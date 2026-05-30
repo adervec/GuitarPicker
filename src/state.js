@@ -18,6 +18,7 @@ const DEFAULTS = {
     metronome: false,
     avatar: { ...DEFAULT_AVATAR },   // player cosmetic loadout (see cosmetics/avatars.js)
     guitar: { ...DEFAULT_GUITAR },   // guitar cosmetic loadout (see cosmetics/guitars.js)
+    streak: { count: 0, best: 0, lastDay: "" },  // daily-practice streak (see music/daily.js)
   },
   songs: [],                 // user/imported/generated songs (built-ins live in code)
   history: [],               // session results
@@ -94,6 +95,8 @@ export const Store = {
     const coinGain = Math.round((entry.accuracy || 0) / 5) + (entry.passed ? 15 : 0);
     state.coins = (state.coins || 0) + coinGain;
     entry.coins = coinGain;
+    // playing counts toward today's practice streak
+    this.recordPracticeDay(new Date(entry.ts || Date.now()).toISOString().slice(0, 10));
     persist();
     this.emit({ type: "history", entry });
   },
@@ -115,6 +118,21 @@ export const Store = {
     if (!arr.includes(stepId)) arr.push(stepId);
     persist();
     this.emit({ type: "progress" });
+  },
+
+  // ----- daily practice streak -----
+  // `day` is a "YYYY-MM-DD" key. Bumps the streak when called on a new day,
+  // continuing it only if the previous practice day was exactly one day before.
+  recordPracticeDay(day) {
+    const cur = state.settings.streak || { count: 0, best: 0, lastDay: "" };
+    if (!day || cur.lastDay === day) return cur;        // already counted today
+    const consecutive = cur.lastDay && (new Date(day) - new Date(cur.lastDay) === 86400000);
+    const count = consecutive ? (cur.count || 0) + 1 : 1;
+    const st = { count, best: Math.max(cur.best || 0, count), lastDay: day };
+    state.settings.streak = st;
+    persist();
+    this.emit({ type: "streak", streak: st });
+    return st;
   },
 
   // ----- economy (coins + cosmetic unlocks) -----

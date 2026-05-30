@@ -118,6 +118,13 @@ category) composed to SVG on demand by `cosmetics/`; `theme` is the app-skin id.
 holds the date-stamped completion (+ coin-reward bookkeeping) of the home "Today's
 Practice" checklist.
 
+**Daily streak** (`settings.streak` = `{count,best,lastDay}`): `Store.recordPracticeDay(day)`
+bumps the run when called on a new day, continuing it only if the prior day was exactly one
+before (else resets to 1); `best` is preserved. Called from `addHistory` (playing) and from
+checking off a daily activity. `daily.js#streakStatus()` interprets it for display — the run
+counts as alive only if `lastDay` is today or yesterday, otherwise it shows 0 with `best`
+kept. Shown as a 🔥 chip on the Home "Today's Practice" panel.
+
 **Economy** (top-level state): `coins` (number) and `unlocks` (map of unlocked cosmetic
 keys). Coins are awarded in `addHistory` (accuracy/5 + 15 pass bonus, recorded on the
 history entry as `coins`) and by daily activities. Items above Common rarity are priced by
@@ -157,6 +164,7 @@ play continues. Killfeed shows the last several note judgments with note name + 
 - [x] Coin economy: earn by playing + daily activities, rarity-priced cosmetic unlocks
 - [x] Player avatar shown in the play HUD; coins-earned shown in the finish banner
 - [x] Recommended daily activities (date-seeded) on the home dashboard, with coin rewards
+- [x] Daily practice streak (🔥 consecutive days, best kept) shown on the home panel
 - [x] Song metadata (genre/mood) on every song + genre filter in the library
 - [x] Singalong lyrics: 11 built-in lyric tracks + karaoke current/next line in the play view
 - [ ] Polyphonic chord transcription (approximation only — documented limitation)

@@ -3,7 +3,7 @@ import { Store } from "../state.js";
 import { allSongs } from "../music/catalog.js";
 import { INSTRUMENTS } from "../music/notes.js";
 import { fmtTime } from "../ui/components.js";
-import { dailyActivities, todayKey } from "../music/daily.js";
+import { dailyActivities, todayKey, streakStatus } from "../music/daily.js";
 import { composeAvatar, composeGuitar, avatarLoadout, guitarLoadout } from "../cosmetics/index.js";
 
 export default function home(ctx) {
@@ -108,16 +108,30 @@ function buildDailyPanel(navigate) {
   const counter = el("span.muted");
   const bar = progressBar(0);
   const list = el("div.col", { style: { gap: "10px", marginTop: "12px" } });
+  const streakChip = el("span.streak-chip");
+
+  function paintStreak() {
+    const ss = streakStatus(Store.settings().streak, today);
+    streakChip.innerHTML = ss.count > 0
+      ? `🔥 <b>${ss.count}</b>-day streak${ss.best > ss.count ? ` · best ${ss.best}` : ""}`
+      : "🔥 Start your streak today!";
+    streakChip.title = ss.practicedToday
+      ? "Practiced today — streak secured! Come back tomorrow to extend it."
+      : "Play a song or check off an activity today to keep your streak alive.";
+    streakChip.classList.toggle("cold", ss.count === 0);
+  }
 
   function persist() { Store.setSetting("daily", { date: today, done: [...done], rewarded: [...rewarded], bonusPaid }); }
   function refresh() {
     counter.textContent = `${done.size} / ${acts.length} done`;
     if (bar.firstChild) bar.firstChild.style.width = (acts.length ? done.size / acts.length : 0) * 100 + "%";
+    paintStreak();
   }
   function toggle(a, paint) {
     if (done.has(a.id)) { done.delete(a.id); }
     else {
       done.add(a.id);
+      Store.recordPracticeDay(today);   // any completed activity keeps the streak alive
       if (!rewarded.has(a.id)) { rewarded.add(a.id); Store.addCoins(DAILY_COIN); toast(`+${DAILY_COIN} 🪙 — ${a.title}`, "good"); }
       if (done.size === acts.length && !bonusPaid) { bonusPaid = true; Store.addCoins(DAILY_BONUS); toast(`Daily complete! +${DAILY_BONUS} 🪙 bonus`, "good"); }
     }
@@ -141,8 +155,12 @@ function buildDailyPanel(navigate) {
   refresh();
 
   return el("div.panel", { style: { marginBottom: "16px" } }, [
-    el("div.spread", {}, [el("h2", { text: "🗓️ Today's Practice" }),
-      el("span.muted", {}, [counter, el("span", { html: ` · complete all for +${DAILY_BONUS} 🪙` })])]),
+    el("div.spread", {}, [
+      el("div.row", { style: { alignItems: "center", gap: "10px" } }, [
+        el("h2", { text: "🗓️ Today's Practice", style: { margin: "0" } }), streakChip,
+      ]),
+      el("span.muted", {}, [counter, el("span", { html: ` · complete all for +${DAILY_BONUS} 🪙` })]),
+    ]),
     bar, list,
   ]);
 }
