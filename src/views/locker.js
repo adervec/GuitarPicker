@@ -10,7 +10,7 @@ import {
   AVATAR_PARTS, AVATAR_CATEGORY_ORDER,
   GUITAR_PARTS, GUITAR_CATEGORY_ORDER,
   SKINS, getSkin, rarity,
-  coins, priceFor, ownsItem, buyItem,
+  coins, priceFor, ownsItem, buyItem, unlockedCount,
 } from "../cosmetics/index.js";
 
 export default function locker(ctx) {
@@ -25,7 +25,22 @@ export default function locker(ctx) {
   root.appendChild(head);
   const paintCoins = () => { coinChip.innerHTML = `🪙 <b>${coins().toLocaleString()}</b>`; };
   paintCoins();
-  const offCoins = Store.on((e) => { if (e.type === "coins" || e.type === "unlocks") paintCoins(); });
+
+  // First-unlock nudge — shown until the player unlocks their first item or dismisses it.
+  let tipEl = null;
+  if (unlockedCount() === 0 && !Store.settings().lockerTipDismissed) {
+    tipEl = el("div.panel.tight", { style: { borderColor: "var(--accent)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "12px" } }, [
+      el("div", { style: { flex: "1", fontSize: "13px" },
+        html: "💡 <b>New here?</b> Items marked 🔒 unlock with coins you earn by playing songs and finishing daily practice. Tap a locked item to unlock it — colours are always free." }),
+      el("button.btn.ghost", { onclick: () => { Store.setSetting("lockerTipDismissed", true); if (tipEl) { tipEl.remove(); tipEl = null; } } }, ["Got it ✕"]),
+    ]);
+    root.appendChild(tipEl);
+  }
+
+  const offCoins = Store.on((e) => {
+    if (e.type === "coins" || e.type === "unlocks") paintCoins();
+    if (e.type === "unlocks" && tipEl) { tipEl.remove(); tipEl = null; }   // first unlock dismisses the nudge
+  });
 
   const TABS = [["player", "🧑 Player"], ["guitar", "🎸 Guitar"], ["skin", "🎨 App Skin"]];
   let active = "player";

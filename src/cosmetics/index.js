@@ -69,3 +69,35 @@ export function buyItem(kind, catKey, item) {
   Store.unlock(unlockKey(kind, catKey, item.id));
   return { ok: true, bought: true, price };
 }
+
+/** How many cosmetics has the player unlocked (excludes free/common items). */
+export function unlockedCount() {
+  return Object.keys(Store.get().unlocks || {}).length;
+}
+
+/**
+ * Collection completion across all unlockable items (avatar parts, guitar
+ * parts, app skins). Free/common items and colours are not counted as
+ * "collectible". Returns { total, owned, coins, byRarity:{ id:{total,owned} } }.
+ */
+export function collectionStats() {
+  const byRarity = {};
+  let total = 0, owned = 0;
+  const tally = (kind, catKey, item) => {
+    if (priceOf(item.rarity) === 0) return;            // free → not collectible
+    total++;
+    const r = (byRarity[item.rarity] ||= { total: 0, owned: 0 });
+    r.total++;
+    if (ownsItem(kind, catKey, item)) { owned++; r.owned++; }
+  };
+  for (const key of AVATAR_CATEGORY_ORDER) {
+    const cat = AVATAR_PARTS[key];
+    if (cat.kind !== "color") for (const it of cat.items) tally("avatar", cat.key, it);
+  }
+  for (const key of GUITAR_CATEGORY_ORDER) {
+    const cat = GUITAR_PARTS[key];
+    if (cat.kind !== "color") for (const it of cat.items) tally("guitar", cat.key, it);
+  }
+  for (const sk of SKINS) tally("skin", "", sk);
+  return { total, owned, coins: Store.coins(), byRarity };
+}
