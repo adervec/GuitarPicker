@@ -1,0 +1,74 @@
+/* Theme variable sets. Switch via <html data-theme="..."> */
+:root {
+  --radius: 14px;
+  --radius-sm: 9px;
+  --gap: 16px;
+  --font: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  --mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
+  --speed: 160ms;
+
+  /* judgment colors are shared across themes */
+  --j-perfect: #21d07a;
+  --j-good: #5ec8ff;
+  --j-off: #ffb454;
+  --j-miss: #ff5d6c;
+}
+
+/* ---- Midnight (default) ---- */
+[data-theme="midnight"] {
+  --bg: #0b0f1a;
+  --bg-2: #111726;
+  --panel: #151d30;
+  --panel-2: #1b2440;
+  --line: #26324f;
+  --text: #e8eefc;
+  --muted: #9aa9c7;
+  --accent: #6ea8fe;
+  --accent-2: #b388ff;
+  --accent-ink: #07101f;
+  --good: #21d07a;
+  --warn: #ffb454;
+  --bad: #ff5d6c;
+  --highway: #0a0e18;
+  --highway-line: #1c2740;
+}
+
+/* ---- Dark slate ---- */
+[data-theme="dark"] {
+  --bg: #121212; --bg-2: #181818; --panel: #1e1e1e; --panel-2: #262626;
+  --line: #333; --text: #f2f2f2; --muted: #a8a8a8; --accent: #4caf50;
+  --accent-2: #80e27e; --accent-ink: #052b06; --good: #4caf50; --warn: #ffb300;
+  --bad: #ef5350; --highway: #0c0c0c; --highway-line: #2a2a2a;
+}
+
+/* ---- Light ---- */
+[data-theme="light"] {
+  --bg: #f3f5fb; --bg-2: #eaeef7; --panel: #ffffff; --panel-2: #f4f7ff;
+  --line: #d8e0f0; --text: #142033; --muted: #5d6b86; --accent: #2d6cdf;
+  --accent-2: #7a4ddb; --accent-ink: #ffffff; --good: #138a52; --warn: #b9740a;
+  --bad: #d33344; --highway: #e9eef9; --highway-line: #cfd9ee;
+}
+
+/* ---- Sunset ---- */
+[data-theme="sunset"] {
+  --bg: #1a0f1e; --bg-2: #241327; --panel: #2a1730; --panel-2: #371d40;
+  --line: #4a2752; --text: #ffeef6; --muted: #d9a7c4; --accent: #ff7a59;
+  --accent-2: #ffb84d; --accent-ink: #2a0d12; --good: #43d6a0; --warn: #ffcf5c;
+  --bad: #ff5d80; --highway: #150a18; --highway-line: #34203a;
+}
+
+/* ---- Forest ---- */
+[data-theme="forest"] {
+  --bg: #0c1410; --bg-2: #101d16; --panel: #13251b; --panel-2: #193524;
+  --line: #234a33; --text: #e7f6ec; --muted: #93b9a3; --accent: #4fd18b;
+  --accent-2: #c4e86a; --accent-ink: #04150c; --good: #4fd18b; --warn: #e3c558;
+  --bad: #ff6b6b; --highway: #08120c; --highway-line: #1a3322;
+}
+
+/* ---- High contrast (accessibility) ---- */
+[data-theme="contrast"] {
+  --bg: #000000; --bg-2: #000000; --panel: #0a0a0a; --panel-2: #141414;
+  --line: #ffffff; --text: #ffffff; --muted: #d0d0d0; --accent: #ffe600;
+  --accent-2: #00e5ff; --accent-ink: #000000; --good: #00ff85; --warn: #ffb000;
+  --bad: #ff3b3b; --highway: #000000; --highway-line: #555;
+}

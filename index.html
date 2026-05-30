@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="midnight">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GuitarPicker</title>
+  <link rel="stylesheet" href="styles/themes.css" />
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">🎸</div>
+        <div class="brand-text">
+          <strong>GuitarPicker</strong>
+          <span>learn · play · grow</span>
+        </div>
+      </div>
+      <nav id="nav"></nav>
+      <div class="sidebar-foot">
+        <div id="io-indicator" class="io-indicator" title="Input / output devices">
+          <span class="io-row"><span class="io-dot in"></span><span data-io="in">no mic</span></span>
+          <span class="io-row"><span class="io-dot out"></span><span data-io="out">default out</span></span>
+        </div>
+      </div>
+    </aside>
+
+    <main id="main">
+      <header id="topbar">
+        <div id="crumb"></div>
+        <div class="topbar-right">
+          <div id="health-mini" class="health-mini hidden" title="Health"></div>
+          <select id="theme-quick" title="Theme"></select>
+        </div>
+      </header>
+      <section id="view"><!-- active view renders here --></section>
+    </main>
+  </div>
+
+  <div id="toast-host"></div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

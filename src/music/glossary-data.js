@@ -1,0 +1,58 @@
+// Music lore / dictionary / reference terms.
+export const GLOSSARY = [
+  ["Note", "Basics", "A single musical sound of a definite pitch, named A–G (with sharps/flats)."],
+  ["Pitch", "Basics", "How high or low a note sounds, determined by frequency (Hz)."],
+  ["Octave", "Basics", "The interval between a note and the next note of the same name; a doubling of frequency."],
+  ["Semitone", "Basics", "The smallest interval in Western music — one fret on a guitar, one key on a piano."],
+  ["Whole tone", "Basics", "An interval of two semitones."],
+  ["Sharp (♯)", "Basics", "Raises a note by one semitone."],
+  ["Flat (♭)", "Basics", "Lowers a note by one semitone."],
+  ["Natural (♮)", "Basics", "Cancels a previous sharp or flat."],
+  ["Enharmonic", "Basics", "Two names for the same pitch (e.g., F♯ and G♭)."],
+
+  ["Scale", "Scales & Keys", "An ordered set of notes spanning an octave, e.g., major or minor."],
+  ["Major scale", "Scales & Keys", "Pattern W-W-H-W-W-W-H; bright, happy character. C major has no sharps/flats."],
+  ["Minor scale", "Scales & Keys", "Darker-sounding scale; natural minor is W-H-W-W-H-W-W."],
+  ["Pentatonic", "Scales & Keys", "Five-note scale; the minor pentatonic is the backbone of blues/rock lead guitar."],
+  ["Blues scale", "Scales & Keys", "Minor pentatonic plus the 'blue note' (♭5) for a gritty sound."],
+  ["Key", "Scales & Keys", "The tonal center of a piece — the home note and scale it gravitates toward."],
+  ["Key signature", "Scales & Keys", "Sharps or flats shown at the start of a staff, defining the key."],
+  ["Circle of fifths", "Scales & Keys", "A diagram of keys arranged by perfect fifths, showing their key signatures and relationships."],
+  ["Mode", "Scales & Keys", "A scale starting on a different degree of the major scale (Dorian, Mixolydian, etc.)."],
+  ["Relative minor", "Scales & Keys", "The minor key sharing a key signature with a major key (A minor ↔ C major)."],
+
+  ["Interval", "Harmony", "The distance between two pitches, e.g., a perfect fifth."],
+  ["Chord", "Harmony", "Three or more notes played together. A triad has a root, third, and fifth."],
+  ["Triad", "Harmony", "A three-note chord built in thirds: root, third, fifth."],
+  ["Major chord", "Harmony", "Root + major third + perfect fifth — sounds bright."],
+  ["Minor chord", "Harmony", "Root + minor third + perfect fifth — sounds sad."],
+  ["Seventh chord", "Harmony", "A triad plus a seventh (dominant 7, major 7, minor 7)."],
+  ["Power chord", "Harmony", "Root + fifth only; the workhorse of rock guitar."],
+  ["Progression", "Harmony", "A sequence of chords, often labelled with Roman numerals (I–V–vi–IV)."],
+  ["Cadence", "Harmony", "A chord movement that creates a sense of resolution (e.g., V–I)."],
+  ["Inversion", "Harmony", "A chord with a note other than the root in the bass."],
+
+  ["Tempo", "Rhythm", "The speed of the music, measured in beats per minute (BPM)."],
+  ["Beat", "Rhythm", "The basic pulse of the music."],
+  ["Time signature", "Rhythm", "Two numbers showing beats per bar and the note value of the beat (e.g., 4/4)."],
+  ["Bar / Measure", "Rhythm", "A segment of music containing a set number of beats."],
+  ["Syncopation", "Rhythm", "Accenting off-beats to create rhythmic tension."],
+  ["Metronome", "Rhythm", "A device that ticks a steady tempo for practice."],
+
+  ["Capo", "Guitar", "A clamp on the fretboard that raises the pitch of all strings, letting you use easy open shapes in higher keys."],
+  ["Fret", "Guitar", "A metal strip on the neck; pressing behind it shortens the string to raise pitch."],
+  ["Open string", "Guitar", "A string played without fretting any note."],
+  ["Standard tuning", "Guitar", "Guitar tuned E-A-D-G-B-E (low to high)."],
+  ["Drop D", "Guitar", "Lower the 6th string from E to D for heavier riffs and easy power chords."],
+  ["Barre chord", "Guitar", "Fretting multiple strings with one finger to make movable chord shapes."],
+  ["Fingerpicking", "Guitar", "Plucking strings with individual fingers rather than a pick."],
+  ["Hammer-on / Pull-off", "Guitar", "Sounding a note by tapping onto or pulling off a fret without re-picking."],
+
+  ["Dynamics", "Expression", "How loud or soft music is played (piano = soft, forte = loud)."],
+  ["Legato", "Expression", "Playing notes smoothly and connected."],
+  ["Staccato", "Expression", "Playing notes short and detached."],
+  ["Vibrato", "Expression", "A slight, regular wavering of pitch for expression."],
+  ["Timbre", "Expression", "The tonal 'colour' that distinguishes instruments playing the same note."],
+];
+
+export const CATEGORIES = [...new Set(GLOSSARY.map((g) => g[1]))];

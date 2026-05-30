@@ -1,0 +1,97 @@
+import { el, pageHead, select, slider, toast, download } from "../ui/components.js";
+import { Store } from "../state.js";
+import { Audio } from "../audio/engine.js";
+import { INSTRUMENTS } from "../music/notes.js";
+
+const THEMES = ["midnight", "dark", "light", "sunset", "forest", "contrast"];
+
+export default async function settings(ctx) {
+  const { el: root } = ctx;
+  const s = Store.settings();
+
+  root.appendChild(pageHead("Settings", "Devices, sound, and appearance. GuitarPicker always shows the active input & output."));
+
+  // --- Devices ---
+  const devPanel = el("div.panel", {}, [el("h2", { text: "Audio devices" })]);
+  root.appendChild(devPanel);
+
+  const inputSel = select({ label: "Input (microphone)", options: [{ value: "", label: "System default" }], value: s.inputDeviceId,
+    onchange: (v) => { Store.setSetting("inputDeviceId", v); if (Audio.micLive()) Audio.startMic(v); } });
+  const outputSel = select({ label: "Output (speakers/headphones)", options: [{ value: "", label: "System default" }], value: s.outputDeviceId,
+    onchange: (v) => Audio.setOutputDevice(v) });
+
+  const micStatus = el("span.muted", { text: Audio.micLive() ? "Microphone live" : "Microphone off" });
+  const testBtn = el("button.btn", { onclick: async () => {
+    try {
+      if (Audio.micLive()) { Audio.stopMic(); micStatus.textContent = "Microphone off"; testBtn.textContent = "Enable microphone"; }
+      else { await Audio.startMic(s.inputDeviceId); micStatus.textContent = "Microphone live"; testBtn.textContent = "Disable microphone"; await refreshDevices(); }
+    } catch (e) { toast("Mic access failed: " + e.message, "bad"); }
+  }}, [Audio.micLive() ? "Disable microphone" : "Enable microphone"]);
+
+  devPanel.append(
+    el("div.grid", { style: { gridTemplateColumns: "1fr 1fr" } }, [inputSel, outputSel]),
+    el("div.row", { style: { marginTop: "12px", alignItems: "center" } }, [testBtn, micStatus]),
+    el("p.muted", { style: { marginTop: "8px", fontSize: "12px" },
+      html: "Device names appear after you grant microphone permission. Output routing uses <code>setSinkId</code> where the browser supports it (Chrome/Edge)." }),
+  );
+
+  async function refreshDevices() {
+    const { inputs, outputs } = await Audio.listDevices();
+    fill(inputSel.selectEl, inputs, s.inputDeviceId, "System default");
+    fill(outputSel.selectEl, outputs, s.outputDeviceId, "System default");
+  }
+  function fill(sel, list, current, defLabel) {
+    sel.innerHTML = "";
+    sel.appendChild(el("option", { value: "", text: defLabel }));
+    for (const d of list) {
+      const o = el("option", { value: d.deviceId, text: d.label });
+      if (d.deviceId === current) o.selected = true;
+      sel.appendChild(o);
+    }
+  }
+  refreshDevices();
+
+  // --- Sound ---
+  const soundPanel = el("div.panel", {}, [el("h2", { text: "Sound & detection" })]);
+  root.appendChild(soundPanel);
+  soundPanel.append(
+    el("div.grid", { style: { gridTemplateColumns: "1fr 1fr" } }, [
+      slider({ label: "Backing track volume", value: s.backingVolume, fmt: (v) => Math.round(v * 100) + "%",
+        oninput: (v) => Store.setSetting("backingVolume", v) }),
+      slider({ label: "Vocal track volume", value: s.vocalVolume, fmt: (v) => Math.round(v * 100) + "%",
+        oninput: (v) => Store.setSetting("vocalVolume", v) }),
+      slider({ label: "Mic noise gate (sensitivity)", min: 0.002, max: 0.06, step: 0.002, value: s.micGate,
+        fmt: (v) => v.toFixed(3), oninput: (v) => Store.setSetting("micGate", v) }),
+      slider({ label: "A4 calibration (Hz)", min: 415, max: 466, step: 1, value: s.a4, fmt: (v) => v + " Hz",
+        oninput: (v) => Store.setSetting("a4", v) }),
+      slider({ label: "Note highway speed", min: 0.5, max: 2, step: 0.1, value: s.noteSpeed, fmt: (v) => v.toFixed(1) + "×",
+        oninput: (v) => Store.setSetting("noteSpeed", v) }),
+    ]),
+  );
+
+  // --- Appearance / defaults ---
+  const apr = el("div.panel", {}, [el("h2", { text: "Appearance & defaults" })]);
+  root.appendChild(apr);
+  apr.append(
+    el("div.grid", { style: { gridTemplateColumns: "1fr 1fr" } }, [
+      select({ label: "Theme", value: s.theme, options: THEMES.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) })),
+        onchange: (v) => { Store.setSetting("theme", v); document.documentElement.setAttribute("data-theme", v);
+          document.getElementById("theme-quick").value = v; } }),
+      select({ label: "Default instrument", value: s.instrument,
+        options: Object.entries(INSTRUMENTS).map(([id, i]) => ({ value: id, label: i.name })),
+        onchange: (v) => Store.setSetting("instrument", v) }),
+    ]),
+  );
+
+  // --- Data ---
+  const data = el("div.panel", {}, [el("h2", { text: "Data" })]);
+  root.appendChild(data);
+  data.append(el("div.row", {}, [
+    el("button.btn", { onclick: () => download("guitarpicker-data.json", Store.exportAll()) }, ["Export all data"]),
+    el("button.btn.danger", { onclick: () => {
+      if (confirm("Clear all local data (songs, history, progress, settings)?")) {
+        localStorage.removeItem("guitarpicker.v1"); location.reload();
+      }
+    }}, ["Reset everything"]),
+  ]));
+}

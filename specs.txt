@@ -1,0 +1,29 @@
+-need Design.md to be up to date after each change
+-read the spec before deciding how to code this
+
+-should replicate most of the features of the 'yousician' application
+-allow playing of various songs in various keys with various instruments
+	-default acoustic guitar for starters
+-shows the oncoming 'stream' of notes and how to play them like in yousician
+	-however needs to show 'killfeed' grading quality of each note
+	-rather than ending the song when it goes horrible there should be a 'healthbar' that goes up and down, once failed can keep playing but it won't count as a pass
+-need assorted variations of wide variety of public domain
+-need instrument tuning utilities
+	-need detection of when out of tune
+-need indication of when to use guitar capo
+-need ability to manually create songs
+-need ability to create songs by having the app 'listen' to something and then break it down into songs with different levels of complexity for different instruments
+	-can also 'watch and listen' and then song background can be a slideshow of what showed in a designated rectangle.
+	-or created songs can have some generic background that shows behind the notes (provide some animated and solid colour backgrounds)
+-need ability to import/export/view file location of song files
+-need trending of improvement in each instrument over time
+	-need a whole training plan and course progression for each instrument
+	-need various drills of variable difficulty and length for grinding week skills
+-need a whole music lore/glossary/dictionary reference section
+-need a suite of minigames for developing quizzing music theory
+-need option to play the underlying song at customizable volume when playing
+-need option to include vocal track with songs (which can be optionally played alongside at its own volume)
+-need different views of history, session history, etc.
+-graphics should be very clean and crisp throughout
+-needs to be constantly clear what input and output devices are used
+-need to be able to select various themes
