@@ -1,7 +1,7 @@
 import { el, pageHead, select, toast, download, getVar } from "../ui/components.js";
 import { Store } from "../state.js";
 import { findSong, isBuiltin } from "../music/catalog.js";
-import { newSong, parseMelody, serialize, songDuration, uid } from "../music/song-format.js";
+import { newSong, parseMelody, serialize, songDuration, uid, GENRES } from "../music/song-format.js";
 import { INSTRUMENTS, midiToName, nameToMidi } from "../music/notes.js";
 import { ANIMATED_BACKGROUNDS, SOLID_SWATCHES } from "../ui/backgrounds.js";
 import { Synth } from "../audio/synth.js";
@@ -45,10 +45,11 @@ export default function editor(ctx) {
       field("BPM", "bpm", "number"),
       field("Capo", "capo", "number"),
     ]),
-    el("div.grid", { style: { gridTemplateColumns: "1fr 1fr 1fr" } }, [
+    el("div.grid", { style: { gridTemplateColumns: "1fr 1fr 1fr 1fr" } }, [
       field("Instrument", "instrument", "select", Object.entries(INSTRUMENTS).map(([id, i]) => ({ value: id, label: i.name }))),
       field("Key", "key", "select", CIRCLE_KEYS.map((k) => ({ value: k, label: k }))),
       field("Difficulty", "difficulty", "select", ["beginner", "intermediate", "advanced"].map((d) => ({ value: d, label: d }))),
+      field("Genre", "genre", "select", GENRES.map((g) => ({ value: g, label: g }))),
     ]),
   ]);
   root.appendChild(meta);

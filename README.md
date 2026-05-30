@@ -28,7 +28,7 @@ Allow microphone access when prompted (it never leaves your machine).
 - **Note highway** — streaming notes, per-note killfeed (Perfect / Good / Off / Miss), a
   healthbar that dips on mistakes but lets you finish (a failed run just won't count as a pass).
 - **Tuner** — live pitch + cents needle, out-of-tune detection, multiple instruments & tunings.
-- **Songs** — a public-domain library (Ode to Joy, Greensleeves, 12-bar blues, …) plus
+- **Songs** — a public-domain library tagged by **genre**, with singalong **lyrics**, plus
   import / export / transpose / capo suggestions.
 - **Song Editor** — paint notes on a piano roll or type them in; attach backing/vocal audio.
 - **Listen & Make** — record yourself, auto-transcribe to a song at three difficulty levels,
@@ -37,6 +37,14 @@ Allow microphone access when prompted (it never leaves your machine).
 - **Theory Games** — ear training and theory quizzes.
 - **Glossary** — a music dictionary with interactive chord/scale/interval players.
 - **Progress** — session history and improvement trends.
+- **Locker** — build a layered player avatar (skin tone, hair, clothing, tattoos, eyewear,
+  headwear, jewellery, frames), design a guitar (body shape, finish, hardware, inlays,
+  decals), and choose from 20 app skins. Rarer items are **unlocked with coins**.
+- **Coins & rewards** — earn 🪙 by playing songs (accuracy + pass bonus) and completing
+  daily activities; spend them in the Locker. Balance shows in the top bar, and your avatar
+  rides along in the play HUD.
+- **Daily practice** — a home-dashboard checklist of recommended activities that refreshes
+  each day, tracks what you've completed, and pays coins.
 - **Themes**, clear input/output device display, customizable backing & vocal volumes.
 
 ## Verify it works

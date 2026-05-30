@@ -8,7 +8,7 @@ import { Synth } from "../audio/synth.js";
 
 export default function library(ctx) {
   const { el: root, navigate } = ctx;
-  let filter = { q: "", instrument: "all", difficulty: "all" };
+  let filter = { q: "", instrument: "all", difficulty: "all", genre: "all" };
 
   const actions = [
     el("button.btn", { onclick: importSong }, ["⬇ Import"]),
@@ -22,13 +22,16 @@ export default function library(ctx) {
   const instSel = el("select.input", { onchange: (e) => { filter.instrument = e.target.value; renderGrid(); } },
     [el("option", { value: "all", text: "All instruments" }),
      ...Object.entries(INSTRUMENTS).map(([id, i]) => el("option", { value: id, text: i.name }))]);
+  const genreSel = el("select.input", { onchange: (e) => { filter.genre = e.target.value; renderGrid(); } },
+    [el("option", { value: "all", text: "All genres" }),
+     ...[...new Set(allSongs().map((s) => s.genre).filter(Boolean))].sort().map((g) => el("option", { value: g, text: g }))]);
   const diffPills = el("div.pill-row", {}, ["all", "beginner", "intermediate", "advanced"].map((d) =>
     el(`span.pill${d === "all" ? ".active" : ""}`, { text: d, onclick: (e) => {
       filter.difficulty = d; [...diffPills.children].forEach((p) => p.classList.toggle("active", p.textContent === d)); renderGrid();
     } })));
   root.appendChild(el("div.panel.tight", { style: { marginBottom: "16px" } }, [
     el("div.row", { style: { alignItems: "center" } }, [
-      el("div", { style: { flex: "1", minWidth: "200px" } }, [search]), instSel, diffPills,
+      el("div", { style: { flex: "1", minWidth: "200px" } }, [search]), instSel, genreSel, diffPills,
     ]),
   ]));
 
@@ -55,6 +58,7 @@ export default function library(ctx) {
       if (s.source === "drill") return false; // drills live in Training
       if (filter.instrument !== "all" && s.instrument !== filter.instrument) return false;
       if (filter.difficulty !== "all" && s.difficulty !== filter.difficulty) return false;
+      if (filter.genre !== "all" && s.genre !== filter.genre) return false;
       if (filter.q && !(`${s.title} ${s.artist}`.toLowerCase().includes(filter.q))) return false;
       return true;
     });
@@ -71,8 +75,9 @@ export default function library(ctx) {
           isBuiltin(s.id) ? tag("public domain") : tag(s.source || "custom"),
         ]),
         el("div.sub", { text: `${s.artist} · ${INSTRUMENTS[s.instrument]?.name || s.instrument}` }),
-        el("div.row", { style: { gap: "6px" } }, [
+        el("div.row", { style: { gap: "6px", flexWrap: "wrap" } }, [
           tag(s.difficulty, s.difficulty),
+          s.genre ? tag(s.genre) : null,
           tag(`key ${s.key}`),
           s.capo ? tag(`capo ${s.capo}`) : null,
         ]),

@@ -54,6 +54,11 @@ const SONGS = [
     background: { type: "solid", value: "" },
     notes: parseMelody(110,
       "C4:1 E4:1 F4:1 G4:2 r:1 C4:1 E4:1 F4:1 G4:2 r:1 C4:1 E4:1 F4:1 G4:2 E4:1 C4:1 E4:1 D4:3"),
+    lyrics: [
+      { time: 0, text: "Oh, when the saints" }, { time: 3.3, text: "go marching in," },
+      { time: 6.5, text: "Oh when the saints go marching in," },
+      { time: 9.8, text: "Lord, how I want to be in that number!" },
+    ],
   }),
   builtin({
     id: "bi-auld", title: "Auld Lang Syne", artist: "Trad. / Burns",
@@ -69,6 +74,10 @@ const SONGS = [
     notes: parseMelody(110,
       "G3:0.5 G3:0.5 A3:1 G3:1 C4:1 B3:2 G3:0.5 G3:0.5 A3:1 G3:1 D4:1 C4:2 " +
       "G3:0.5 G3:0.5 G4:1 E4:1 C4:1 B3:1 A3:1 F4:0.5 F4:0.5 E4:1 C4:1 D4:1 C4:2"),
+    lyrics: [
+      { time: 0, text: "Happy birthday to you," }, { time: 3.3, text: "Happy birthday to you," },
+      { time: 6.5, text: "Happy birthday dear friend," }, { time: 9.8, text: "Happy birthday to you!" },
+    ],
   }),
   builtin({
     id: "bi-amazing", title: "Amazing Grace", artist: "Trad. / Newton",
@@ -109,6 +118,102 @@ const SONGS = [
     notes: parseMelody(100,
       "F#5:1 E5:1 D5:1 C#5:1 B4:1 A4:1 B4:1 C#5:1 D5:1 C#5:1 B4:1 A4:1 G4:1 F#4:1 G4:1 E4:1 " +
       "F#4:1 G4:1 A4:1 B4:1 A4:1 G4:1 F#4:1 E4:1 D4:2 D5:2"),
+  }),
+
+  // ---- Singalong tunes (timed lyrics for karaoke-style play) ----
+  builtin({
+    id: "bi-mary", title: "Mary Had a Little Lamb", artist: "Trad.",
+    key: "C", bpm: 100, difficulty: "beginner", genre: "Children's",
+    background: { type: "animated", value: "pulse" },
+    notes: parseMelody(100,
+      "E4:1 D4:1 C4:1 D4:1 E4:1 E4:1 E4:2 D4:1 D4:1 D4:2 E4:1 G4:1 G4:2 " +
+      "E4:1 D4:1 C4:1 D4:1 E4:1 E4:1 E4:1 E4:1 D4:1 D4:1 E4:1 D4:1 C4:2"),
+    lyrics: [
+      { time: 0, text: "Mary had a little lamb," }, { time: 4.8, text: "little lamb, little lamb," },
+      { time: 9.6, text: "Mary had a little lamb," }, { time: 14.4, text: "its fleece was white as snow." },
+    ],
+  }),
+  builtin({
+    id: "bi-row", title: "Row, Row, Row Your Boat", artist: "Trad.",
+    key: "C", bpm: 90, difficulty: "beginner", genre: "Children's",
+    background: { type: "animated", value: "waves" },
+    notes: parseMelody(90,
+      "C4:1 C4:1 C4:1 D4:1 E4:2 E4:1 D4:1 E4:1 F4:1 G4:2 " +
+      "C5:1 C5:1 C5:1 G4:1 G4:1 G4:1 E4:1 E4:1 E4:1 C4:1 C4:1 C4:1 G4:1 F4:1 E4:1 D4:1 C4:2"),
+    lyrics: [
+      { time: 0, text: "Row, row, row your boat," }, { time: 4.0, text: "gently down the stream." },
+      { time: 8.0, text: "Merrily, merrily, merrily, merrily," }, { time: 16.0, text: "life is but a dream." },
+    ],
+  }),
+  builtin({
+    id: "bi-london", title: "London Bridge Is Falling Down", artist: "Trad.",
+    key: "C", bpm: 120, difficulty: "beginner", genre: "Children's",
+    background: { type: "solid", value: "" },
+    notes: parseMelody(120,
+      "G4:1.5 A4:0.5 G4:1 F4:1 E4:1 F4:1 G4:2 D4:1 E4:1 F4:2 E4:1 F4:1 G4:2 " +
+      "G4:1.5 A4:0.5 G4:1 F4:1 E4:1 F4:1 G4:2 D4:2 G4:1 E4:1 C4:2"),
+    lyrics: [
+      { time: 0, text: "London Bridge is falling down," }, { time: 4.0, text: "falling down, falling down," },
+      { time: 8.0, text: "London Bridge is falling down," }, { time: 12.0, text: "my fair lady." },
+    ],
+  }),
+  builtin({
+    id: "bi-macdonald", title: "Old MacDonald Had a Farm", artist: "Trad.",
+    key: "C", bpm: 120, difficulty: "beginner", genre: "Children's",
+    background: { type: "animated", value: "pulse" },
+    notes: parseMelody(120,
+      "C4:1 C4:1 C4:1 G3:1 A3:1 A3:1 G3:2 E4:1 E4:1 D4:1 D4:1 C4:2 " +
+      "G3:1 C4:1 C4:1 C4:1 G3:1 A3:1 A3:1 G3:2 E4:1 E4:1 D4:1 D4:1 C4:2 " +
+      "C4:1 C4:1 C4:1 G3:1 A3:1 A3:1 G3:2 E4:1 E4:1 D4:1 D4:1 C4:2"),
+    lyrics: [
+      { time: 0, text: "Old MacDonald had a farm, E-I-E-I-O!" },
+      { time: 7.0, text: "And on his farm he had a cow, E-I-E-I-O!" },
+      { time: 14.5, text: "Old MacDonald had a farm, E-I-E-I-O!" },
+    ],
+  }),
+  builtin({
+    id: "bi-jingle", title: "Jingle Bells", artist: "Pierpont (Trad.)",
+    key: "C", bpm: 120, difficulty: "beginner", genre: "Holiday",
+    background: { type: "animated", value: "starfield" },
+    notes: parseMelody(120,
+      "E4:1 E4:1 E4:2 E4:1 E4:1 E4:2 E4:1 G4:1 C4:1.5 D4:0.5 E4:4 " +
+      "F4:1 F4:1 F4:1.5 F4:0.5 F4:1 E4:1 E4:1 E4:0.5 E4:0.5 G4:1 G4:1 F4:1 D4:1 C4:4"),
+    lyrics: [
+      { time: 0, text: "Jingle bells, jingle bells," }, { time: 4.0, text: "jingle all the way!" },
+      { time: 8.0, text: "Oh what fun it is to ride" }, { time: 12.0, text: "in a one-horse open sleigh!" },
+    ],
+  }),
+  builtin({
+    id: "bi-susanna", title: "Oh! Susanna", artist: "Stephen Foster (Trad.)",
+    key: "C", bpm: 120, difficulty: "intermediate", genre: "Folk",
+    background: { type: "animated", value: "waves" },
+    notes: parseMelody(120,
+      "C4:0.5 D4:0.5 E4:1 G4:1 G4:1 A4:1 G4:1 E4:1 C4:1 D4:1 E4:1 E4:1 D4:1 C4:1 D4:2 " +
+      "C4:0.5 D4:0.5 E4:1 G4:1 G4:1 A4:1 G4:1 E4:1 C4:1 D4:1 E4:1 E4:1 D4:1 D4:1 C4:2 " +
+      "E4:1 F4:1 G4:2 G4:1 A4:1 G4:1 E4:1 C4:1 D4:1 E4:1 E4:1 D4:1 C4:1 D4:2 " +
+      "C4:0.5 D4:0.5 E4:1 G4:1 G4:1 A4:1 G4:1 E4:1 C4:1 D4:1 E4:1 E4:1 D4:1 D4:1 C4:2"),
+    lyrics: [
+      { time: 0, text: "I come from Alabama with my banjo on my knee," },
+      { time: 7.5, text: "And I'm going to Louisiana, my true love for to see." },
+      { time: 15.0, text: "Oh! Susanna, don't you cry for me," },
+      { time: 23.0, text: "For I come from Alabama with my banjo on my knee." },
+    ],
+  }),
+  builtin({
+    id: "bi-silent", title: "Silent Night", artist: "Gruber / Mohr (Trad.)",
+    key: "C", bpm: 90, difficulty: "intermediate", genre: "Holiday",
+    background: { type: "animated", value: "aurora" },
+    notes: parseMelody(90,
+      "G4:1.5 A4:0.5 G4:1 E4:3 G4:1.5 A4:0.5 G4:1 E4:3 " +
+      "D5:2 D5:1 B4:3 C5:2 C5:1 G4:3 " +
+      "A4:2 A4:1 C5:1.5 B4:0.5 A4:1 G4:1.5 A4:0.5 G4:1 E4:3 " +
+      "A4:2 A4:1 C5:1.5 B4:0.5 A4:1 G4:1.5 A4:0.5 G4:1 E4:3 " +
+      "D5:2 D5:1 F5:1.5 D5:0.5 B4:1 C5:3 E5:3 C5:1 G4:1 E4:1 G4:1.5 F4:0.5 D4:1 C4:3"),
+    lyrics: [
+      { time: 0, text: "Silent night, holy night," }, { time: 8.0, text: "All is calm, all is bright," },
+      { time: 16.0, text: "Round yon virgin mother and child," }, { time: 24.0, text: "Holy infant so tender and mild," },
+      { time: 32.0, text: "Sleep in heavenly peace," }, { time: 38.0, text: "Sleep in heavenly peace." },
+    ],
   }),
 
   // ---- Chord-progression trainers (great for strumming practice) ----

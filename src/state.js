@@ -1,4 +1,7 @@
 // Global store: settings, user songs, history, progress. Persists to localStorage.
+import { DEFAULT_AVATAR } from "./cosmetics/avatars.js";
+import { DEFAULT_GUITAR } from "./cosmetics/guitars.js";
+
 const KEY = "guitarpicker.v1";
 
 const DEFAULTS = {
@@ -13,10 +16,14 @@ const DEFAULTS = {
     micGate: 0.012,          // RMS noise gate for pitch detection
     noteSpeed: 1.0,          // highway scroll multiplier
     metronome: false,
+    avatar: { ...DEFAULT_AVATAR },   // player cosmetic loadout (see cosmetics/avatars.js)
+    guitar: { ...DEFAULT_GUITAR },   // guitar cosmetic loadout (see cosmetics/guitars.js)
   },
   songs: [],                 // user/imported/generated songs (built-ins live in code)
   history: [],               // session results
   progress: {},              // per-instrument: { xp, drills:{id:bestScore}, courses:{id:[done...]} }
+  coins: 0,                  // earned currency for unlocking cosmetics
+  unlocks: {},               // unlocked cosmetic keys -> true (see cosmetics/economy.js)
 };
 
 function load() {
@@ -29,6 +36,8 @@ function load() {
       songs: parsed.songs || [],
       history: parsed.history || [],
       progress: parsed.progress || {},
+      coins: parsed.coins || 0,
+      unlocks: parsed.unlocks || {},
     };
   } catch (e) {
     console.warn("state load failed, using defaults", e);
@@ -81,6 +90,10 @@ export const Store = {
     const inst = entry.instrument || "acoustic-guitar";
     const p = (state.progress[inst] ||= { xp: 0, drills: {}, courses: {} });
     p.xp = (p.xp || 0) + Math.round(entry.score / 10);
+    // award coins (accuracy-based + a pass bonus); attach to entry for the UI
+    const coinGain = Math.round((entry.accuracy || 0) / 5) + (entry.passed ? 15 : 0);
+    state.coins = (state.coins || 0) + coinGain;
+    entry.coins = coinGain;
     persist();
     this.emit({ type: "history", entry });
   },
@@ -102,6 +115,30 @@ export const Store = {
     if (!arr.includes(stepId)) arr.push(stepId);
     persist();
     this.emit({ type: "progress" });
+  },
+
+  // ----- economy (coins + cosmetic unlocks) -----
+  coins: () => state.coins || 0,
+  addCoins(n) {
+    state.coins = Math.max(0, (state.coins || 0) + Math.round(n));
+    persist();
+    this.emit({ type: "coins", coins: state.coins });
+    return state.coins;
+  },
+  spendCoins(n) {
+    if ((state.coins || 0) < n) return false;
+    state.coins -= n;
+    persist();
+    this.emit({ type: "coins", coins: state.coins });
+    return true;
+  },
+  isUnlocked(key) { return !!state.unlocks[key]; },
+  unlock(key) {
+    if (!state.unlocks[key]) {
+      state.unlocks[key] = true;
+      persist();
+      this.emit({ type: "unlocks", key });
+    }
   },
 
   exportAll() {

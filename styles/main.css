@@ -61,6 +61,11 @@ a { color: var(--accent); }
 .health-mini::after { content: ""; position: absolute; inset: 0; width: var(--h, 100%);
   background: linear-gradient(90deg, var(--bad), var(--warn) 45%, var(--good));
   transition: width 200ms; }
+.coin-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  border-radius: 999px; background: var(--panel); border: 1px solid var(--line);
+  color: var(--text); font-size: 13px; text-decoration: none; font-variant-numeric: tabular-nums; }
+.coin-chip:hover { border-color: var(--warn); }
+.coin-chip b { color: var(--warn); }
 #theme-quick, select.input, input.input, textarea.input {
   background: var(--panel); border: 1px solid var(--line); color: var(--text);
   border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; outline: none;
@@ -179,6 +184,9 @@ table.data tr:hover td { background: var(--panel-2); }
   justify-content: space-between; align-items: flex-start; pointer-events: none; }
 .hud-box { background: rgba(0,0,0,.42); backdrop-filter: blur(4px); border: 1px solid var(--line);
   border-radius: var(--radius-sm); padding: 8px 12px; pointer-events: auto; }
+.play-avatar { width: 52px; height: 60px; flex: none; background: rgba(0,0,0,.42);
+  backdrop-filter: blur(4px); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 2px; pointer-events: auto; }
 .killfeed { position: absolute; right: 16px; top: 70px; display: flex; flex-direction: column;
   gap: 6px; align-items: flex-end; pointer-events: none; }
 .kill { padding: 5px 11px; border-radius: 8px; font-size: 13px; font-weight: 600;

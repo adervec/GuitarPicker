@@ -1,8 +1,10 @@
-import { el, pageHead, stat, tag, progressBar } from "../ui/components.js";
+import { el, pageHead, stat, tag, progressBar, getVar, toast } from "../ui/components.js";
 import { Store } from "../state.js";
 import { allSongs } from "../music/catalog.js";
 import { INSTRUMENTS } from "../music/notes.js";
 import { fmtTime } from "../ui/components.js";
+import { dailyActivities, todayKey } from "../music/daily.js";
+import { composeAvatar, composeGuitar, avatarLoadout, guitarLoadout } from "../cosmetics/index.js";
 
 export default function home(ctx) {
   const { el: root, navigate } = ctx;
@@ -41,6 +43,24 @@ export default function home(ctx) {
     ]),
   ]));
 
+  // today's recommended practice
+  root.appendChild(buildDailyPanel(navigate));
+
+  // your setup (avatar + guitar + app skin)
+  root.appendChild(el("div.panel", { style: { marginBottom: "16px" } }, [
+    el("div.spread", {}, [
+      el("div.row", { style: { alignItems: "center", gap: "18px" } }, [
+        el("div", { style: { width: "92px", height: "108px", flex: "none" }, html: composeAvatar(avatarLoadout(), getVar("--accent")) }),
+        el("div", { style: { width: "66px", height: "150px", flex: "none" }, html: composeGuitar(guitarLoadout(), getVar("--accent")) }),
+        el("div", {}, [
+          el("h3", { text: "Your setup" }),
+          el("div.muted", { text: "Personalise your avatar, guitar, and the app skin." }),
+        ]),
+      ]),
+      el("button.btn.primary", { onclick: () => navigate("#/locker") }, ["🎨 Customize"]),
+    ]),
+  ]));
+
   // stats
   root.appendChild(el("div.grid.cards", { style: { marginBottom: "16px" } }, [
     stat(totalSessions, "Sessions"),
@@ -56,7 +76,7 @@ export default function home(ctx) {
     el("div.card", { onclick: () => navigate(`#/play/${s.id}`) }, [
       el("div.title", { text: s.title }),
       el("div.sub", { text: `${s.artist} · ${INSTRUMENTS[s.instrument]?.name || s.instrument}` }),
-      el("div", {}, [tag(s.difficulty, s.difficulty)]),
+      el("div.row", { style: { gap: "6px", flexWrap: "wrap" } }, [tag(s.difficulty, s.difficulty), s.genre ? tag(s.genre) : null]),
     ])
   )));
 
@@ -66,7 +86,63 @@ export default function home(ctx) {
     el("ul.muted", {}, [
       el("li", { html: "Open <b>Settings</b> to pick your microphone & output device, and choose a theme." }),
       el("li", { html: "Use the <b>Tuner</b> before playing — GuitarPicker tells you when a string is out of tune." }),
-      el("li", { html: "In a song, the <b>healthbar</b> dips on bad notes but you can keep playing to the end." }),
+      el("li", { html: "Build a character and pick an app skin in the <b>Locker</b>." }),
     ]),
   ]));
+}
+
+// Date-seeded daily practice checklist with per-day completion tracking.
+// Each activity pays a few coins the first time it's checked off today, with a
+// bonus when the whole list is finished. `reward` records what's been paid so
+// re-checking can't farm coins.
+const DAILY_COIN = 12, DAILY_BONUS = 40;
+function buildDailyPanel(navigate) {
+  const today = todayKey();
+  const acts = dailyActivities(today);
+  const saved = Store.settings().daily;
+  const fresh = saved && saved.date === today;
+  const done = new Set(fresh ? (saved.done || []) : []);
+  const rewarded = new Set(fresh ? (saved.rewarded || []) : []);
+  let bonusPaid = fresh ? !!saved.bonusPaid : false;
+
+  const counter = el("span.muted");
+  const bar = progressBar(0);
+  const list = el("div.col", { style: { gap: "10px", marginTop: "12px" } });
+
+  function persist() { Store.setSetting("daily", { date: today, done: [...done], rewarded: [...rewarded], bonusPaid }); }
+  function refresh() {
+    counter.textContent = `${done.size} / ${acts.length} done`;
+    if (bar.firstChild) bar.firstChild.style.width = (acts.length ? done.size / acts.length : 0) * 100 + "%";
+  }
+  function toggle(a, paint) {
+    if (done.has(a.id)) { done.delete(a.id); }
+    else {
+      done.add(a.id);
+      if (!rewarded.has(a.id)) { rewarded.add(a.id); Store.addCoins(DAILY_COIN); toast(`+${DAILY_COIN} 🪙 — ${a.title}`, "good"); }
+      if (done.size === acts.length && !bonusPaid) { bonusPaid = true; Store.addCoins(DAILY_BONUS); toast(`Daily complete! +${DAILY_BONUS} 🪙 bonus`, "good"); }
+    }
+    persist(); paint(); refresh();
+  }
+
+  for (const a of acts) {
+    const check = el("button.btn");
+    const paint = () => { check.textContent = done.has(a.id) ? "✓ Done" : `Mark done +${DAILY_COIN}🪙`; check.classList.toggle("primary", done.has(a.id)); };
+    check.addEventListener("click", () => toggle(a, paint));
+    paint();
+    list.appendChild(el("div.row", { style: { alignItems: "center", gap: "12px" } }, [
+      el("div", { style: { flex: "1", minWidth: "180px" } }, [
+        el("div", { html: `${a.icon} <b>${a.title}</b>` }),
+        el("div.muted", { style: { fontSize: "12px" }, text: a.desc }),
+      ]),
+      el("button.btn.primary", { onclick: () => navigate(a.hash) }, ["Go"]),
+      check,
+    ]));
+  }
+  refresh();
+
+  return el("div.panel", { style: { marginBottom: "16px" } }, [
+    el("div.spread", {}, [el("h2", { text: "🗓️ Today's Practice" }),
+      el("span.muted", {}, [counter, el("span", { html: ` · complete all for +${DAILY_BONUS} 🪙` })])]),
+    bar, list,
+  ]);
 }

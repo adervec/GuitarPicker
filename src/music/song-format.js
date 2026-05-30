@@ -18,6 +18,9 @@ export function newSong(partial = {}) {
     bpm: partial.bpm || 90,
     capo: partial.capo || 0,
     difficulty: partial.difficulty || "beginner",
+    genre: partial.genre || "Unknown",
+    mood: partial.mood || "",
+    tags: partial.tags || [],
     background: partial.background || { type: "solid", value: "" },
     audio: partial.audio || { backing: null, vocal: null },
     lyrics: partial.lyrics || [],
@@ -76,4 +79,55 @@ export function parseMelody(bpm, str, { string = null } = {}) {
     t += dur;
   }
   return notes;
+}
+
+// ---- metadata ("analysis") -------------------------------------------------
+
+export const GENRES = [
+  "Classical", "Folk", "Blues", "Rock", "Pop", "Jazz", "Country",
+  "Holiday", "Children's", "Hymn/Gospel", "Funk/Soul", "World", "Electronic", "Unknown",
+];
+
+// Lightweight metadata analysis: infer a genre + mood when a song lacks them,
+// from title keywords, instrument and tempo. Not musicology — a useful default
+// so every song in the library carries metadata.
+export function analyzeSong(song) {
+  const title = (song.title || "").toLowerCase();
+  const inst = song.instrument || "acoustic-guitar";
+  const bpm = song.bpm || 90;
+  const keyword = [
+    ["blues", "Blues"], ["boogie", "Blues"], ["jazz", "Jazz"], ["swing", "Jazz"], ["rag", "Jazz"],
+    ["waltz", "Classical"], ["sonata", "Classical"], ["symphony", "Classical"], ["nocturne", "Classical"],
+    ["minuet", "Classical"], ["prelude", "Classical"], ["fugue", "Classical"], ["canon", "Classical"], ["ode", "Classical"],
+    ["carol", "Holiday"], ["christmas", "Holiday"], ["jingle", "Holiday"], ["noel", "Holiday"],
+    ["grace", "Hymn/Gospel"], ["holy", "Hymn/Gospel"], ["saints", "Hymn/Gospel"], ["hymn", "Hymn/Gospel"],
+    ["twinkle", "Children's"], ["lamb", "Children's"], ["abc", "Children's"], ["nursery", "Children's"], ["birthday", "Children's"],
+    ["greensleeves", "Folk"], ["scarborough", "Folk"], ["shanty", "Folk"], ["ballad", "Folk"], ["danny", "Folk"],
+    ["auld", "Folk"], ["rising", "Folk"], ["lang syne", "Folk"],
+    ["pop", "Pop"], ["progression", "Pop"], ["trainer", "Pop"], ["chord", "Pop"],
+    ["country", "Country"], ["honky", "Country"],
+  ];
+  let genre = null;
+  for (const [k, g] of keyword) if (title.includes(k)) { genre = g; break; }
+  if (!genre) {
+    if (inst === "electric-guitar") genre = bpm >= 120 ? "Rock" : "Blues";
+    else if (inst === "bass") genre = "Funk/Soul";
+    else if (inst === "piano") genre = "Classical";
+    else if (inst === "violin" || inst === "mandolin") genre = "Folk";
+    else genre = bpm <= 80 ? "Folk" : "Pop";
+  }
+  const mood = bpm >= 130 ? "Energetic" : bpm >= 100 ? "Upbeat" : bpm <= 70 ? "Mellow" : "Bright";
+  return { genre, mood };
+}
+
+// Fill missing genre/mood/tags on a song (in place) and return it.
+export function ensureMetadata(song) {
+  if (!song) return song;
+  if (!song.genre || song.genre === "Unknown" || !song.mood) {
+    const a = analyzeSong(song);
+    if (!song.genre || song.genre === "Unknown") song.genre = a.genre;
+    if (!song.mood) song.mood = a.mood;
+  }
+  if (!Array.isArray(song.tags)) song.tags = [];
+  return song;
 }

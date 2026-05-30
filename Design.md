@@ -53,6 +53,7 @@ src/
     player.js         Backing/vocal track playback w/ independent gains
     synth.js          Simple oscillator for note preview / metronome
   music/
+    daily.js          Date-seeded "Today's Practice" activity generator
     notes.js          MIDI<->freq<->name, scales, key signatures, instrument tunings, fretboard
     theory.js         Chords, intervals, capo math, transposition
     song-format.js    Song JSON schema, validate, serialize, parse, compact notation
@@ -72,6 +73,14 @@ src/
     minigames.js      Theory quiz minigames
     history.js        Session history + improvement trending charts
     settings.js       I/O devices, theme selection, instrument defaults
+    locker.js         Avatar / guitar / app-skin customisation ("Locker")
+  cosmetics/
+    parts.js          Shared palettes, rarities, SVG string helpers
+    avatars.js        Player avatar parts + composeAvatar()
+    guitars.js        Guitar avatar parts + composeGuitar()
+    skins.js          App skin (theme) catalogue — single source of truth
+    economy.js        Coin prices by rarity + unlock-key helpers
+    index.js          Cosmetics registry + loadout/economy helpers
   ui/
     components.js     Small shared render helpers (el builder, sliders, charts, toasts)
     backgrounds.js    Canvas song backgrounds (solid / animated / slideshow)
@@ -91,6 +100,7 @@ dom-smoke.mjs         Verification: all views render against a DOM shim
   "id": "uuid", "title": "...", "artist": "...",
   "instrument": "acoustic-guitar", "key": "C", "bpm": 90, "capo": 0,
   "difficulty": "beginner|intermediate|advanced",
+  "genre": "Folk", "mood": "Mellow", "tags": [],
   "background": { "type": "solid|animated|slideshow", "value": "#101..." | "aurora" | [dataURLs] },
   "audio": { "backing": null|dataURL, "vocal": null|dataURL },
   "lyrics": [ { "time": 0.0, "text": "..." } ],
@@ -102,6 +112,21 @@ A note's `midi` is an array so chords are first-class. `string`/`fret` optional 
 
 **History event**: `{ ts, songId, instrument, score, accuracy, maxStreak, passed, durationSec, notes:{perfect,good,off,miss} }`
 **Progress**: per-instrument xp/level + per-course/drill completion, derived + cached.
+
+**Cosmetics** (in `settings`): `avatar` and `guitar` are loadout objects (one id per
+category) composed to SVG on demand by `cosmetics/`; `theme` is the app-skin id. `daily`
+holds the date-stamped completion (+ coin-reward bookkeeping) of the home "Today's
+Practice" checklist.
+
+**Economy** (top-level state): `coins` (number) and `unlocks` (map of unlocked cosmetic
+keys). Coins are awarded in `addHistory` (accuracy/5 + 15 pass bonus, recorded on the
+history entry as `coins`) and by daily activities. Items above Common rarity are priced by
+`cosmetics/economy.js` (`PRICES`) and unlocked via `Store.spendCoins` + `Store.unlock`;
+Common items and all colours are free. The top-bar coin chip stays in sync via store events.
+
+**Song metadata**: every song carries `genre`, `mood` and `tags`. Songs without them are
+filled by `analyzeSong()` (title / instrument / tempo heuristic) via `ensureMetadata()`,
+applied in the catalog so the whole library is searchable and filterable by genre.
 
 ## Grading model (gameplay)
 For each note window the detected pitch is compared to the expected MIDI(s):
@@ -128,6 +153,12 @@ play continues. Killfeed shows the last several note judgments with note name + 
 - [x] Glossary / music dictionary
 - [x] Theory minigames
 - [x] History views + improvement trending charts
+- [x] Locker: layered SVG player avatars, customisable guitar avatars, and 20 app skins
+- [x] Coin economy: earn by playing + daily activities, rarity-priced cosmetic unlocks
+- [x] Player avatar shown in the play HUD; coins-earned shown in the finish banner
+- [x] Recommended daily activities (date-seeded) on the home dashboard, with coin rewards
+- [x] Song metadata (genre/mood) on every song + genre filter in the library
+- [x] Singalong lyrics: 11 built-in lyric tracks + karaoke current/next line in the play view
 - [ ] Polyphonic chord transcription (approximation only — documented limitation)
 - [ ] Bundled audio assets for backing tracks (user-imported only by default)
 
@@ -148,3 +179,15 @@ play continues. Killfeed shows the last several note judgments with note name + 
   25 core checks pass (incl. pitch detector vs. synthesized tones), import graph clean,
   all 12 view mounts render + tear down without error. Both servers verified to serve
   ES modules with correct MIME types.
+- Added the **Locker** cosmetics system (`src/cosmetics/`: parts, avatars, guitars, skins,
+  registry) and the `locker` view. Players compose from layered SVG (skin tone, expression,
+  hair, facial hair, clothing, tattoos, eyewear, headwear, jewellery, frame); guitars from
+  body shape, colour, finish, pickguard, hardware, inlays and decals. Added 14 app skins
+  (20 total) from a single `skins.js` list used by the top-bar picker, Settings and the
+  Locker. Loadouts persist in `settings.avatar` / `settings.guitar`.
+- Added recommended **daily activities** (`src/music/daily.js`): a date-seeded checklist on
+  Home with per-day completion tracking (`settings.daily`).
+- Added **song metadata** — `genre`/`mood`/`tags` on the song format, `analyzeSong()` +
+  `ensureMetadata()` so every song is tagged, a genre field in the editor, and a genre
+  filter + tags in the library. Lyrics now render karaoke-style (current + next line) for
+  singalong, with a 🎤 indicator and genre in the play HUD. dom-smoke now mounts 13 views.

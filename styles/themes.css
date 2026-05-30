@@ -72,3 +72,121 @@
   --accent-2: #00e5ff; --accent-ink: #000000; --good: #00ff85; --warn: #ffb000;
   --bad: #ff3b3b; --highway: #000000; --highway-line: #555;
 }
+
+/* ============================================================
+   Extra app skins (selectable in Settings & the Locker).
+   Each id matches a `skins.js` entry. Keep the variable set in
+   sync with the contract above.
+   ============================================================ */
+
+/* ---- Neon Arcade ---- */
+[data-theme="neon"] {
+  --bg: #08060f; --bg-2: #0d0a18; --panel: #130f22; --panel-2: #1b1530;
+  --line: #34244f; --text: #f4eaff; --muted: #a890d0; --accent: #ff2bd6;
+  --accent-2: #19f0ff; --accent-ink: #15001a; --good: #25f4a0; --warn: #ffd23f;
+  --bad: #ff3b6b; --highway: #07050d; --highway-line: #271a3d;
+}
+
+/* ---- Synthwave ---- */
+[data-theme="synthwave"] {
+  --bg: #1a0b2e; --bg-2: #211038; --panel: #281542; --panel-2: #341a52;
+  --line: #4a2a6b; --text: #ffe9f5; --muted: #c79fd6; --accent: #ff5f9e;
+  --accent-2: #ffb14e; --accent-ink: #2a0820; --good: #4be6c0; --warn: #ffcf5c;
+  --bad: #ff5d80; --highway: #150a26; --highway-line: #3a2057;
+}
+
+/* ---- Vaporwave ---- */
+[data-theme="vaporwave"] {
+  --bg: #1f1633; --bg-2: #271c40; --panel: #2e2249; --panel-2: #392b58;
+  --line: #50406f; --text: #fdeaff; --muted: #c2a9d6; --accent: #f59ecb;
+  --accent-2: #7ef0e0; --accent-ink: #2a1430; --good: #7ef0c0; --warn: #ffd98a;
+  --bad: #ff8fa3; --highway: #1a1230; --highway-line: #3f3060;
+}
+
+/* ---- Deep Ocean ---- */
+[data-theme="ocean"] {
+  --bg: #04161d; --bg-2: #061f29; --panel: #082833; --panel-2: #0c3340;
+  --line: #15505f; --text: #e2f6fb; --muted: #88b6c2; --accent: #22c1c9;
+  --accent-2: #4aa3ff; --accent-ink: #02161a; --good: #2bd6a0; --warn: #ffc457;
+  --bad: #ff6b7d; --highway: #03121a; --highway-line: #103b48;
+}
+
+/* ---- Arctic ---- */
+[data-theme="arctic"] {
+  --bg: #0c1822; --bg-2: #11212e; --panel: #162a3a; --panel-2: #1d3548;
+  --line: #2c4961; --text: #eaf6ff; --muted: #9cc0d6; --accent: #7fd6ff;
+  --accent-2: #cfe9ff; --accent-ink: #04141f; --good: #6fe6c0; --warn: #ffd27a;
+  --bad: #ff7d8f; --highway: #0a1620; --highway-line: #21384c;
+}
+
+/* ---- Ember ---- */
+[data-theme="ember"] {
+  --bg: #160a08; --bg-2: #1f0e0a; --panel: #28130d; --panel-2: #361a12;
+  --line: #50281c; --text: #ffeede; --muted: #cfa593; --accent: #ff6a3d;
+  --accent-2: #ffc24b; --accent-ink: #220a04; --good: #43d68b; --warn: #ffb454;
+  --bad: #ff4d4d; --highway: #120806; --highway-line: #381e16;
+}
+
+/* ---- Crimson ---- */
+[data-theme="crimson"] {
+  --bg: #160608; --bg-2: #1f090b; --panel: #280c0f; --panel-2: #371115;
+  --line: #50202a; --text: #ffe8ec; --muted: #d09aa3; --accent: #ff4757;
+  --accent-2: #ffb454; --accent-ink: #220406; --good: #3fd68b; --warn: #ffc24b;
+  --bad: #ff5d6c; --highway: #120507; --highway-line: #38161d;
+}
+
+/* ---- Royal ---- */
+[data-theme="royal"] {
+  --bg: #0f0a1f; --bg-2: #15102b; --panel: #1c1638; --panel-2: #261d4a;
+  --line: #3c2f63; --text: #efe9ff; --muted: #b0a0d6; --accent: #9b6bff;
+  --accent-2: #e7c25a; --accent-ink: #100726; --good: #4be6a0; --warn: #ffd267;
+  --bad: #ff6b8a; --highway: #0c081a; --highway-line: #2c2150;
+}
+
+/* ---- Black Gold ---- */
+[data-theme="gold"] {
+  --bg: #0c0b07; --bg-2: #13110a; --panel: #1a170d; --panel-2: #242012;
+  --line: #463d1f; --text: #fbf3df; --muted: #c2b48a; --accent: #e7b53a;
+  --accent-2: #f6e27a; --accent-ink: #1a1400; --good: #5fd68b; --warn: #ffce4b;
+  --bad: #ff6b6b; --highway: #0a0905; --highway-line: #322c18;
+}
+
+/* ---- Mahogany ---- */
+[data-theme="mahogany"] {
+  --bg: #1b100b; --bg-2: #23150e; --panel: #2c1a11; --panel-2: #3a2417;
+  --line: #56381f; --text: #f6e6d6; --muted: #c2a288; --accent: #c87f43;
+  --accent-2: #e0b06a; --accent-ink: #1f0f06; --good: #6fc28b; --warn: #e3a64b;
+  --bad: #e0685a; --highway: #150c08; --highway-line: #3c2718;
+}
+
+/* ---- Bubblegum ---- */
+[data-theme="bubblegum"] {
+  --bg: #241320; --bg-2: #2e1829; --panel: #381e32; --panel-2: #46273f;
+  --line: #5e3a55; --text: #ffeaf6; --muted: #d0a6c2; --accent: #ff7ec0;
+  --accent-2: #5fe0c0; --accent-ink: #2a0c20; --good: #5fe0b0; --warn: #ffce6a;
+  --bad: #ff6f91; --highway: #1f1019; --highway-line: #482b40;
+}
+
+/* ---- Terminal ---- */
+[data-theme="terminal"] {
+  --bg: #020a02; --bg-2: #041004; --panel: #061806; --panel-2: #0a220a;
+  --line: #154d15; --text: #c6ffce; --muted: #6fb87a; --accent: #33ff66;
+  --accent-2: #9dff7a; --accent-ink: #021004; --good: #33ff66; --warn: #d6ff4b;
+  --bad: #ff5d5d; --highway: #010801; --highway-line: #103a12;
+}
+
+/* ---- Mono Ink ---- */
+[data-theme="mono"] {
+  --bg: #101012; --bg-2: #16161a; --panel: #1d1d22; --panel-2: #26262c;
+  --line: #3a3a42; --text: #ededf2; --muted: #9a9aa2; --accent: #d8d8de;
+  --accent-2: #9a9aa2; --accent-ink: #16161a; --good: #8fd6a0; --warn: #e0c87a;
+  --bad: #e08a8a; --highway: #0d0d10; --highway-line: #2a2a30;
+}
+
+/* ---- Blue Slate ---- */
+[data-theme="slate"] {
+  --bg: #10151d; --bg-2: #151b26; --panel: #1b2330; --panel-2: #232d3e;
+  --line: #354459; --text: #e8eef7; --muted: #97a6bd; --accent: #5e9bd6;
+  --accent-2: #e0a85a; --accent-ink: #08111c; --good: #4fd18b; --warn: #ffc457;
+  --bad: #ff6b7d; --highway: #0c121a; --highway-line: #283446;
+}

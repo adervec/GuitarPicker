@@ -2,8 +2,7 @@ import { el, pageHead, select, slider, toast, download } from "../ui/components.
 import { Store } from "../state.js";
 import { Audio } from "../audio/engine.js";
 import { INSTRUMENTS } from "../music/notes.js";
-
-const THEMES = ["midnight", "dark", "light", "sunset", "forest", "contrast"];
+import { SKINS } from "../cosmetics/skins.js";
 
 export default async function settings(ctx) {
   const { el: root } = ctx;
@@ -74,12 +73,17 @@ export default async function settings(ctx) {
   root.appendChild(apr);
   apr.append(
     el("div.grid", { style: { gridTemplateColumns: "1fr 1fr" } }, [
-      select({ label: "Theme", value: s.theme, options: THEMES.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) })),
+      select({ label: "Theme (app skin)", value: s.theme, options: SKINS.map((sk) => ({ value: sk.id, label: sk.name })),
         onchange: (v) => { Store.setSetting("theme", v); document.documentElement.setAttribute("data-theme", v);
-          document.getElementById("theme-quick").value = v; } }),
+          const q = document.getElementById("theme-quick"); if (q) q.value = v; } }),
       select({ label: "Default instrument", value: s.instrument,
         options: Object.entries(INSTRUMENTS).map(([id, i]) => ({ value: id, label: i.name })),
         onchange: (v) => Store.setSetting("instrument", v) }),
+    ]),
+    el("p.muted", { style: { margin: "12px 0 0", fontSize: "13px" },
+      html: "Customise your <b>player avatar</b>, <b>guitar</b>, and more app skins in the Locker." }),
+    el("div.row", { style: { marginTop: "8px" } }, [
+      el("button.btn", { onclick: () => { location.hash = "#/locker"; } }, ["🎨 Open Locker"]),
     ]),
   );
 

@@ -9,6 +9,7 @@ import { songDuration } from "../music/song-format.js";
 import { freqToMidiFloat, midiToName, INSTRUMENTS } from "../music/notes.js";
 import { suggestCapo, describeMidiSet } from "../music/theory.js";
 import { drawBackground } from "../ui/backgrounds.js";
+import { renderAvatar } from "../cosmetics/index.js";
 
 const LEAD_IN = 3.0;          // count-in seconds before notes start
 const HIT_PAD = 0.16;         // detection window pad around a note
@@ -47,14 +48,18 @@ export default async function play(ctx) {
     el("div", { html: `<b>${song.title}</b>` }),
     el("div.muted", { style: { fontSize: "12px" }, html:
       `${song.artist} · key ${song.key} · ${song.bpm} BPM` + (capo ? ` · <span class="capo-note" style="padding:2px 8px">🔼 Capo ${capo}</span>` : "") }),
+    (song.lyrics && song.lyrics.length)
+      ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" }, text: `🎤 Singalong${song.genre ? " · " + song.genre : ""}` })
+      : (song.genre ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" }, text: song.genre }) : null),
   ]);
   const healthWrap = el("div.healthbar-big", {}, [el("i", { style: { width: "100%" } })]);
   const killfeed = el("div.killfeed");
   const lyric = el("div.lyric-line");
   const banner = el("div.banner.hidden");
 
+  const avatarBadge = el("div.play-avatar", { html: renderAvatar() });
   const hud = el("div.play-hud", {}, [
-    songBox,
+    el("div.row", { style: { gap: "10px", alignItems: "flex-start" } }, [avatarBadge, songBox]),
     el("div.col", { style: { alignItems: "flex-end", gap: "8px" } }, [scoreBox, healthWrap]),
   ]);
   overlay.append(hud, killfeed, lyric, el("div.play-bottom-fade"), banner);
@@ -324,10 +329,14 @@ export default async function play(ctx) {
   // lyrics
   const lyrics = (song.lyrics || []).slice().sort((a, b) => a.time - b.time);
   function updateLyric(t) {
-    if (!lyrics.length) { lyric.textContent = ""; return; }
-    let cur = "";
-    for (const l of lyrics) { if (t >= l.time) cur = l.text; else break; }
-    lyric.textContent = cur;
+    if (!lyrics.length) { lyric.innerHTML = ""; return; }
+    let idx = -1;
+    for (let i = 0; i < lyrics.length; i++) { if (t >= lyrics[i].time) idx = i; else break; }
+    const cur = idx >= 0 ? lyrics[idx].text : "";
+    const next = lyrics[idx + 1] ? lyrics[idx + 1].text : "";
+    lyric.innerHTML =
+      `<div style="font-size:26px;line-height:1.2">${esc(cur)}</div>` +
+      (next ? `<div style="font-size:15px;opacity:.55;margin-top:2px">${esc(next)}</div>` : "");
   }
 
   function updateHud() {
@@ -356,14 +365,16 @@ export default async function play(ctx) {
       notes: { ...counts },
     };
     Store.addHistory(entry);
-    showBanner(grade, acc, passed);
+    showBanner(grade, acc, passed, entry.coins || 0);
   }
 
-  function showBanner(grade, acc, passed) {
+  function showBanner(grade, acc, passed, coinsEarned) {
     banner.innerHTML = "";
     banner.appendChild(el("div.panel", {}, [
       el("div.big-grade", { text: grade, style: { color: passed ? getVar("--good") : getVar("--bad") } }),
       el("h2", { text: passed ? "Song complete — passed!" : (failed ? "Finished (failed — healthbar emptied)" : "Finished") }),
+      coinsEarned ? el("div", { style: { fontSize: "16px", fontWeight: "700", color: "var(--warn)", margin: "2px 0 6px" },
+        html: `🪙 +${coinsEarned} coins earned · <span class="muted" style="font-weight:400">spend them in the Locker</span>` }) : null,
       el("div.grid.cards", { style: { margin: "14px 0" } }, [
         miniStat(acc + "%", "Accuracy"), miniStat(score, "Score"), miniStat(maxStreak, "Best streak"),
         miniStat(counts.perfect, "Perfect"), miniStat(counts.miss, "Missed"),
@@ -372,6 +383,7 @@ export default async function play(ctx) {
         el("button.btn.primary", { onclick: restart }, ["⟲ Play again"]),
         el("button.btn", { onclick: () => navigate("#/library") }, ["← Songs"]),
         el("button.btn", { onclick: () => navigate("#/history") }, ["📈 Progress"]),
+        coinsEarned ? el("button.btn", { onclick: () => navigate("#/locker") }, ["🎨 Locker"]) : null,
       ]),
     ]));
     banner.classList.remove("hidden");
@@ -388,6 +400,7 @@ export default async function play(ctx) {
 }
 
 // ---------- helpers ----------
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 function wrapNarrow(node) { node.style.minWidth = "150px"; return node; }
 function miniStat(num, label) {
   return el("div.stat", {}, [el("div.num", { text: String(num) }), el("div.lbl", { text: label })]);

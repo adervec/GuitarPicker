@@ -2,8 +2,7 @@
 import { Store } from "./state.js";
 import { el, clear } from "./ui/components.js";
 import { Audio } from "./audio/engine.js";
-
-const THEMES = ["midnight", "dark", "light", "sunset", "forest", "contrast"];
+import { SKINS } from "./cosmetics/skins.js";
 
 const NAV = [
   { sep: "Play" },
@@ -18,6 +17,8 @@ const NAV = [
   { route: "minigames", icon: "🎮", label: "Theory Games" },
   { route: "glossary", icon: "📖", label: "Glossary" },
   { route: "history", icon: "📈", label: "Progress" },
+  { sep: "You" },
+  { route: "locker", icon: "🧑", label: "Locker" },
   { sep: "System" },
   { route: "settings", icon: "⚙️", label: "Settings" },
 ];
@@ -33,6 +34,7 @@ const VIEWS = {
   minigames: () => import("./views/minigames.js"),
   glossary: () => import("./views/glossary.js"),
   history: () => import("./views/history.js"),
+  locker: () => import("./views/locker.js"),
   settings: () => import("./views/settings.js"),
 };
 
@@ -65,7 +67,7 @@ function setActiveNav(route) {
 function buildThemePicker() {
   const sel = document.getElementById("theme-quick");
   clear(sel);
-  for (const t of THEMES) sel.appendChild(el("option", { value: t, text: t[0].toUpperCase() + t.slice(1) }));
+  for (const sk of SKINS) sel.appendChild(el("option", { value: sk.id, text: sk.name }));
   sel.value = Store.settings().theme;
   sel.addEventListener("change", () => { Store.setSetting("theme", sel.value); applyTheme(sel.value); });
 }
@@ -113,11 +115,19 @@ function refreshIO() {
 }
 Audio.onChange(refreshIO);
 
+// ---- coin counter (top bar) ----
+function refreshCoins() {
+  const chip = document.getElementById("coin-chip");
+  if (chip) chip.innerHTML = `🪙 <b>${Store.coins().toLocaleString()}</b>`;
+}
+Store.on((e) => { if (e.type === "coins" || e.type === "history" || e.type === "unlocks") refreshCoins(); });
+
 // crumb helper available to views via title attribute on #crumb
 const crumbTitles = {
   home: "Home", library: "Songs", play: "Now Playing", tuner: "Tuner",
   editor: "Song Editor", listen: "Listen & Make", training: "Training",
-  minigames: "Theory Games", glossary: "Glossary", history: "Progress", settings: "Settings",
+  minigames: "Theory Games", glossary: "Glossary", history: "Progress",
+  locker: "Locker", settings: "Settings",
 };
 function refreshCrumb() {
   const { route } = parseHash();
@@ -129,6 +139,7 @@ function init() {
   buildNav();
   buildThemePicker();
   refreshIO();
+  refreshCoins();
   window.addEventListener("hashchange", () => { refreshCrumb(); router(); });
   if (!location.hash) location.hash = "#/home";
   refreshCrumb();

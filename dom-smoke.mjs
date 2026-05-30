@@ -122,6 +122,7 @@ const views = [
   ["home", []], ["library", []], ["tuner", []], ["settings", []],
   ["editor", []], ["editor(copy)", [songId], "editor"], ["listen", []],
   ["training", []], ["minigames", []], ["glossary", []], ["history", []],
+  ["locker", []],
   ["play", [songId], "play"],
 ];
 
