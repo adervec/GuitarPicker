@@ -95,7 +95,9 @@ export const Store = {
     const coinGain = Math.round((entry.accuracy || 0) / 5) + (entry.passed ? 15 : 0);
     state.coins = (state.coins || 0) + coinGain;
     entry.coins = coinGain;
-    // playing counts toward today's practice streak
+    // a completed run — pass OR fail — counts toward today's practice streak
+    // (a noble failed attempt still counts; the streak can only be earned by
+    //  actually playing, never by ticking daily-activity boxes)
     this.recordPracticeDay(new Date(entry.ts || Date.now()).toISOString().slice(0, 10));
     persist();
     this.emit({ type: "history", entry });

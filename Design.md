@@ -120,10 +120,12 @@ Practice" checklist.
 
 **Daily streak** (`settings.streak` = `{count,best,lastDay}`): `Store.recordPracticeDay(day)`
 bumps the run when called on a new day, continuing it only if the prior day was exactly one
-before (else resets to 1); `best` is preserved. Called from `addHistory` (playing) and from
-checking off a daily activity. `daily.js#streakStatus()` interprets it for display — the run
-counts as alive only if `lastDay` is today or yesterday, otherwise it shows 0 with `best`
-kept. Shown as a 🔥 chip on the Home "Today's Practice" panel.
+before (else resets to 1); `best` is preserved. Called **only** from `addHistory` — i.e.
+completing a song run, pass *or* fail (a noble failed attempt still counts). Checking off a
+daily activity awards coins but deliberately does **not** advance the streak, so it can't be
+gamed by ticking boxes. `daily.js#streakStatus()` interprets it for display — the run counts
+as alive only if `lastDay` is today or yesterday, otherwise it shows 0 with `best` kept.
+Shown as a 🔥 chip on the Home "Today's Practice" panel.
 
 **Economy** (top-level state): `coins` (number) and `unlocks` (map of unlocked cosmetic
 keys). Coins are awarded in `addHistory` (accuracy/5 + 15 pass bonus, recorded on the

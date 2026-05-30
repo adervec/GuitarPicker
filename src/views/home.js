@@ -117,7 +117,7 @@ function buildDailyPanel(navigate) {
       : "🔥 Start your streak today!";
     streakChip.title = ss.practicedToday
       ? "Practiced today — streak secured! Come back tomorrow to extend it."
-      : "Play a song or check off an activity today to keep your streak alive.";
+      : "Play a song today — even a failed run counts — to keep your streak alive. Ticking activities doesn't.";
     streakChip.classList.toggle("cold", ss.count === 0);
   }
 
@@ -131,7 +131,8 @@ function buildDailyPanel(navigate) {
     if (done.has(a.id)) { done.delete(a.id); }
     else {
       done.add(a.id);
-      Store.recordPracticeDay(today);   // any completed activity keeps the streak alive
+      // NB: ticking an activity gives coins but does NOT touch the streak — only
+      // actually playing a song does (Store.addHistory). Keeps it un-gameable.
       if (!rewarded.has(a.id)) { rewarded.add(a.id); Store.addCoins(DAILY_COIN); toast(`+${DAILY_COIN} 🪙 — ${a.title}`, "good"); }
       if (done.size === acts.length && !bonusPaid) { bonusPaid = true; Store.addCoins(DAILY_BONUS); toast(`Daily complete! +${DAILY_BONUS} 🪙 bonus`, "good"); }
     }
