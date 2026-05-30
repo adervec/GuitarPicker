@@ -1,6 +1,7 @@
-import { el, pageHead, stat, select, lineChart, getVar, fmtTime, clear } from "../ui/components.js";
+import { el, pageHead, stat, select, lineChart, getVar, fmtTime, clear, progressBar } from "../ui/components.js";
 import { Store } from "../state.js";
 import { INSTRUMENTS } from "../music/notes.js";
+import { collectionStats, RARITIES } from "../cosmetics/index.js";
 
 export default function history(ctx) {
   const { el: root, navigate } = ctx;
@@ -15,6 +16,7 @@ export default function history(ctx) {
       el("p.muted", { text: "Play a song or a drill and your results will trend here." }),
       el("button.btn.primary", { onclick: () => navigate("#/library") }, ["Browse songs"]),
     ]));
+    root.appendChild(buildCollectionPanel(navigate));
     return;
   }
 
@@ -28,6 +30,9 @@ export default function history(ctx) {
   root.appendChild(el("div.panel.tight", { style: { marginBottom: "16px" } }, [
     el("div.row", {}, [instSel, viewSel]),
   ]));
+
+  // cosmetics collection progress (independent of the session filters)
+  root.appendChild(buildCollectionPanel(navigate));
 
   const summary = el("div.grid.cards", { style: { marginBottom: "16px" } });
   root.appendChild(summary);
@@ -68,12 +73,14 @@ export default function history(ctx) {
     const totalTime = rows.reduce((a, h) => a + (h.durationSec || 0), 0);
     const best = rows.reduce((a, h) => Math.max(a, h.maxStreak || 0), 0);
     const passes = rows.filter((h) => h.passed).length;
+    const coinsThis = rows.reduce((a, h) => a + (h.coins || 0), 0);
     summary.append(
       stat(rows.length, "Sessions"),
       stat(avgAcc + "%", "Avg accuracy"),
       stat(passes, "Passes"),
       stat(best, "Best streak"),
       stat(fmtTime(totalTime), "Time played"),
+      stat("🪙 " + coinsThis, "Coins earned"),
     );
 
     // charts (chronological)
@@ -115,4 +122,37 @@ export default function history(ctx) {
   const onResize = () => renderAll();
   window.addEventListener("resize", onResize);
   return () => window.removeEventListener("resize", onResize);
+}
+
+// Cosmetics collection summary: coin balance, overall completion bar, and a
+// per-rarity breakdown. Links to the Locker to spend coins.
+function buildCollectionPanel(navigate) {
+  const cs = collectionStats();
+  const frac = cs.total ? cs.owned / cs.total : 0;
+  const tiers = Object.values(RARITIES).filter((r) => r.id !== "common").sort((a, b) => a.order - b.order);
+
+  const chips = el("div.row", { style: { gap: "8px", flexWrap: "wrap", marginTop: "12px" } });
+  for (const r of tiers) {
+    const b = cs.byRarity[r.id] || { total: 0, owned: 0 };
+    if (!b.total) continue;
+    chips.appendChild(el("span", {
+      style: { fontSize: "12px", padding: "4px 10px", borderRadius: "999px",
+        border: `1px solid ${r.color}`, color: r.color },
+      text: `${r.name} ${b.owned}/${b.total}`,
+    }));
+  }
+
+  return el("div.panel", { style: { marginBottom: "16px" } }, [
+    el("div.spread", {}, [
+      el("h2", { text: "🎨 Collection" }),
+      el("div.row", { style: { gap: "12px", alignItems: "center" } }, [
+        el("span.muted", { html: `🪙 <b style="color:var(--warn)">${cs.coins.toLocaleString()}</b> coins` }),
+        navigate ? el("button.btn", { onclick: () => navigate("#/locker") }, ["Open Locker"]) : null,
+      ]),
+    ]),
+    el("div.muted", { style: { margin: "4px 0 8px", fontSize: "13px" },
+      text: `${cs.owned} of ${cs.total} unlockable items collected (${Math.round(frac * 100)}%)` }),
+    progressBar(frac),
+    chips,
+  ]);
 }
