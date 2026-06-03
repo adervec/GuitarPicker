@@ -6,6 +6,6 @@
   "description": "A Yousician-style music-learning web app: note highway, tuner, song editor, listen-and-transcribe, training, theory games, glossary, and progress trending. No build step.",
   "scripts": {
     "serve": "node serve.mjs",
-    "test": "node check-imports.cjs && node test-core.mjs && node dom-smoke.mjs"
+    "test": "node check-imports.cjs && node test-core.mjs && node test-cosmetics.mjs && node dom-smoke.mjs"
   }
 }
