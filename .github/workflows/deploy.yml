@@ -1,0 +1,67 @@
+name: Deploy to GitHub Pages
+
+# Publish the static site whenever main advances. `workflow_dispatch` lets you
+# re-deploy on demand from the Actions tab.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissions required by the GitHub Pages deployment actions.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two Pages deploys at once; let an in-flight deploy finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Re-run the suite so a red main can never reach production, even via
+  # a manual workflow_dispatch.
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+
+  deploy:
+    name: Build & deploy
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Ship only what the running app needs. index.html loads styles/ and
+      # src/app.js; everything else is reached via relative imports from there.
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp -r src styles _site/
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Best-effort auto-enable. If the token lacks permission, enable
+          # Pages once manually: Settings -> Pages -> Source -> GitHub Actions.
+          enablement: true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
