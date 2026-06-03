@@ -1,5 +1,8 @@
 # 🎸 GuitarPicker
 
+[![CI](https://github.com/adervec/GuitarPicker/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/GuitarPicker/actions/workflows/ci.yml)
+[![Deploy](https://github.com/adervec/GuitarPicker/actions/workflows/deploy.yml/badge.svg)](https://github.com/adervec/GuitarPicker/actions/workflows/deploy.yml)
+
 A Yousician-style music-learning app that runs in your browser — no build step, no
 account, no cloud. Plug in a guitar (or any mic), pick a song, and play along while a
 scrolling note highway grades every note in real time.
