@@ -98,4 +98,23 @@ export default async function settings(ctx) {
       }
     }}, ["Reset everything"]),
   ]));
+
+  // --- About & disclaimers ---
+  const about = el("div.panel", {}, [el("h2", { text: "About & disclaimers" })]);
+  root.appendChild(about);
+  about.append(
+    el("p.muted", { style: { margin: "0 0 8px", fontSize: "13px", lineHeight: "1.5" },
+      html: "<b>GuitarPicker</b> is a free, open-source hobby project, released under the MIT License and provided <b>as is</b>, without warranty of any kind." }),
+    el("p.muted", { style: { margin: "0 0 8px", fontSize: "13px", lineHeight: "1.5" },
+      html: "I'm a software developer — <b>not a doctor, music teacher, coach, or lawyer</b>. Nothing here is professional instruction or medical, hearing, or legal advice. Play at a comfortable volume and protect your hearing. Not affiliated with or endorsed by Yousician or any other company." }),
+    el("p.muted", { style: { margin: "0 0 8px", fontSize: "13px", lineHeight: "1.5" },
+      html: "<b>Privacy:</b> everything runs in your browser. No accounts, no servers, no analytics. Microphone audio is analysed locally and never leaves your device; your data lives only in this browser (export or reset it above)." }),
+    el("p.muted", { style: { margin: "0 0 10px", fontSize: "13px", lineHeight: "1.5" },
+      html: "Built-in songs are traditional / public-domain works and the glossary is original. No third-party code, fonts, images, or audio are bundled." }),
+    el("div.row", {}, [
+      el("a.btn", { href: "https://github.com/adervec/GuitarPicker", target: "_blank", rel: "noopener" }, ["GitHub"]),
+      el("a.btn", { href: "https://github.com/adervec/GuitarPicker/blob/main/LICENSE", target: "_blank", rel: "noopener" }, ["MIT License"]),
+      el("a.btn", { href: "https://github.com/adervec/GuitarPicker/blob/main/CREDITS.md", target: "_blank", rel: "noopener" }, ["Credits"]),
+    ]),
+  );
 }

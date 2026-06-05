@@ -3,8 +3,8 @@
 [![CI](https://github.com/adervec/GuitarPicker/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/GuitarPicker/actions/workflows/ci.yml)
 [![Deploy](https://github.com/adervec/GuitarPicker/actions/workflows/deploy.yml/badge.svg)](https://github.com/adervec/GuitarPicker/actions/workflows/deploy.yml)
 
-A Yousician-style music-learning app that runs in your browser — no build step, no
-account, no cloud. Plug in a guitar (or any mic), pick a song, and play along while a
+An open-source music-learning web app that runs entirely in your browser (in the spirit
+of tools like Yousician) — no build step, no account, no cloud. Plug in a guitar (or any mic), pick a song, and play along while a
 scrolling note highway grades every note in real time.
 
 ## Quick start
@@ -55,5 +55,35 @@ Allow microphone access when prompted (it never leaves your machine).
 ```bash
 npm test    # import graph + core music/pitch math + headless view-render checks
 ```
+
+## License
+
+Source code is released under the **[MIT License](./LICENSE)** — free to use, modify, and
+share. The license covers the code only; the built-in songs are public-domain works (see
+below) and remain in the public domain.
+
+## Disclaimer
+
+I'm a software developer — **not a doctor, music teacher, coach, or lawyer.** GuitarPicker
+is a personal hobby project provided **as is**, without warranty of any kind, for fun and
+practice. It is **not** professional music instruction, and nothing in it is medical,
+health, hearing, or legal advice. Use your own judgement, and protect your hearing when
+playing with audio or headphones. Not affiliated with or endorsed by Yousician or any other
+company.
+
+## Privacy
+
+GuitarPicker runs entirely in your browser. There are **no accounts, no servers, no
+analytics, and no network requests.** Microphone audio is analysed locally for pitch
+detection and **never leaves your device.** Your songs, settings, and progress are stored
+only in this browser's `localStorage` — export or wipe them anytime from **Settings → Data**.
+
+## Credits & content
+
+All built-in songs are **traditional or public-domain** works (or original practice
+progressions), and the glossary text is original. No third-party libraries, fonts, images,
+or audio are bundled. See **[CREDITS.md](./CREDITS.md)** for per-song provenance.
+
+## Architecture
 
 See **[Design.md](./Design.md)** for architecture, the song file format, and known limitations.
