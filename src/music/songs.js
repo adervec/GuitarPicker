@@ -69,14 +69,19 @@ const SONGS = [
       "A4:1 G4:1.5 E4:0.5 E4:1 C4:1 D4:1.5 C4:0.5 D4:1 E4:1 C4:1.5 A3:0.5 A3:1 G3:1 C4:3"),
   }),
   builtin({
-    id: "bi-birthday", title: "Happy Birthday to You", artist: "Trad. (public domain)",
-    key: "C", bpm: 110, difficulty: "beginner",
-    notes: parseMelody(110,
-      "G3:0.5 G3:0.5 A3:1 G3:1 C4:1 B3:2 G3:0.5 G3:0.5 A3:1 G3:1 D4:1 C4:2 " +
-      "G3:0.5 G3:0.5 G4:1 E4:1 C4:1 B3:1 A3:1 F4:0.5 F4:0.5 E4:1 C4:1 D4:1 C4:2"),
+    id: "bi-frere", title: "Frère Jacques", artist: "Trad.",
+    key: "C", bpm: 100, difficulty: "beginner", genre: "Children's",
+    background: { type: "animated", value: "pulse" },
+    notes: parseMelody(100,
+      "C4:1 D4:1 E4:1 C4:1 C4:1 D4:1 E4:1 C4:1 " +
+      "E4:1 F4:1 G4:2 E4:1 F4:1 G4:2 " +
+      "G4:0.5 A4:0.5 G4:0.5 F4:0.5 E4:1 C4:1 G4:0.5 A4:0.5 G4:0.5 F4:0.5 E4:1 C4:1 " +
+      "C4:1 G3:1 C4:2 C4:1 G3:1 C4:2"),
     lyrics: [
-      { time: 0, text: "Happy birthday to you," }, { time: 3.3, text: "Happy birthday to you," },
-      { time: 6.5, text: "Happy birthday dear friend," }, { time: 9.8, text: "Happy birthday to you!" },
+      { time: 0, text: "Are you sleeping, are you sleeping?" },
+      { time: 4.8, text: "Brother John, Brother John?" },
+      { time: 9.6, text: "Morning bells are ringing, morning bells are ringing," },
+      { time: 14.4, text: "Ding ding dong, ding ding dong." },
     ],
   }),
   builtin({
