@@ -61,9 +61,14 @@ src/
     catalog.js        Unified accessor over built-in + user songs
     drills.js         Drill generators + course definitions
     glossary-data.js  Dictionary terms
+    lrc.js            LRC karaoke-lyric import/export (standard + enhanced word tags)
+  karaoke/            Shared karaoke engine (UI-agnostic)
+    timeline.js       buildLyricTimeline / activeAt — word-level fill + auto-distribution
+    grader.js         Shared octave-agnostic note grader (instrument play + vocal scoring)
   views/
     home.js           Dashboard
     play.js           Note highway gameplay (grading, healthbar, killfeed)
+    karaoke.js        Karaoke stage (teleprompter + word fill + sing-and-score) & song picker
     library.js        Song browser, import/export, file location, transpose/capo
     tuner.js          Instrument tuner + out-of-tune detection
     editor.js         Manual song creation
@@ -103,12 +108,19 @@ dom-smoke.mjs         Verification: all views render against a DOM shim
   "genre": "Folk", "mood": "Mellow", "tags": [],
   "background": { "type": "solid|animated|slideshow", "value": "#101..." | "aurora" | [dataURLs] },
   "audio": { "backing": null|dataURL, "vocal": null|dataURL },
-  "lyrics": [ { "time": 0.0, "text": "..." } ],
+  "lyrics": [ { "time": 0.0, "dur": 4.8, "text": "...",
+               "words": [ { "t": 0.0, "d": 0.5, "text": "..." } ] } ],
+  "voice": { "notes": [ { "time": 0.0, "dur": 0.5, "midi": [60] } ] },
   "notes": [ { "time": 0.0, "dur": 0.5, "midi": [60] , "string": 2, "fret": 1 } ],
   "source": "builtin|manual|listen|import"
 }
 ```
 A note's `midi` is an array so chords are first-class. `string`/`fret` optional (guitar overlay).
+**Karaoke fields** are all optional and back-compatible: a lyric line may carry `dur` and
+per-`words` timing (for word-by-word highlight); when `words` is absent the karaoke timeline
+auto-distributes them across the line. `voice.notes` is a separate vocal melody used as the
+pitch target for sing-and-score (graded octave-agnostically). LRC files import/export to this
+shape via `music/lrc.js`.
 
 **History event**: `{ ts, songId, instrument, score, accuracy, maxStreak, passed, durationSec, notes:{perfect,good,off,miss} }`
 **Progress**: per-instrument xp/level + per-course/drill completion, derived + cached.
@@ -169,6 +181,13 @@ play continues. Killfeed shows the last several note judgments with note name + 
 - [x] Daily practice streak (🔥 consecutive days, best kept) shown on the home panel
 - [x] Song metadata (genre/mood) on every song + genre filter in the library
 - [x] Singalong lyrics: 11 built-in lyric tracks + karaoke current/next line in the play view
+- [x] Full karaoke mode: word-level lyric model + voice melody in the song format, LRC
+      import/export, a shared lyric timeline + octave-agnostic vocal grader, a `#/karaoke` view
+      (teleprompter with word-by-word fill, per-line count-in, backing + guide vocal, optional
+      sing-and-score with a pitch ribbon → Progress), a 🎤 Karaoke toggle in the Play view that
+      reuses the same word fill, editor authoring (LRC import/paste/export + tap-to-time word
+      capture), a library karaoke badge/filter/entry button, and two fully word-timed showcase
+      songs (Twinkle, Frère Jacques). Songs without word timing auto-distribute words at runtime.
 - [ ] Polyphonic chord transcription (approximation only — documented limitation)
 - [ ] Bundled audio assets for backing tracks (user-imported only by default)
 
@@ -201,3 +220,47 @@ play continues. Killfeed shows the last several note judgments with note name + 
   `ensureMetadata()` so every song is tagged, a genre field in the editor, and a genre
   filter + tags in the library. Lyrics now render karaoke-style (current + next line) for
   singalong, with a 🎤 indicator and genre in the play HUD. dom-smoke now mounts 13 views.
+- **Full karaoke mode — Phase 1 (engine foundations):** extended the song format with
+  word-level lyric timing (`lyrics[].words` + `dur`) and a `voice.notes` vocal melody (both
+  optional / back-compatible, with validation). Added `music/lrc.js` (standard + enhanced LRC
+  import/export), `karaoke/timeline.js` (`buildLyricTimeline`/`activeAt`, weighted word
+  auto-distribution so every lyric song highlights word-by-word), and `karaoke/grader.js` (a
+  reusable octave-agnostic note grader extracted to match the play view's scoring exactly, for
+  shared use by instrument play and vocal sing-and-score). test-core grew from 25 to 49 checks.
+- **Full karaoke mode — Phase 2 (standalone view):** added `views/karaoke.js` + the `karaoke`
+  route/nav/crumb. `#/karaoke` lists every song with lyrics; `#/karaoke/:id` is the stage — a
+  centred teleprompter (previous/current/next/next-2 lines, current line filled word-by-word via
+  a clip-text gradient driven by `activeAt`), a per-line count-in dot row over silent gaps, the
+  3-2-1 lead-in, backing-track volume + a guide-vocal on/off toggle, and an optional
+  sing-and-score pass (`karaokeScoring` setting) that grades mic pitch against `voice.notes`
+  (falling back to the instrument melody) through the shared `Grader`, drawing a compact pitch
+  ribbon and recording a `mode:"karaoke"`, `instrument:"voice"` history entry. dom-smoke now
+  mounts 15 views (added karaoke picker + stage). New CSS: `.kara-*` + `.view-pad`.
+- **Full karaoke mode — Phase 3 (Play overlay):** extracted the word-fill line rendering into
+  `karaoke/render.js` (`lineFillHTML`/`escapeHTML`, shared by both views) and added a 🎤 Karaoke
+  toggle to the Play view that swaps its current/next lyric line for the word-by-word fill
+  (`karaokeLyrics` setting, on by default when a song has lyrics; falls back to the original
+  simple display when off). test-core now 53 checks.
+- **Full karaoke mode — Phase 4 (authoring + library) & docs:** the Song Editor's lyrics panel
+  became "Lyrics & Karaoke" — LRC import (file) / paste / export, per-line word-timed badges
+  with a revert-to-auto control, and a **tap-to-time** tool (plays the backing track and stamps
+  word timing as you tap/Space; the view now returns a teardown that stops it). The Library
+  gained a 🎤 Karaoke filter pill, a karaoke badge on cards/detail, and Karaoke entry buttons
+  (card + detail) alongside Play. Two built-ins (Twinkle, Frère Jacques) are now fully
+  word-timed to their melodies as showcases. README updated. test-core now 55 checks; the full
+  suite stays green (imports clean, 55 core, 44 cosmetics, 15 view mounts).
+- **Vocal-melody authoring:** the Song Editor gained a "Vocal melody (Karaoke scoring)" panel —
+  copy the instrument melody to the vocal line, shift it ±8ve (singers often sit an octave from
+  the guitar), or clear it; the vocal line is drawn dimmed on the piano roll. Scoring-target
+  selection moved into a shared `vocalTargets(song)` (grader.js: authored `voice.notes` else the
+  instrument melody) used by the Karaoke view, which now shows a "scored melody" tag in the
+  picker for songs with an authored vocal line. test-core now 57 checks.
+- **Per-note vocal editing:** the editor's piano roll became layer-aware — an Instrument/Vocal
+  toggle picks which melody the roll, click-to-add/delete, "Clear layer", and the quick-notation
+  Apply/From-roll operate on. The inactive layer is drawn dim & thin, the active layer as bright
+  blocks. "Copy from notes" switches to the Vocal layer so edits are immediately visible.
+- **Hum-to-capture & shared transcriber:** extracted the Listen view's frames→notes transcription
+  into `music/transcribe.js` (`framesToNotes`/`quantizeNotes`); Listen now imports it (behaviour
+  unchanged). The editor's vocal panel gained a 🎙️ Hum-to-capture recorder — sing the line, it
+  pitch-tracks and transcribes to `voice.notes` at the song tempo, then switches to the Vocal
+  layer. The editor teardown stops the recorder. test-core now 61 checks.

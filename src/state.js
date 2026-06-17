@@ -16,6 +16,8 @@ const DEFAULTS = {
     micGate: 0.012,          // RMS noise gate for pitch detection
     noteSpeed: 1.0,          // highway scroll multiplier
     metronome: false,
+    karaokeScoring: true,    // grade the singer's voice in karaoke mode (sing-and-score)
+    karaokeLyrics: true,     // word-by-word karaoke highlight in the play-view lyric overlay
     avatar: { ...DEFAULT_AVATAR },   // player cosmetic loadout (see cosmetics/avatars.js)
     guitar: { ...DEFAULT_GUITAR },   // guitar cosmetic loadout (see cosmetics/guitars.js)
     streak: { count: 0, best: 0, lastDay: "" },  // daily-practice streak (see music/daily.js)

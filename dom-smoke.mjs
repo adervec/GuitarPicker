@@ -113,6 +113,7 @@ global.structuredClone = global.structuredClone || ((o) => JSON.parse(JSON.strin
 const { Store } = await import("./src/state.js");
 const { builtinSongs } = await import("./src/music/songs.js");
 const songId = builtinSongs()[0].id;
+const karaokeId = (builtinSongs().find((s) => (s.lyrics || []).length) || builtinSongs()[0]).id;
 
 // seed a little history so the Progress view exercises charts/table
 Store.addHistory({ ts: Date.now() - 86400000, songId, songTitle: "Test", instrument: "acoustic-guitar", score: 5000, accuracy: 82, maxStreak: 12, passed: true, durationSec: 60, notes: { perfect: 20, good: 5, off: 2, miss: 1 } });
@@ -124,6 +125,8 @@ const views = [
   ["training", []], ["minigames", []], ["glossary", []], ["history", []],
   ["locker", []],
   ["play", [songId], "play"],
+  ["karaoke(picker)", [], "karaoke"],
+  ["karaoke(song)", [karaokeId], "karaoke"],
 ];
 
 let pass = 0, fail = 0;

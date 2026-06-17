@@ -208,10 +208,29 @@ table.data tr:hover td { background: var(--panel-2); }
 .play-bottom-fade { position:absolute; left:0; right:0; bottom:0; height:90px; pointer-events:none;
   background: linear-gradient(180deg, transparent, rgba(0,0,0,.25)); }
 .lyric-line { position:absolute; left:0; right:0; bottom:18px; text-align:center; font-size:22px;
-  font-weight:700; text-shadow: 0 2px 10px rgba(0,0,0,.8); pointer-events:none; }
+  font-weight:700; text-shadow: 0 2px 10px rgba(0,0,0,.8); pointer-events:none; --kw-future: var(--muted); }
+.lyric-line .kw { color: var(--kw-future); transition: color 90ms; }
+.lyric-line .kw.done { color: var(--accent); }
+.lyric-line .kw.cur { -webkit-background-clip: text; background-clip: text; color: transparent; }
 .banner { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
 .banner .panel { text-align:center; max-width: 480px; }
 .big-grade { font-size: 64px; font-weight: 800; }
+
+/* ---------- Karaoke ---------- */
+.view-pad { padding: 22px; }
+.kara-pick { cursor: pointer; transition: transform 120ms, border-color 120ms; }
+.kara-pick:hover { transform: translateY(-2px); border-color: var(--accent); }
+.kara-stage { position:absolute; left:0; right:0; top:46%; transform: translateY(-50%);
+  text-align:center; pointer-events:none; padding: 0 6%; --kw-future: var(--muted); }
+.kara-stage > div { text-shadow: 0 2px 14px rgba(0,0,0,.85); line-height: 1.18; }
+.kara-countin { height: 26px; letter-spacing: 8px; color: var(--accent); font-size: 18px; opacity: .85; }
+.kara-prev { font-size: 20px; opacity: .4; min-height: 24px; }
+.kara-cur { font-size: clamp(28px, 5vw, 54px); font-weight: 800; margin: 6px 0 10px; min-height: 60px; }
+.kara-next { font-size: 24px; opacity: .62; min-height: 28px; }
+.kara-next2 { font-size: 19px; opacity: .34; min-height: 22px; }
+.kara-cur .kw { color: var(--kw-future); transition: color 90ms; }
+.kara-cur .kw.done { color: var(--accent); }
+.kara-cur .kw.cur { -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* ---------- Editor / piano roll ---------- */
 .roll-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--highway); }

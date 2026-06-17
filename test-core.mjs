@@ -7,6 +7,11 @@ import { builtinSongs } from "./src/music/songs.js";
 import { DRILLS, buildDrillSong, COURSES } from "./src/music/drills.js";
 import { detectPitch } from "./src/audio/pitch.js";
 import { GLOSSARY, CATEGORIES } from "./src/music/glossary-data.js";
+import { parseLRC, toLRC, parseLRCTime } from "./src/music/lrc.js";
+import { buildLyricTimeline, activeAt, timelineDuration } from "./src/karaoke/timeline.js";
+import { Grader, centsOff, classify, gradeLetter, vocalTargets } from "./src/karaoke/grader.js";
+import { lineFillHTML, escapeHTML } from "./src/karaoke/render.js";
+import { framesToNotes, quantizeNotes } from "./src/music/transcribe.js";
 
 let pass = 0;
 const ok = (name, cond) => { assert.ok(cond, "FAILED: " + name); console.log("  ✓ " + name); pass++; };
@@ -80,5 +85,80 @@ for (const f of [110, 196, 220, 330, 440]) {
 ok("detectPitch matches sine tones (110-440Hz)", true);
 const silent = detectPitch(new Float32Array(2048), SR, 0.01);
 ok("detectPitch gates silence", silent.freq === -1);
+
+// ---- karaoke: LRC parsing ----
+ok("parseLRCTime mm:ss.xx", Math.abs(parseLRCTime("01:02.50") - 62.5) < 1e-6);
+const lrc = parseLRC("[ti:Demo]\n[offset:0]\n[00:00.00]Hello world\n[00:02.50]Second line");
+ok("parseLRC skips metadata, keeps 2 lines", lrc.length === 2);
+ok("parseLRC times", Math.abs(lrc[0].time - 0) < 1e-6 && Math.abs(lrc[1].time - 2.5) < 1e-6);
+ok("parseLRC line dur from next tag", Math.abs(lrc[0].dur - 2.5) < 1e-6);
+const elrc = parseLRC("[00:01.00]<00:01.00>Twin<00:01.50>kle <00:02.00>star");
+ok("parseLRC enhanced word count", elrc[0].words && elrc[0].words.length === 3);
+ok("parseLRC enhanced word time", Math.abs(elrc[0].words[2].t - 2.0) < 1e-6);
+ok("parseLRC offset applied", parseLRC("[offset:500]\n[00:01.00]x")[0].time === 1.5);
+const round = parseLRC(toLRC(lrc));
+ok("toLRC -> parseLRC roundtrip", round.length === 2 && Math.abs(round[1].time - 2.5) < 0.02);
+const eround = parseLRC(toLRC(elrc));
+ok("toLRC enhanced roundtrip keeps words", eround[0].words && eround[0].words.length === 3);
+
+// ---- karaoke: lyric timeline ----
+const ksong = newSong({ title: "K", notes: mel,
+  lyrics: [{ time: 0, dur: 3, text: "one two three" }, { time: 4, text: "four" }],
+  voice: { notes: [{ time: 0, dur: 0.5, midi: [60] }] } });
+ok("validateSong accepts voice + lyrics", validateSong(ksong).ok);
+const tl = buildLyricTimeline(ksong);
+ok("timeline builds 2 lines", tl.lines.length === 2);
+ok("words auto-distributed for line-only lyric", tl.lines[0].words.length === 3);
+ok("auto words stay within line span", tl.lines[0].words[0].t >= 0 && tl.lines[0].words[2].end <= 3.001);
+ok("timeline preserves authored word timing", buildLyricTimeline({ lyrics: elrc }).lines[0].words.length === 3);
+ok("timelineDuration is last line end", Math.abs(timelineDuration(tl) - tl.lines[1].end) < 1e-6);
+ok("activeAt before first line", activeAt(tl, -1).lineIdx === -1);
+ok("activeAt selects current line", activeAt(tl, 0.1).lineIdx === 0 && activeAt(tl, 4.2).lineIdx === 1);
+const aw = activeAt(tl, 0.1);
+ok("activeAt resolves current word + progress", aw.wordIdx === 0 && aw.wordProgress > 0 && aw.wordProgress <= 1);
+const wordTimed = songs.filter((s) => (s.lyrics || []).some((l) => Array.isArray(l.words) && l.words.length));
+ok("at least 2 built-in songs are word-timed showcases", wordTimed.length >= 2);
+for (const ws of wordTimed) for (const ln of buildLyricTimeline(ws).lines)
+  ln.words.forEach((w, i) => assert.ok(i === 0 || w.t >= ln.words[i - 1].t, "words sorted in " + ws.title));
+ok("word-timed built-ins build a monotonic timeline", true);
+
+// ---- karaoke: grader ----
+ok("centsOff is octave-agnostic", centsOff(72, [60]) < 1e-6 && centsOff(60, [60]) < 1e-6);
+ok("classify perfect/good/off/miss", classify(2, 10) === "perfect" && classify(1, 50) === "good"
+  && classify(1, 999) === "off" && classify(0, 999) === "miss");
+const g = new Grader();
+const vnote = { midi: [60], frames: 0, best: Infinity };
+for (let i = 0; i < 3; i++) g.observe(vnote, 72); // sung an octave up — still perfect
+ok("grader scores an octave-up perfect", g.finalize(vnote) === "perfect" && g.counts.perfect === 1 && g.score === 100);
+ok("grader accuracy 100 after one perfect", g.accuracy() === 100);
+const g2 = new Grader();
+g2.finalize({ midi: [60], frames: 0, best: Infinity }); // a miss
+ok("grader miss drops health, no score", g2.counts.miss === 1 && g2.health === 90 && g2.score === 0);
+ok("gradeLetter S/F", gradeLetter(98, false) === "S" && gradeLetter(99, true) === "F");
+ok("vocalTargets prefers authored voice melody",
+  vocalTargets({ voice: { notes: [{ time: 0, dur: 1, midi: [60] }] }, notes: [{ time: 0, dur: 1, midi: [48] }] })[0].midi[0] === 60);
+ok("vocalTargets falls back to instrument melody",
+  vocalTargets({ voice: { notes: [] }, notes: [{ time: 0, dur: 1, midi: [48] }] })[0].midi[0] === 48);
+
+// ---- karaoke: line fill HTML ----
+ok("escapeHTML escapes angle brackets", escapeHTML("a<b>&c") === "a&lt;b&gt;&amp;c");
+const fillLine = buildLyricTimeline(ksong).lines[0]; // "one two three", 3 auto words
+const html0 = lineFillHTML(fillLine, -1, 0);
+ok("lineFillHTML neutral before first word", !html0.includes("done") && !html0.includes("cur"));
+const html1 = lineFillHTML(fillLine, 1, 0.5);
+ok("lineFillHTML marks done/current words", html1.includes('kw done') && html1.includes('kw cur') && html1.includes("50%"));
+ok("lineFillHTML falls back to plain text", lineFillHTML({ text: "hi", words: [] }, 0, 0) === "hi");
+
+// ---- transcription (Listen + hum-to-capture) ----
+const humFrames = [];
+for (let t = 0; t < 0.5; t += 0.02) humFrames.push({ t: +t.toFixed(2), freq: 440 });      // A4 (midi 69)
+for (let t = 0.5; t < 0.64; t += 0.02) humFrames.push({ t: +t.toFixed(2), freq: -1 });     // gap
+for (let t = 0.7; t < 1.2; t += 0.02) humFrames.push({ t: +t.toFixed(2), freq: 493.88 });  // B4 (midi 71)
+const humNotes = framesToNotes(humFrames, 120, 440);
+ok("framesToNotes segments two sung notes", humNotes.length === 2);
+ok("framesToNotes detects A4 then B4", humNotes[0].midi[0] === 69 && humNotes[1].midi[0] === 71);
+ok("framesToNotes quantizes onsets to the grid", humNotes.every((n) => Math.abs(n.time / (0.5 * 0.25) - Math.round(n.time / (0.5 * 0.25))) < 1e-6));
+const q = quantizeNotes([{ time: 0.04, dur: 0.001, midi: [60] }], 120);
+ok("quantizeNotes snaps onset to grid + floors dur to >= grid", q.length === 1 && q[0].time === 0 && q[0].dur >= 0.1);
 
 console.log(`\n${pass} checks passed.`);

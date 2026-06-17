@@ -24,6 +24,7 @@ export function newSong(partial = {}) {
     background: partial.background || { type: "solid", value: "" },
     audio: partial.audio || { backing: null, vocal: null },
     lyrics: partial.lyrics || [],
+    voice: partial.voice || { notes: [] },
     notes: partial.notes || [],
     source: partial.source || "manual",
     createdAt: partial.createdAt || new Date().toISOString(),
@@ -40,6 +41,15 @@ export function validateSong(o) {
     if (!Array.isArray(n.midi)) errors.push(`note ${i}: midi[]`);
   });
   if (typeof o.bpm !== "number" || o.bpm <= 0) errors.push("bpm");
+  if (o.lyrics != null && !Array.isArray(o.lyrics)) errors.push("lyrics must be an array");
+  else if (Array.isArray(o.lyrics)) o.lyrics.forEach((l, i) => {
+    if (typeof l.time !== "number") errors.push(`lyric ${i}: time`);
+    if (l.words != null && !Array.isArray(l.words)) errors.push(`lyric ${i}: words must be an array`);
+  });
+  if (o.voice != null) {
+    if (typeof o.voice !== "object") errors.push("voice must be an object");
+    else if (o.voice.notes != null && !Array.isArray(o.voice.notes)) errors.push("voice.notes must be an array");
+  }
   return { ok: errors.length === 0, errors };
 }
 

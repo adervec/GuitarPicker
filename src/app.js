@@ -8,6 +8,7 @@ const NAV = [
   { sep: "Play" },
   { route: "home", icon: "🏠", label: "Home" },
   { route: "library", icon: "🎵", label: "Songs" },
+  { route: "karaoke", icon: "🎤", label: "Karaoke" },
   { route: "tuner", icon: "🎚️", label: "Tuner" },
   { sep: "Create" },
   { route: "editor", icon: "✏️", label: "Song Editor" },
@@ -27,6 +28,7 @@ const VIEWS = {
   home: () => import("./views/home.js"),
   library: () => import("./views/library.js"),
   play: () => import("./views/play.js"),
+  karaoke: () => import("./views/karaoke.js"),
   tuner: () => import("./views/tuner.js"),
   editor: () => import("./views/editor.js"),
   listen: () => import("./views/listen.js"),
@@ -88,7 +90,7 @@ async function router() {
   // teardown previous view
   if (cleanup) { try { cleanup(); } catch (e) { console.warn(e); } cleanup = null; }
   const container = clear(viewEl());
-  viewEl().classList.toggle("no-pad", route === "play");
+  viewEl().classList.toggle("no-pad", route === "play" || route === "karaoke");
 
   try {
     const mod = await loader();
@@ -124,7 +126,7 @@ Store.on((e) => { if (e.type === "coins" || e.type === "history" || e.type === "
 
 // crumb helper available to views via title attribute on #crumb
 const crumbTitles = {
-  home: "Home", library: "Songs", play: "Now Playing", tuner: "Tuner",
+  home: "Home", library: "Songs", play: "Now Playing", karaoke: "Karaoke", tuner: "Tuner",
   editor: "Song Editor", listen: "Listen & Make", training: "Training",
   minigames: "Theory Games", glossary: "Glossary", history: "Progress",
   locker: "Locker", settings: "Settings",

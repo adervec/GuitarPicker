@@ -10,6 +10,8 @@ import { freqToMidiFloat, midiToName, INSTRUMENTS } from "../music/notes.js";
 import { suggestCapo, describeMidiSet } from "../music/theory.js";
 import { drawBackground } from "../ui/backgrounds.js";
 import { renderAvatar } from "../cosmetics/index.js";
+import { buildLyricTimeline, activeAt } from "../karaoke/timeline.js";
+import { lineFillHTML } from "../karaoke/render.js";
 
 const LEAD_IN = 3.0;          // count-in seconds before notes start
 const HIT_PAD = 0.16;         // detection window pad around a note
@@ -31,6 +33,11 @@ export default async function play(ctx) {
   const speed = s.noteSpeed;
   const duration = songDuration(song);
   const capo = song.capo || suggestCapo(((song.notes[0]?.midi[0] ?? 60) % 12)).capo;
+
+  // ----- lyrics / karaoke overlay -----
+  const lyrics = (song.lyrics || []).slice().sort((a, b) => a.time - b.time);
+  const lyricTimeline = lyrics.length ? buildLyricTimeline(song) : null;
+  let karaokeLyrics = lyricTimeline ? (s.karaokeLyrics ?? true) : false;
 
   // ----- per-note runtime state -----
   const notes = song.notes.map((n) => ({
@@ -76,6 +83,11 @@ export default async function play(ctx) {
     oninput: (v) => { Store.setSetting("vocalVolume", v); player.setVocalVolume(v); } });
   const metroBtn = el("button.btn", { onclick: () => { metro = !metro; metroBtn.classList.toggle("primary", metro); } }, ["🥁 Metronome"]);
   let metro = false;
+  const karaokeBtn = lyrics.length ? el("button.btn", { class: karaokeLyrics ? "primary" : "", title: "Word-by-word singalong highlight", onclick: () => {
+    karaokeLyrics = !karaokeLyrics; Store.setSetting("karaokeLyrics", karaokeLyrics);
+    karaokeBtn.classList.toggle("primary", karaokeLyrics);
+    updateLyric(clock);
+  } }, ["🎤 Karaoke"]) : null;
 
   const controls = el("div.play-controls", {}, [
     playBtn, restartBtn,
@@ -84,7 +96,7 @@ export default async function play(ctx) {
     !player.hasAudio() ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
     player.backing ? wrapNarrow(volB) : null,
     player.vocal ? wrapNarrow(volV) : null,
-    metroBtn, backBtn,
+    karaokeBtn, metroBtn, backBtn,
   ]);
 
   shell.append(canvas, overlay, controls);
@@ -326,10 +338,20 @@ export default async function play(ctx) {
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
   }
 
-  // lyrics
-  const lyrics = (song.lyrics || []).slice().sort((a, b) => a.time - b.time);
+  // lyrics — word-by-word karaoke fill when enabled, else simple current/next
   function updateLyric(t) {
     if (!lyrics.length) { lyric.innerHTML = ""; return; }
+    if (karaokeLyrics && lyricTimeline) {
+      const a = activeAt(lyricTimeline, t);
+      const lines = lyricTimeline.lines;
+      const cur = a.lineIdx >= 0 ? lineFillHTML(lines[a.lineIdx], a.wordIdx, a.wordProgress) : "";
+      const nIdx = a.lineIdx >= 0 ? a.lineIdx + 1 : 0;
+      const next = lines[nIdx] ? esc(lines[nIdx].text) : "";
+      lyric.innerHTML =
+        `<div style="font-size:26px;line-height:1.2;font-weight:700">${cur}</div>` +
+        (next ? `<div style="font-size:15px;opacity:.55;margin-top:2px">${next}</div>` : "");
+      return;
+    }
     let idx = -1;
     for (let i = 0; i < lyrics.length; i++) { if (t >= lyrics[i].time) idx = i; else break; }
     const cur = idx >= 0 ? lyrics[idx].text : "";

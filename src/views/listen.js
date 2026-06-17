@@ -4,6 +4,7 @@ import { Audio } from "../audio/engine.js";
 import { detectPitch, PitchTracker } from "../audio/pitch.js";
 import { newSong, songDuration, uid } from "../music/song-format.js";
 import { freqToMidiFloat, freqToMidi, midiToName, INSTRUMENTS } from "../music/notes.js";
+import { framesToNotes } from "../music/transcribe.js";
 import { ANIMATED_BACKGROUNDS } from "../ui/backgrounds.js";
 
 export default function listen(ctx) {
@@ -94,38 +95,7 @@ export default function listen(ctx) {
     raf = requestAnimationFrame(loop);
   }
 
-  // ---------- transcription ----------
-  function framesToNotes(frames, bpm) {
-    const notes = [];
-    let cur = null;
-    const minDur = 0.07;
-    for (const fr of frames) {
-      const midi = fr.freq > 0 ? freqToMidi(fr.freq, s.a4) : null;
-      if (midi == null) {
-        if (cur && fr.t - cur.last > 0.06) { closeNote(cur); cur = null; }
-        continue;
-      }
-      if (cur && Math.abs(midi - cur.midi) <= 0) { cur.last = fr.t; }
-      else { if (cur) closeNote(cur); cur = { midi, start: fr.t, last: fr.t }; }
-    }
-    if (cur) closeNote(cur);
-    function closeNote(n) {
-      const dur = Math.max(minDur, n.last - n.start + 0.04);
-      notes.push({ time: n.start, dur, midi: [n.midi] });
-    }
-    return quantize(notes, bpm);
-  }
-  function quantize(notes, bpm, gridBeats = 0.25) {
-    const grid = (60 / bpm) * gridBeats;
-    return notes
-      .map((n) => ({
-        time: +(Math.round(n.time / grid) * grid).toFixed(4),
-        dur: +(Math.max(grid, Math.round(n.dur / grid) * grid) * 0.92).toFixed(4),
-        midi: n.midi,
-      }))
-      .filter((n) => n.dur >= grid * 0.5);
-  }
-
+  // ---------- transcription (shared with the editor's hum-to-capture) ----------
   // complexity reducers
   function simplify(notes, bpm, level) {
     if (level === "advanced") return notes;
@@ -151,7 +121,7 @@ export default function listen(ctx) {
   let chosenBg = { type: "animated", value: "aurora" };
 
   function buildResults() {
-    const full = framesToNotes(frames, bpm);
+    const full = framesToNotes(frames, bpm, s.a4);
     if (!full.length) { toast("Couldn't find clear notes — try a melody with single notes.", "bad"); return; }
 
     resultPanel.classList.remove("hidden");

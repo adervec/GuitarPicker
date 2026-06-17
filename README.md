@@ -33,7 +33,13 @@ Allow microphone access when prompted (it never leaves your machine).
 - **Tuner** — live pitch + cents needle, out-of-tune detection, multiple instruments & tunings.
 - **Songs** — a public-domain library tagged by **genre**, with singalong **lyrics**, plus
   import / export / transpose / capo suggestions.
-- **Song Editor** — paint notes on a piano roll or type them in; attach backing/vocal audio.
+- **Karaoke** — a full sing-along mode: a scrolling teleprompter that highlights lyrics
+  **word-by-word**, a per-line count-in, backing track + an optional guide vocal, and an
+  optional **sing-and-score** pass that grades your pitch against the vocal melody (with a live
+  pitch ribbon, healthbar and letter grade). The Play view can show the same word fill on its
+  lyric line. Import standard or enhanced **`.lrc`** files, or **tap** word timings in the editor.
+- **Song Editor** — paint notes on a piano roll or type them in; attach backing/vocal audio;
+  add lyrics, import/export `.lrc`, or tap-to-time word-level karaoke timing.
 - **Listen & Make** — record yourself, auto-transcribe to a song at three difficulty levels,
   with animated/solid/screen-capture-slideshow backgrounds.
 - **Training** — courses with progression + tempo-adjustable skill drills.

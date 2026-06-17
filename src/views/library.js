@@ -8,7 +8,7 @@ import { Synth } from "../audio/synth.js";
 
 export default function library(ctx) {
   const { el: root, navigate } = ctx;
-  let filter = { q: "", instrument: "all", difficulty: "all", genre: "all" };
+  let filter = { q: "", instrument: "all", difficulty: "all", genre: "all", karaoke: false };
 
   const actions = [
     el("button.btn", { onclick: importSong }, ["⬇ Import"]),
@@ -29,9 +29,13 @@ export default function library(ctx) {
     el(`span.pill${d === "all" ? ".active" : ""}`, { text: d, onclick: (e) => {
       filter.difficulty = d; [...diffPills.children].forEach((p) => p.classList.toggle("active", p.textContent === d)); renderGrid();
     } })));
+  const karaokePill = el("span.pill", { text: "🎤 Karaoke", title: "Only songs with lyrics", onclick: () => {
+    filter.karaoke = !filter.karaoke; karaokePill.classList.toggle("active", filter.karaoke); renderGrid();
+  } });
   root.appendChild(el("div.panel.tight", { style: { marginBottom: "16px" } }, [
     el("div.row", { style: { alignItems: "center" } }, [
       el("div", { style: { flex: "1", minWidth: "200px" } }, [search]), instSel, genreSel, diffPills,
+      el("div.pill-row", {}, [karaokePill]),
     ]),
   ]));
 
@@ -59,6 +63,7 @@ export default function library(ctx) {
       if (filter.instrument !== "all" && s.instrument !== filter.instrument) return false;
       if (filter.difficulty !== "all" && s.difficulty !== filter.difficulty) return false;
       if (filter.genre !== "all" && s.genre !== filter.genre) return false;
+      if (filter.karaoke && !(s.lyrics || []).length) return false;
       if (filter.q && !(`${s.title} ${s.artist}`.toLowerCase().includes(filter.q))) return false;
       return true;
     });
@@ -80,8 +85,12 @@ export default function library(ctx) {
           s.genre ? tag(s.genre) : null,
           tag(`key ${s.key}`),
           s.capo ? tag(`capo ${s.capo}`) : null,
+          (s.lyrics || []).length ? tag("🎤 karaoke") : null,
         ]),
-        el("button.btn.primary", { style: { marginTop: "auto" }, onclick: (ev) => { ev.stopPropagation(); navigate(`#/play/${s.id}`); } }, ["▶ Play"]),
+        el("div.row", { style: { marginTop: "auto", gap: "6px" } }, [
+          el("button.btn.primary", { style: { flex: "1" }, onclick: (ev) => { ev.stopPropagation(); navigate(`#/play/${s.id}`); } }, ["▶ Play"]),
+          (s.lyrics || []).length ? el("button.btn", { title: "Karaoke", onclick: (ev) => { ev.stopPropagation(); navigate(`#/karaoke/${s.id}`); } }, ["🎤"]) : null,
+        ]),
       ]);
       grid.appendChild(card);
     }
@@ -106,7 +115,7 @@ export default function library(ctx) {
         tag(song.difficulty, song.difficulty),
         song.audio?.backing ? tag("has backing") : tag("no backing"),
         song.audio?.vocal ? tag("has vocal") : null,
-        song.lyrics?.length ? tag("lyrics") : null,
+        song.lyrics?.length ? tag("🎤 karaoke") : null,
       ]),
       el("div.panel.tight", { style: { background: "var(--panel-2)" } }, [
         el("div.spread", {}, [
@@ -120,6 +129,7 @@ export default function library(ctx) {
       ]),
       el("div.row", { style: { marginTop: "14px" } }, [
         el("button.btn.primary", { onclick: () => navigate(`#/play/${working.id}`) }, ["▶ Play"]),
+        song.lyrics?.length ? el("button.btn", { onclick: () => navigate(`#/karaoke/${working.id}`) }, ["🎤 Karaoke"]) : null,
         el("button.btn", { onclick: () => navigate(`#/editor/${working.id}`) },
           [isBuiltin(working.id) ? "✏ Edit a copy" : "✏ Edit"]),
         el("button.btn", { onclick: () => exportSong(working) }, ["⬆ Export"]),

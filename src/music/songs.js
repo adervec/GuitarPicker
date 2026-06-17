@@ -35,9 +35,12 @@ const SONGS = [
       "C4:1 C4:1 G4:1 G4:1 A4:1 A4:1 G4:2 F4:1 F4:1 E4:1 E4:1 D4:1 D4:1 C4:2 " +
       "G4:1 G4:1 F4:1 F4:1 E4:1 E4:1 D4:2 G4:1 G4:1 F4:1 F4:1 E4:1 E4:1 D4:2 " +
       "C4:1 C4:1 G4:1 G4:1 A4:1 A4:1 G4:2 F4:1 F4:1 E4:1 E4:1 D4:1 D4:1 C4:2"),
+    // Word timing aligned to the melody notes — a karaoke showcase.
     lyrics: [
-      { time: 0, text: "Twinkle, twinkle, little star" },
-      { time: 4.8, text: "How I wonder what you are" },
+      { time: 0, dur: 4.8, text: "Twinkle, twinkle, little star", words: [
+        { t: 0, text: "Twinkle," }, { t: 1.2, text: "twinkle," }, { t: 2.4, text: "little" }, { t: 3.6, text: "star" }] },
+      { time: 4.8, dur: 4.8, text: "How I wonder what you are", words: [
+        { t: 4.8, text: "How" }, { t: 5.4, text: "I" }, { t: 6.0, text: "wonder" }, { t: 7.2, text: "what" }, { t: 7.8, text: "you" }, { t: 8.4, text: "are" }] },
     ],
   }),
   builtin({
@@ -77,11 +80,16 @@ const SONGS = [
       "E4:1 F4:1 G4:2 E4:1 F4:1 G4:2 " +
       "G4:0.5 A4:0.5 G4:0.5 F4:0.5 E4:1 C4:1 G4:0.5 A4:0.5 G4:0.5 F4:0.5 E4:1 C4:1 " +
       "C4:1 G3:1 C4:2 C4:1 G3:1 C4:2"),
+    // Fully word-timed to the melody — a karaoke showcase.
     lyrics: [
-      { time: 0, text: "Are you sleeping, are you sleeping?" },
-      { time: 4.8, text: "Brother John, Brother John?" },
-      { time: 9.6, text: "Morning bells are ringing, morning bells are ringing," },
-      { time: 14.4, text: "Ding ding dong, ding ding dong." },
+      { time: 0, dur: 4.8, text: "Are you sleeping, are you sleeping?", words: [
+        { t: 0, text: "Are" }, { t: 0.6, text: "you" }, { t: 1.2, text: "sleeping," }, { t: 2.4, text: "are" }, { t: 3.0, text: "you" }, { t: 3.6, text: "sleeping?" }] },
+      { time: 4.8, dur: 4.8, text: "Brother John, Brother John?", words: [
+        { t: 4.8, text: "Brother" }, { t: 6.0, text: "John," }, { t: 7.2, text: "Brother" }, { t: 8.4, text: "John?" }] },
+      { time: 9.6, dur: 4.8, text: "Morning bells are ringing, morning bells are ringing,", words: [
+        { t: 9.6, text: "Morning" }, { t: 10.2, text: "bells" }, { t: 10.5, text: "are" }, { t: 10.8, text: "ringing," }, { t: 12.0, text: "morning" }, { t: 12.6, text: "bells" }, { t: 12.9, text: "are" }, { t: 13.2, text: "ringing," }] },
+      { time: 14.4, dur: 4.8, text: "Ding ding dong, ding ding dong.", words: [
+        { t: 14.4, text: "Ding" }, { t: 15.0, text: "ding" }, { t: 15.6, text: "dong," }, { t: 16.8, text: "ding" }, { t: 17.4, text: "ding" }, { t: 18.0, text: "dong." }] },
     ],
   }),
   builtin({
