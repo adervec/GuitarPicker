@@ -12,6 +12,7 @@ import { buildLyricTimeline, activeAt, timelineDuration } from "./src/karaoke/ti
 import { Grader, centsOff, classify, gradeLetter, vocalTargets } from "./src/karaoke/grader.js";
 import { lineFillHTML, escapeHTML } from "./src/karaoke/render.js";
 import { framesToNotes, quantizeNotes } from "./src/music/transcribe.js";
+import { mergeSyncable } from "./src/cloud/merge.js";
 
 let pass = 0;
 const ok = (name, cond) => { assert.ok(cond, "FAILED: " + name); console.log("  ✓ " + name); pass++; };
@@ -160,5 +161,22 @@ ok("framesToNotes detects A4 then B4", humNotes[0].midi[0] === 69 && humNotes[1]
 ok("framesToNotes quantizes onsets to the grid", humNotes.every((n) => Math.abs(n.time / (0.5 * 0.25) - Math.round(n.time / (0.5 * 0.25))) < 1e-6));
 const q = quantizeNotes([{ time: 0.04, dur: 0.001, midi: [60] }], 120);
 ok("quantizeNotes snaps onset to grid + floors dur to >= grid", q.length === 1 && q[0].time === 0 && q[0].dur >= 0.1);
+
+// ---- cloud sync merge ----
+const localP = { savedAt: 100, songs: [{ id: "x", createdAt: "2024-01-01" }, { id: "y", createdAt: "2024-01-01" }],
+  history: [{ ts: 10, songId: "x" }], progress: { guitar: { xp: 50, drills: { d1: 80 }, courses: { c1: ["s1"] } } },
+  coins: 30, unlocks: { red: true } };
+const remoteP = { savedAt: 200, songs: [{ id: "y", createdAt: "2024-06-01" }, { id: "z", createdAt: "2024-01-01" }],
+  history: [{ ts: 10, songId: "x" }, { ts: 20, songId: "z" }], progress: { guitar: { xp: 90, drills: { d1: 60, d2: 40 }, courses: { c1: ["s2"] } } },
+  coins: 12, unlocks: { blue: true } };
+const mg = mergeSyncable(localP, remoteP);
+ok("merge unions songs by id (x,y,z)", mg.songs.length === 3);
+ok("merge keeps newer song on id conflict", mg.songs.find((s) => s.id === "y").createdAt === "2024-06-01");
+ok("merge dedupes history by ts+songId", mg.history.length === 2);
+ok("merge takes max xp + union drills/courses", mg.progress.guitar.xp === 90 && mg.progress.guitar.drills.d1 === 80 && mg.progress.guitar.drills.d2 === 40 && mg.progress.guitar.courses.c1.length === 2);
+ok("merge unions unlocks", mg.unlocks.red && mg.unlocks.blue);
+ok("merge coins = last-write-wins by savedAt", mg.coins === 12);
+ok("merge coins flips when local is newer", mergeSyncable({ ...localP, savedAt: 300 }, remoteP).coins === 30);
+ok("merge of empties is safe", mergeSyncable(null, null).songs.length === 0);
 
 console.log(`\n${pass} checks passed.`);

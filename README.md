@@ -56,6 +56,9 @@ Allow microphone access when prompted (it never leaves your machine).
 - **Daily practice** — a home-dashboard checklist of recommended activities that refreshes
   each day, tracks what you've completed, and pays coins.
 - **Themes**, clear input/output device display, customizable backing & vocal volumes.
+- **Cloud sync (optional, opt-in)** — sync your songs, history, and progress to a private folder
+  in your *own* Google Drive. Off by default; the app is fully local/offline until you sign in.
+  No backend, no database — see [docs/CLOUD-SYNC-SETUP.md](docs/CLOUD-SYNC-SETUP.md).
 
 ## Verify it works
 

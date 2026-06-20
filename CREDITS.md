@@ -1,8 +1,12 @@
 # Credits & content provenance
 
-GuitarPicker bundles **no third-party code, libraries, fonts, images, or audio**. The
-app has zero runtime dependencies, makes no network requests, and renders all graphics
-as code-generated SVG. Emoji are drawn by your operating system's own fonts.
+GuitarPicker bundles **no third-party code, libraries, fonts, images, or audio**. It has
+**zero bundled dependencies** and renders all graphics as code-generated SVG. Emoji are drawn
+by your operating system's own fonts. The app runs **fully offline by default**; its only
+network use is the **optional, off-by-default** Google Drive sync, which loads Google Identity
+Services from Google *only when a user chooses to sign in* (see
+[docs/CLOUD-SYNC-SETUP.md](./docs/CLOUD-SYNC-SETUP.md)). Sync data lives in the user's own Google
+Drive — this project operates **no server** and runs no analytics.
 
 - **Source code** — original work by Adam Eryavec, licensed under the [MIT License](./LICENSE).
 - **Glossary** — original definitions written for this project.

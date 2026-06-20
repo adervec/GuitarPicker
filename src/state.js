@@ -1,6 +1,7 @@
 // Global store: settings, user songs, history, progress. Persists to localStorage.
 import { DEFAULT_AVATAR } from "./cosmetics/avatars.js";
 import { DEFAULT_GUITAR } from "./cosmetics/guitars.js";
+import { mergeSyncable } from "./cloud/merge.js";
 
 const KEY = "guitarpicker.v1";
 
@@ -165,5 +166,29 @@ export const Store = {
 
   exportAll() {
     return JSON.stringify({ exportedAt: new Date().toISOString(), ...state }, null, 2);
+  },
+
+  // ----- cloud-syncable subset (Google Drive appData) -----
+  // Portable user content only — device-specific settings stay local.
+  exportSyncable() {
+    return {
+      app: "guitarpicker", v: 1, savedAt: Date.now(),
+      songs: state.songs, history: state.history, progress: state.progress,
+      coins: state.coins || 0, unlocks: state.unlocks || {},
+    };
+  },
+  // Merge a remote payload into local state (additive for content, last-write-
+  // wins for the coin balance), persist, and notify. Returns the merged payload.
+  importSyncable(remote) {
+    const merged = mergeSyncable(this.exportSyncable(), remote);
+    state.songs = merged.songs;
+    state.history = merged.history;
+    state.progress = merged.progress;
+    state.coins = merged.coins;
+    state.unlocks = merged.unlocks;
+    persist();
+    this.emit({ type: "sync" });
+    this.emit({ type: "coins", coins: state.coins });
+    return merged;
   },
 };

@@ -17,6 +17,7 @@ glossary, and progress trending.
 | Graphics | Canvas 2D for the highway/visualizers; CSS for UI | Crisp, fast, theme-able. |
 | Audio out | `<audio>` + Web Audio gain nodes | Independent backing-track and vocal volume. |
 | Persistence | `localStorage` (settings, songs, history) | No backend required; import/export to files. |
+| Cloud sync | Google Drive `appDataFolder` via GIS + Drive REST (`fetch`) | Optional/opt-in; no server we run; data in the user's own Drive (`drive.appdata` scope). |
 | Theming | CSS custom properties, swappable theme classes | Multiple selectable themes. |
 
 ### Running it
@@ -89,6 +90,10 @@ src/
   ui/
     components.js     Small shared render helpers (el builder, sliders, charts, toasts)
     backgrounds.js    Canvas song backgrounds (solid / animated / slideshow)
+  cloud/
+    config.js         Sync config (GOOGLE_CLIENT_ID; empty = sync off / fully local)
+    merge.js          Pure merge of two sync payloads (union content, LWW coins) — tested
+    sync.js           Google Drive appData sync (GIS token + Drive REST via fetch; no SDK)
 serve.mjs             Zero-dependency Node static server
 serve.ps1             Zero-dependency PowerShell static server (Windows)
 package.json          Scripts: `serve`, `test`
@@ -271,3 +276,15 @@ play continues. Killfeed shows the last several note judgments with note name + 
   (28 with lyrics, 19 word-timed). Every entry is public-domain or non-copyrightable, logged in
   CREDITS.md. Traditional melodies are hand-transcribed and tagged `verify-melody` — word-timing
   is exact (one note per word), but **pitches need an ear-check before public release**.
+- **Optional Google Drive cloud sync (opt-in, local-first):** added `cloud/` — `config.js`
+  (`GOOGLE_CLIENT_ID`; empty ⇒ sync off and the app stays fully local/offline), `merge.js` (pure,
+  tested union-merge of two payloads: songs/history/progress/unlocks unioned, coin balance
+  last-write-wins by `savedAt`), and `sync.js` (Google Identity Services token + Drive v3 REST via
+  `fetch` — no bundled SDK, GIS loaded only on sign-in; reads/writes one file in the user's hidden
+  `appDataFolder` with the minimal `drive.appdata` scope). `Store.exportSyncable`/`importSyncable`
+  expose the portable subset (device settings stay local). A Settings "Account & Sync" panel does
+  sign-in / Sync-now / sign-out (inert with a setup pointer when unconfigured). No live resources
+  are provisioned — `docs/CLOUD-SYNC-SETUP.md` covers creating the OAuth client ID + deploying.
+  README/CREDITS privacy + "no network" claims updated to reflect the opt-in. test-core now 69
+  checks; Settings mounts at 7 root nodes. **Not live-tested** (needs a real OAuth client ID + a
+  browser Google sign-in) — the merge logic is unit-tested, the network path is not.
