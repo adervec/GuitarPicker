@@ -264,3 +264,10 @@ play continues. Killfeed shows the last several note judgments with note name + 
   unchanged). The editor's vocal panel gained a 🎙️ Hum-to-capture recorder — sing the line, it
   pitch-tracks and transcribes to `voice.notes` at the song tempo, then switches to the Vocal
   layer. The editor teardown stops the recorder. test-core now 61 checks.
+- **Public-domain library expansion (going-public prep):** added `music/songs-extra.js`
+  (`EXTRA_SONGS`, merged into `builtinSongs()`) with 25 new built-ins — 8 guitar chord
+  progressions / patterns (non-copyrightable harmonic forms or original) and 17 word-timed
+  singalongs (traditional folk, spirituals, nursery rhymes, and carols). Library is now 47 songs
+  (28 with lyrics, 19 word-timed). Every entry is public-domain or non-copyrightable, logged in
+  CREDITS.md. Traditional melodies are hand-transcribed and tagged `verify-melody` — word-timing
+  is exact (one note per word), but **pitches need an ear-check before public release**.

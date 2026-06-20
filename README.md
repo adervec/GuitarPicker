@@ -31,8 +31,9 @@ Allow microphone access when prompted (it never leaves your machine).
 - **Note highway** — streaming notes, per-note killfeed (Perfect / Good / Off / Miss), a
   healthbar that dips on mistakes but lets you finish (a failed run just won't count as a pass).
 - **Tuner** — live pitch + cents needle, out-of-tune detection, multiple instruments & tunings.
-- **Songs** — a public-domain library tagged by **genre**, with singalong **lyrics**, plus
-  import / export / transpose / capo suggestions.
+- **Songs** — a 45+ song **public-domain** library (folk, spirituals, nursery rhymes, carols,
+  classical themes, plus chord-progression trainers) tagged by **genre**, with singalong
+  **lyrics**, plus import / export / transpose / capo suggestions.
 - **Karaoke** — a full sing-along mode: a scrolling teleprompter that highlights lyrics
   **word-by-word**, a per-line count-in, backing track + an optional guide vocal, and an
   optional **sing-and-score** pass that grades your pitch against the vocal melody (with a live

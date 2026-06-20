@@ -40,9 +40,39 @@ as code-generated SVG. Emoji are drawn by your operating system's own fonts.
 | 12-Bar Blues in A | Traditional blues form | Not copyrightable |
 | Ode to Joy (Ukulele) | Ludwig van Beethoven (1824) | Public domain |
 | When the Saints (Bass Line) | Traditional | Public domain |
+| 12-Bar Blues in E | Traditional blues form | Not copyrightable |
+| Doo-Wop Progression I–vi–IV–V (C) | Original chord progression | Not copyrightable |
+| Andalusian Cadence (Am–G–F–E) | Traditional Spanish harmonic form | Not copyrightable |
+| Pachelbel Strum Loop (D) | Johann Pachelbel (c. 1680), chord loop | Public domain |
+| Minor 12-Bar Blues in Am | Traditional blues form | Not copyrightable |
+| Jazz ii–V–I Loop (C) | Original chord progression | Not copyrightable |
+| Folk Trainer I–IV–V (D) | Original chord progression | Not copyrightable |
+| Travis Picking Pattern (C–Am–F–G) | Original (GuitarPicker) | Original work |
+| Hot Cross Buns | Traditional (English) | Public domain † |
+| Joy to the World | Music attr. G. F. Handel; lyrics I. Watts (1719) | Public domain † |
+| We Wish You a Merry Christmas | Traditional (English carol) | Public domain † |
+| She'll Be Coming 'Round the Mountain | Traditional (American folk) | Public domain † |
+| Oh My Darling, Clementine | Traditional (attr. P. Montrose, 1884) | Public domain † |
+| Camptown Races | Stephen Foster (1850) | Public domain † |
+| Down in the Valley | Traditional (American folk) | Public domain † |
+| Michael, Row the Boat Ashore | Traditional (African-American spiritual) | Public domain † |
+| Deck the Halls | Traditional (Welsh air; English lyrics 1862) | Public domain † |
+| Kumbaya | Traditional (spiritual) | Public domain † |
+| The Muffin Man | Traditional (English) | Public domain † |
+| Skip to My Lou | Traditional (American) | Public domain † |
+| Yankee Doodle | Traditional (18th century) | Public domain † |
+| The First Noel | Traditional (English/Cornish carol) | Public domain † |
+| O Christmas Tree | Traditional (German, "O Tannenbaum") | Public domain † |
+| Buffalo Gals | "Cool White" / J. Hodges (1844) | Public domain † |
+| Home on the Range | B. Higley / D. Kelley (1873) | Public domain † |
 
 \* Only the traditional melody is used. Later recorded arrangements (e.g. The Animals')
 are separately copyrighted and are **not** included.
+
+† The musical work is public domain. These melodies are **hand-transcribed** as note data
+(tagged `verify-melody` in the source) and should be **spot-checked by ear** before release —
+the risk is transcription accuracy, not copyright. Only the underlying public-domain melody
+and traditional lyrics are used; no third-party arrangement or recording is included.
 
 ## User-provided content
 

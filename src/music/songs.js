@@ -4,6 +4,7 @@
 import { parseMelody, newSong } from "./song-format.js";
 import { nameToMidi } from "./notes.js";
 import { chordMidis } from "./theory.js";
+import { EXTRA_SONGS } from "./songs-extra.js";
 
 function chordSeq(bpm, items) {
   const spb = 60 / bpm;
@@ -274,6 +275,8 @@ const SONGS = [
       "C2:1 E2:1 F2:1 G2:2 r:1 C2:1 E2:1 F2:1 G2:2 r:1 C2:1 E2:1 F2:1 G2:2 E2:1 C2:1 E2:1 D2:3"),
   }),
 ];
+
+SONGS.push(...EXTRA_SONGS);
 
 export function builtinSongs() { return SONGS.map((s) => ({ ...s })); }
 export function getBuiltin(id) { const s = SONGS.find((x) => x.id === id); return s ? { ...s } : null; }
