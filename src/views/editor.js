@@ -10,6 +10,7 @@ import { detectPitch, PitchTracker } from "../audio/pitch.js";
 import { parseLRC, toLRC } from "../music/lrc.js";
 import { framesToNotes } from "../music/transcribe.js";
 import { TrackPlayer } from "../audio/player.js";
+import { escapeHTML as escHTML } from "../karaoke/render.js";
 
 const CIRCLE_KEYS = ["C", "G", "D", "A", "E", "B", "F#", "Db", "Ab", "Eb", "Bb", "F", "Am", "Em", "Dm"];
 
@@ -458,8 +459,6 @@ export default function editor(ctx) {
   // stop tap-to-time and hum-capture (timers/listeners/mic) when leaving the view
   return () => { stopTap(true); stopHum(true); };
 }
-
-function escHTML(s) { return String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 
 function notesToNotation(notes, bpm) {
   const spb = 60 / bpm;

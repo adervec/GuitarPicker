@@ -98,8 +98,7 @@ export const GUITAR_COLORS = [
 // ---- helpers ---------------------------------------------------------------
 
 export function pickById(list, id) {
-  for (const x of list) if (x.id === id) return x;
-  return list[0];
+  return list.find((x) => x.id === id) || list[0];
 }
 
 // Clamp + parse a #rrggbb hex into [r,g,b].

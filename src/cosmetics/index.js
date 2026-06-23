@@ -39,7 +39,6 @@ export function setGuitarLoadout(lo) { Store.setSetting("guitar", { ...DEFAULT_G
 
 // ---- convenience renderers (tint flair with the live theme accent) ---------
 export function renderAvatar(loadout) { return composeAvatar(loadout || avatarLoadout(), accent()); }
-export function renderGuitar(loadout) { return composeGuitar(loadout || guitarLoadout(), accent()); }
 
 function accent() {
   try { return getVar("--accent"); } catch { return "#6ea8fe"; }

@@ -4,7 +4,7 @@ import { nameToMidi } from "./notes.js";
 export const SONG_VERSION = 1;
 
 export function uid() {
-  return "s_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  return crypto.randomUUID();
 }
 
 export function newSong(partial = {}) {
@@ -74,7 +74,7 @@ export function songDuration(song) {
  *   - beats: number of beats (defaults to 1 if omitted)
  * Example: "C4:1 E4:1 G4:2 C4+E4+G4:2 r:1"
  */
-export function parseMelody(bpm, str, { string = null } = {}) {
+export function parseMelody(bpm, str) {
   const spb = 60 / bpm;
   let t = 0;
   const notes = [];

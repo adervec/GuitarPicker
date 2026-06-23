@@ -103,7 +103,7 @@ function buildDailyPanel(navigate) {
   const fresh = saved && saved.date === today;
   const done = new Set(fresh ? (saved.done || []) : []);
   const rewarded = new Set(fresh ? (saved.rewarded || []) : []);
-  let bonusPaid = fresh ? !!saved.bonusPaid : false;
+  let bonusPaid = !!(fresh && saved.bonusPaid);
 
   const counter = el("span.muted");
   const bar = progressBar(0);

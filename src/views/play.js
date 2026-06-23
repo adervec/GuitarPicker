@@ -11,7 +11,7 @@ import { suggestCapo, describeMidiSet } from "../music/theory.js";
 import { drawBackground } from "../ui/backgrounds.js";
 import { renderAvatar } from "../cosmetics/index.js";
 import { buildLyricTimeline, activeAt } from "../karaoke/timeline.js";
-import { lineFillHTML } from "../karaoke/render.js";
+import { lineFillHTML, escapeHTML as esc } from "../karaoke/render.js";
 
 const LEAD_IN = 3.0;          // count-in seconds before notes start
 const HIT_PAD = 0.16;         // detection window pad around a note
@@ -422,7 +422,6 @@ export default async function play(ctx) {
 }
 
 // ---------- helpers ----------
-function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 function wrapNarrow(node) { node.style.minWidth = "150px"; return node; }
 function miniStat(num, label) {
   return el("div.stat", {}, [el("div.num", { text: String(num) }), el("div.lbl", { text: label })]);
