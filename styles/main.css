@@ -11,7 +11,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
 a { color: var(--accent); }
 .hidden { display: none !important; }
 
-#app { display: grid; grid-template-columns: 248px 1fr; height: 100vh; }
+#app { display: grid; grid-template-columns: 248px 1fr; height: 100vh; height: 100dvh; } /* dvh: mobile URL-bar safe */
 
 /* ---------- Sidebar ---------- */
 #sidebar {
@@ -258,7 +258,30 @@ table.data tr:hover td { background: var(--panel-2); }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
+/* Tablet / narrow: collapse the sidebar to a centered icon rail. */
 @media (max-width: 820px) {
-  #app { grid-template-columns: 64px 1fr; }
+  #app { grid-template-columns: 60px 1fr; }
   .brand-text, .nav-item span:not(.ico), .io-indicator { display: none; }
+  #sidebar { padding: 14px 6px; }
+  .brand { justify-content: center; padding: 6px 0 14px; }
+  .nav-item { justify-content: center; padding: 11px 0; gap: 0; }
+  .nav-item .ico { font-size: 19px; }
+  .nav-sep { text-align: center; padding: 12px 0 4px; font-size: 8px; letter-spacing: .6px; }
+}
+
+/* Phones: trim chrome and stack every multi-column form grid to one column.
+   ponytail: one rule collapses all .grid form layouts instead of editing ~9 inline
+   styles across views; the locker swatch grid uses a raw inline display:grid (no .grid
+   class) so it stays multi-column, which is what we want there. */
+@media (max-width: 560px) {
+  #view { padding: 14px; }
+  #topbar { padding: 10px 14px; }
+  #crumb { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-right { gap: 8px; }
+  .panel { padding: 14px; overflow-x: auto; }       /* wide tables scroll in-panel, not off-page */
+  .grid { grid-template-columns: 1fr !important; }   /* beat inline gridTemplateColumns on phones */
+  .quiz-choices { grid-template-columns: 1fr; }
+  .healthbar-big { width: 100%; }
+  #toast-host { left: 14px; right: 14px; }
+  .toast { min-width: 0; max-width: none; }
 }

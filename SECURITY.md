@@ -1,9 +1,11 @@
 # Security Policy
 
-GuitarPicker is a static, client-side web app — it runs entirely in your browser, with no
-backend, no accounts, and no network requests. Your data never leaves your device. The
-practical attack surface is therefore small (mainly: could maliciously crafted imported
-song/avatar JSON cause unintended behaviour?).
+GuitarPicker is a static, client-side web app — it runs entirely in your browser with no
+backend operated by this project. By default it makes no network requests and your data never
+leaves your device. The one exception is **opt-in** cloud sync: if enabled and signed in, the
+app talks directly to Google Drive (the user's own `appDataFolder`, `drive.appdata` scope) —
+no third-party server is involved. The practical attack surface is small (mainly: could
+maliciously crafted imported song/avatar JSON, or a synced payload, cause unintended behaviour?).
 
 ## Reporting a vulnerability
 

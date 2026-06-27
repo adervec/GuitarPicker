@@ -37,7 +37,7 @@ export const SHAPES = [
   { id: "jumbo", name: "Jumbo", rarity: "uncommon", acoustic: true, path: bodyPath(190, 376, 48, 37, 56) },
   { id: "strat", name: "Single-Cut S", rarity: "common", acoustic: false, path: bodyPath(206, 368, 45, 38, 50) },
   { id: "tele", name: "Classic T", rarity: "common", acoustic: false, path: bodyPath(208, 366, 43, 39, 47) },
-  { id: "lespaul", name: "Standard LP", rarity: "uncommon", acoustic: false, path: bodyPath(204, 370, 44, 37, 52) },
+  { id: "lespaul", name: "Solid Single-Cut", rarity: "uncommon", acoustic: false, path: bodyPath(204, 370, 44, 37, 52) },
   { id: "hollow", name: "Hollow Body", rarity: "rare", acoustic: false, holes: true, path: bodyPath(196, 374, 46, 35, 53) },
   { id: "bass", name: "Bass", rarity: "uncommon", acoustic: false, bass: true, path: bodyPath(198, 376, 42, 35, 50) },
   { id: "flyingv", name: "Flying V", rarity: "epic", acoustic: false, path: "M 64 202 L 96 202 L 150 360 L 112 360 L 80 286 L 48 360 L 10 360 Z" },

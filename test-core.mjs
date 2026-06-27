@@ -13,6 +13,7 @@ import { Grader, centsOff, classify, gradeLetter, vocalTargets } from "./src/kar
 import { lineFillHTML, escapeHTML } from "./src/karaoke/render.js";
 import { framesToNotes, quantizeNotes } from "./src/music/transcribe.js";
 import { mergeSyncable } from "./src/cloud/merge.js";
+import { OAUTH_ORIGINS, originAllowed, syncConfigured } from "./src/cloud/config.js";
 
 let pass = 0;
 const ok = (name, cond) => { assert.ok(cond, "FAILED: " + name); console.log("  ✓ " + name); pass++; };
@@ -178,5 +179,16 @@ ok("merge unions unlocks", mg.unlocks.red && mg.unlocks.blue);
 ok("merge coins = last-write-wins by savedAt", mg.coins === 12);
 ok("merge coins flips when local is newer", mergeSyncable({ ...localP, savedAt: 300 }, remoteP).coins === 30);
 ok("merge of empties is safe", mergeSyncable(null, null).songs.length === 0);
+
+// ---- cloud OAuth origin gate ----
+{
+  const saved = globalThis.location;
+  const set = (origin) => { globalThis.location = { origin, hostname: new URL(origin).hostname }; };
+  set("http://localhost:8080"); ok("origin gate allows localhost dev (any port)", originAllowed());
+  set(OAUTH_ORIGINS[0]); ok("origin gate allows the production origin", originAllowed());
+  set("https://evil.example.com"); ok("origin gate denies an unknown origin", !originAllowed());
+  ok("not configured without a client id, even on an allowed origin", !syncConfigured());
+  if (saved === undefined) delete globalThis.location; else globalThis.location = saved;
+}
 
 console.log(`\n${pass} checks passed.`);

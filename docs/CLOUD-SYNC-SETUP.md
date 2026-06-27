@@ -41,7 +41,13 @@ Edit [`src/cloud/config.js`](../src/cloud/config.js):
 
 ```js
 export const GOOGLE_CLIENT_ID = "xxxx.apps.googleusercontent.com";
+// And list every origin you serve from (must match the Authorized JavaScript origins above):
+export const OAUTH_ORIGINS = ["https://yourname.github.io"];
 ```
+
+`OAUTH_ORIGINS` is a second, app-side gate: sign-in is refused on any origin not in the
+list (localhost is always allowed for dev), so a fork of this repo redeployed elsewhere
+can't borrow your committed client ID. Keep it in sync with the provider's origins.
 
 Reload, open **Settings → Account & Sync (cloud) → Sign in with Google**, approve
 the `drive.appdata` access, and your data syncs. Sign out anytime.

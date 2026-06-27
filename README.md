@@ -4,7 +4,7 @@
 [![Deploy](https://github.com/adervec/GuitarPicker/actions/workflows/deploy.yml/badge.svg)](https://github.com/adervec/GuitarPicker/actions/workflows/deploy.yml)
 
 An open-source music-learning web app that runs entirely in your browser (in the spirit
-of tools like Yousician) — no build step, no account, no cloud. Plug in a guitar (or any mic), pick a song, and play along while a
+of tools like Yousician) — no build step, no account required, local-first (with optional opt-in cloud sync). Plug in a guitar (or any mic), pick a song, and play along while a
 scrolling note highway grades every note in real time.
 
 ## Quick start
@@ -83,10 +83,13 @@ company.
 
 ## Privacy
 
-GuitarPicker runs entirely in your browser. There are **no accounts, no servers, no
-analytics, and no network requests.** Microphone audio is analysed locally for pitch
-detection and **never leaves your device.** Your songs, settings, and progress are stored
-only in this browser's `localStorage` — export or wipe them anytime from **Settings → Data**.
+GuitarPicker runs entirely in your browser, with **no analytics and no servers operated by
+this project.** Microphone audio is analysed locally for pitch detection and **never leaves
+your device.** Your songs, settings, and progress are stored only in this browser's
+`localStorage` — export or wipe them anytime from **Settings → Data**. **Cloud sync is opt-in
+and off by default**: if you enable it and sign in with Google, your songs/history/progress
+sync to a private folder in *your own* Google Drive (`drive.appdata` scope) — nothing else
+goes over the network. Otherwise the app makes no network requests.
 
 ## Credits & content
 
