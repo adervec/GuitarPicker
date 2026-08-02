@@ -274,6 +274,30 @@ const SONGS = [
     notes: parseMelody(110,
       "C2:1 E2:1 F2:1 G2:2 r:1 C2:1 E2:1 F2:1 G2:2 r:1 C2:1 E2:1 F2:1 G2:2 E2:1 C2:1 E2:1 D2:3"),
   }),
+  // ---- harmonica: middle octave of a C diatonic (holes 4-7, no bends) ----
+  builtin({
+    id: "bi-saints-harmonica", title: "When the Saints (Harmonica)", artist: "Trad.",
+    instrument: "harmonica", key: "C", bpm: 110, difficulty: "beginner",
+    notes: parseMelody(110,
+      "C5:1 E5:1 F5:1 G5:2 r:1 C5:1 E5:1 F5:1 G5:2 r:1 C5:1 E5:1 F5:1 G5:2 E5:1 C5:1 E5:1 D5:3"),
+  }),
+  // ---- recorder: the classic first tune, in the soprano's bottom register ----
+  builtin({
+    id: "bi-hotcross-recorder", title: "Hot Cross Buns (Recorder)", artist: "Trad.",
+    instrument: "recorder", key: "C", bpm: 90, difficulty: "beginner",
+    notes: parseMelody(90,
+      "E5:1 D5:1 C5:2 E5:1 D5:1 C5:2 C5:0.5 C5:0.5 C5:0.5 C5:0.5 D5:0.5 D5:0.5 D5:0.5 D5:0.5 E5:1 D5:1 C5:2"),
+  }),
+  // ---- drums: unpitched, graded on hit timing (lanes are GM kick/snare/hat) ----
+  builtin({
+    id: "bi-backbeat", title: "Backbeat Basics (Drums)", artist: "GuitarPicker",
+    instrument: "e-drums", key: "C", bpm: 90, difficulty: "beginner",
+    notes: parseMelody(90,
+      "C2:1 D2:1 C2:1 D2:1 C2:1 D2:1 C2:1 D2:1 " +
+      "C2:0.5 F#2:0.5 D2:0.5 F#2:0.5 C2:0.5 F#2:0.5 D2:0.5 F#2:0.5 " +
+      "C2:0.5 F#2:0.5 D2:0.5 F#2:0.5 C2:0.5 F#2:0.5 D2:0.5 F#2:0.5 " +
+      "C2:1 D2:1 C2:1 D2:1 C2:1 D2:1 C2:0.5 C2:0.5 D2:2"),
+  }),
 ];
 
 SONGS.push(...EXTRA_SONGS);

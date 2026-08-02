@@ -17,6 +17,7 @@ const NAV = [
   { route: "training", icon: "🏋️", label: "Training" },
   { route: "minigames", icon: "🎮", label: "Theory Games" },
   { route: "glossary", icon: "📖", label: "Glossary" },
+  { route: "instruments", icon: "🎻", label: "Instruments" },
   { route: "history", icon: "📈", label: "Progress" },
   { sep: "You" },
   { route: "locker", icon: "🧑", label: "Locker" },
@@ -35,6 +36,7 @@ const VIEWS = {
   training: () => import("./views/training.js"),
   minigames: () => import("./views/minigames.js"),
   glossary: () => import("./views/glossary.js"),
+  instruments: () => import("./views/instruments.js"),
   history: () => import("./views/history.js"),
   locker: () => import("./views/locker.js"),
   settings: () => import("./views/settings.js"),
@@ -128,7 +130,7 @@ Store.on((e) => { if (e.type === "coins" || e.type === "history" || e.type === "
 const crumbTitles = {
   home: "Home", library: "Songs", play: "Now Playing", karaoke: "Karaoke", tuner: "Tuner",
   editor: "Song Editor", listen: "Listen & Make", training: "Training",
-  minigames: "Theory Games", glossary: "Glossary", history: "Progress",
+  minigames: "Theory Games", glossary: "Glossary", instruments: "Instruments", history: "Progress",
   locker: "Locker", settings: "Settings",
 };
 function refreshCrumb() {

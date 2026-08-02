@@ -6,7 +6,7 @@ import { Synth } from "../audio/synth.js";
 import { TrackPlayer } from "../audio/player.js";
 import { findSong } from "../music/catalog.js";
 import { songDuration } from "../music/song-format.js";
-import { freqToMidiFloat, midiToName, INSTRUMENTS } from "../music/notes.js";
+import { freqToMidiFloat, midiToName, midiToFret, midiToHole, INSTRUMENTS } from "../music/notes.js";
 import { suggestCapo, describeMidiSet } from "../music/theory.js";
 import { drawBackground } from "../ui/backgrounds.js";
 import { renderAvatar } from "../cosmetics/index.js";
@@ -33,6 +33,12 @@ export default async function play(ctx) {
   const speed = s.noteSpeed;
   const duration = songDuration(song);
   const capo = song.capo || suggestCapo(((song.notes[0]?.midi[0] ?? 60) % 12)).capo;
+  const inst = INSTRUMENTS[song.instrument] || INSTRUMENTS["acoustic-guitar"];
+  const fretted = inst.kind === "fretted";
+  const harp = song.instrument === "harmonica";   // hole panel is harmonica-specific, not all winds
+  const percussion = inst.kind === "percussion";  // unpitched: graded on hit timing, not pitch
+  // with a capo, fingering is relative to the capo; midiToFret sees shifted open strings
+  const capoStrings = fretted ? inst.strings.map((v) => v + capo) : null;
 
   // ----- lyrics / karaoke overlay -----
   const lyrics = (song.lyrics || []).slice().sort((a, b) => a.time - b.time);
@@ -43,6 +49,8 @@ export default async function play(ctx) {
   const notes = song.notes.map((n) => ({
     time: n.time, dur: n.dur || 0.4, midi: n.midi, chord: n.chord || n.midi.length > 1,
     state: "pending", best: 999, frames: 0,
+    frets: fretted ? n.midi.map((m) => midiToFret(m, song.instrument, capoStrings)) : null,
+    holes: harp ? n.midi.map(midiToHole) : null,
   }));
   notes.sort((a, b) => a.time - b.time);
 
@@ -83,6 +91,17 @@ export default async function play(ctx) {
     oninput: (v) => { Store.setSetting("vocalVolume", v); player.setVocalVolume(v); } });
   const metroBtn = el("button.btn", { onclick: () => { metro = !metro; metroBtn.classList.toggle("primary", metro); } }, ["🥁 Metronome"]);
   let metro = false;
+  let noteSounds = s.noteSounds ?? true;
+  const soundBtn = el("button.btn", { class: noteSounds ? "primary" : "", title: "Sound each note as it reaches the hit line", onclick: () => {
+    noteSounds = !noteSounds; Store.setSetting("noteSounds", noteSounds);
+    soundBtn.classList.toggle("primary", noteSounds);
+  } }, ["🔊 Notes"]);
+  let showFrets = fretted || harp ? (s.showFingering ?? true) : false;
+  const fretBtn = fretted || harp ? el("button.btn", { class: showFrets ? "primary" : "", title: harp ? "Show harmonica hole and breath direction" : "Show finger positions on a fretboard", onclick: () => {
+    showFrets = !showFrets; Store.setSetting("showFingering", showFrets);
+    fretBtn.classList.toggle("primary", showFrets);
+    if (!playing) render(clock);
+  } }, [harp ? "🎺 Holes" : "🎸 Frets"]) : null;
   const karaokeBtn = lyrics.length ? el("button.btn", { class: karaokeLyrics ? "primary" : "", title: "Word-by-word singalong highlight", onclick: () => {
     karaokeLyrics = !karaokeLyrics; Store.setSetting("karaokeLyrics", karaokeLyrics);
     karaokeBtn.classList.toggle("primary", karaokeLyrics);
@@ -96,7 +115,7 @@ export default async function play(ctx) {
     !player.hasAudio() ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
     player.backing ? wrapNarrow(volB) : null,
     player.vocal ? wrapNarrow(volV) : null,
-    karaokeBtn, metroBtn, backBtn,
+    karaokeBtn, soundBtn, fretBtn, metroBtn, backBtn,
   ]);
 
   shell.append(canvas, overlay, controls);
@@ -129,12 +148,14 @@ export default async function play(ctx) {
   let score = 0, streak = 0, maxStreak = 0, mult = 1;
   const counts = { perfect: 0, good: 0, off: 0, miss: 0 };
   let lastMetroBeat = -1;
+  let soundIdx = 0;                 // next note to sound via the synth
   const beatLen = 60 / song.bpm;
 
   // pitch detection
   const tracker = new PitchTracker();
   const buf = new Float32Array(2048);
   let detectedMidi = -1;
+  let lastRms = 0, onsetAt = -1, lastOnsetAt = -10;  // percussion hit detection
 
   const PPS = () => 240 * speed;    // pixels per second on the highway
   const HIT_X = () => W * 0.16;     // x position of the "now" line
@@ -169,6 +190,7 @@ export default async function play(ctx) {
     finished = false; banner.classList.add("hidden");
     clock = -LEAD_IN; health = 100; failed = false; score = 0; streak = 0; maxStreak = 0; mult = 1;
     counts.perfect = counts.good = counts.off = counts.miss = 0;
+    soundIdx = 0; onsetAt = -1; lastOnsetAt = -10; lastRms = 0;
     notes.forEach((n) => { n.state = "pending"; n.best = 999; n.frames = 0; });
     killfeed.innerHTML = "";
     player.seek(0);
@@ -196,9 +218,22 @@ export default async function play(ctx) {
       if (beat !== lastMetroBeat && clock >= -LEAD_IN) { Synth.click({ accent: beat % 4 === 0 }); lastMetroBeat = beat; }
     }
 
-    // read pitch
+    // sound notes as they cross the hit line (guard skips backlog after audio-sync jumps)
+    while (soundIdx < notes.length && notes[soundIdx].time <= clock) {
+      const n = notes[soundIdx++];
+      if (noteSounds && clock - n.time < 0.3) {
+        for (const m of n.midi) Synth.playMidi(m, { dur: Math.max(0.4, Math.min(n.dur, 2)), a4, gain: 0.18 });
+      }
+    }
+
+    // read pitch (and, for percussion, hit transients)
     if (Audio.readTimeDomain(buf)) {
-      const { freq } = detectPitch(buf, Audio.ctx().sampleRate, s.micGate);
+      const { freq, rms } = detectPitch(buf, Audio.ctx().sampleRate, s.micGate);
+      if (percussion) {
+        // ponytail: RMS-spike onset detector; upgrade to spectral flux if false triggers annoy
+        if (rms > s.micGate * 3 && rms > lastRms * 2 && clock - lastOnsetAt > 0.09) { onsetAt = clock; lastOnsetAt = clock; }
+        lastRms = rms;
+      }
       const f = tracker.push(freq, a4);
       detectedMidi = f > 0 ? freqToMidiFloat(f, a4) : -1;
     }
@@ -215,6 +250,26 @@ export default async function play(ctx) {
 
   // ----- grading -----
   function grade() {
+    if (percussion) {
+      // a hit credits the nearest active note; quality = timing offset, any drum voice counts
+      if (onsetAt >= 0) {
+        let best = null;
+        for (const n of notes) {
+          if (n.state !== "pending") continue;
+          if (n.time - HIT_PAD > onsetAt) break;
+          if (onsetAt <= n.time + n.dur + HIT_PAD &&
+              (!best || Math.abs(n.time - onsetAt) < Math.abs(best.time - onsetAt))) best = n;
+        }
+        if (best) { best.frames++; best.best = Math.min(best.best, Math.abs(best.time - onsetAt)); }
+        onsetAt = -1;
+      }
+      for (const n of notes) {
+        if (n.state !== "pending") continue;
+        if (clock < n.time - HIT_PAD) break;
+        if (clock > n.time + n.dur + HIT_PAD) finalize(n);
+      }
+      return;
+    }
     for (const n of notes) {
       if (n.state !== "pending") continue;
       const winStart = n.time - HIT_PAD;
@@ -235,7 +290,12 @@ export default async function play(ctx) {
   }
   function finalize(n) {
     let q;
-    if (n.frames >= 2 && n.best <= PERFECT_CENTS) q = "perfect";
+    if (percussion) {                       // n.best holds seconds off the beat, not cents
+      if (n.frames && n.best <= 0.07) q = "perfect";
+      else if (n.frames && n.best <= 0.15) q = "good";
+      else if (n.frames) q = "off";
+      else q = "miss";
+    } else if (n.frames >= 2 && n.best <= PERFECT_CENTS) q = "perfect";
     else if (n.frames >= 1 && n.best <= GOOD_CENTS) q = "good";
     else if (n.frames >= 1) q = "off";
     else q = "miss";
@@ -295,13 +355,16 @@ export default async function play(ctx) {
       }
     }
 
-    // live pitch marker
-    if (detectedMidi > 0) {
+    // live pitch marker (meaningless for unpitched percussion)
+    if (!percussion && detectedMidi > 0) {
       const y = yFor(detectedMidi);
       c.fillStyle = getVar("--accent-2");
       c.beginPath(); c.arc(hitX, y, 7, 0, 7); c.fill();
       c.globalAlpha = 0.3; c.fillRect(0, y - 1.5, hitX, 3); c.globalAlpha = 1;
     }
+
+    // fingering hint: fretboard dots or harmonica holes
+    if (showFrets) (harp ? drawHoles : drawFretboard)(t);
 
     // count-in
     if (t < 0) {
@@ -331,6 +394,86 @@ export default async function play(ctx) {
     const lbl = chord ? "" : midiToName(midi).name;
     if (lbl && w > 22) c.fillText(lbl, x + 5, y + 4);
   }
+  // fretboard strip: dots for the current (or next) note's fingering
+  function drawFretboard(t) {
+    const cur = notes.find((n) => n.frets && t <= n.time + n.dur);
+    if (!cur) return;
+    const now = t >= cur.time - 0.05;
+    const nStr = inst.strings.length;
+    const FRETS = 12;
+    const fbW = Math.min(340, W * 0.42), fbH = 6 + nStr * 13;
+    const x0 = 22, y0 = H - fbH - 44;
+    const nutX = x0 + 22, cell = (fbW - 30) / FRETS;
+    c.fillStyle = "rgba(0,0,0,0.55)";
+    roundRect(x0 - 10, y0 - 24, fbW + 20, fbH + 44, 10); c.fill();
+    c.fillStyle = now ? getVar("--accent") : getVar("--muted");
+    c.font = "bold 12px var(--font)";
+    c.fillText((now ? "Now: " : "Next: ") + describeMidiSet(cur.midi) + (capo ? ` · capo ${capo}` : ""), x0, y0 - 8);
+    const sy = (si) => y0 + fbH - 6 - si * 13;   // string 0 (lowest pitch) at bottom
+    c.lineWidth = 1;
+    c.strokeStyle = "rgba(255,255,255,0.4)";
+    for (let si = 0; si < nStr; si++) { const y = sy(si); c.beginPath(); c.moveTo(nutX, y); c.lineTo(nutX + cell * FRETS, y); c.stroke(); }
+    c.fillStyle = getVar("--muted"); c.font = "10px var(--mono)";
+    for (let si = 0; si < nStr; si++) c.fillText(midiToName(inst.strings[si]).name, x0 - 2, sy(si) + 3);
+    for (let f = 0; f <= FRETS; f++) {
+      const x = nutX + f * cell;
+      c.strokeStyle = f === 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.22)";
+      c.lineWidth = f === 0 ? 3 : 1;
+      c.beginPath(); c.moveTo(x, sy(nStr - 1) - 5); c.lineTo(x, sy(0) + 5); c.stroke();
+    }
+    c.fillStyle = getVar("--muted"); c.font = "9px var(--mono)";
+    for (const f of [3, 5, 7, 9, 12]) c.fillText(String(f + capo), nutX + (f - 0.5) * cell - 3, sy(0) + 14);
+    const col = now ? getVar("--accent") : "rgba(255,255,255,0.75)";
+    for (const pos of cur.frets) {
+      if (!pos) continue;                        // note unreachable on this instrument
+      const y = sy(pos.string);
+      if (pos.fret === 0) {                      // open string: ring left of the nut
+        c.strokeStyle = col; c.lineWidth = 2;
+        c.beginPath(); c.arc(nutX - 9, y, 4, 0, 7); c.stroke();
+      } else {
+        const x = nutX + (pos.fret - 0.5) * cell;
+        c.fillStyle = col; c.beginPath(); c.arc(x, y, 6.5, 0, 7); c.fill();
+        const lbl = String(pos.fret + capo);
+        c.fillStyle = "rgba(0,0,0,0.85)"; c.font = "bold 9px var(--mono)";
+        c.fillText(lbl, x - lbl.length * 2.5, y + 3);
+      }
+    }
+  }
+
+  // harmonica strip: which hole to play and whether to blow (↑) or draw (↓)
+  function drawHoles(t) {
+    const cur = notes.find((n) => n.holes && t <= n.time + n.dur);
+    if (!cur) return;
+    const now = t >= cur.time - 0.05;
+    const cell = 28, x0 = 22, fbW = 10 * cell + 4, fbH = 56;
+    const y0 = H - fbH - 44;
+    c.fillStyle = "rgba(0,0,0,0.55)";
+    roundRect(x0 - 10, y0 - 24, fbW + 20, fbH + 34, 10); c.fill();
+    const played = cur.holes.filter(Boolean);
+    const label = played.length
+      ? played.map((p) => `hole ${p.hole} ${p.draw ? "draw ↓" : "blow ↑"}`).join(" · ")
+      : "not on a C harp";
+    c.fillStyle = now ? getVar("--accent") : getVar("--muted");
+    c.font = "bold 12px var(--font)";
+    c.fillText((now ? "Now: " : "Next: ") + describeMidiSet(cur.midi) + " — " + label, x0, y0 - 8);
+    const col = now ? getVar("--accent") : "rgba(255,255,255,0.75)";
+    for (let i = 0; i < 10; i++) {
+      const x = x0 + i * cell;
+      const p = played.find((h) => h.hole === i + 1);
+      roundRect(x, y0, cell - 5, 34, 5);
+      if (p) { c.fillStyle = col; c.fill(); }
+      c.strokeStyle = "rgba(255,255,255,0.35)"; c.lineWidth = 1; c.stroke();
+      c.fillStyle = p ? "rgba(0,0,0,0.85)" : getVar("--muted");
+      c.font = "bold 11px var(--mono)";
+      const num = String(i + 1);
+      c.fillText(num, x + (cell - 5) / 2 - num.length * 3, y0 + 21);
+      if (p) {
+        c.fillStyle = col; c.font = "bold 14px var(--font)";
+        c.fillText(p.draw ? "↓" : "↑", x + (cell - 5) / 2 - 4, y0 + 52);
+      }
+    }
+  }
+
   function roundRect(x, y, w, h, r) {
     r = Math.min(r, h / 2, w / 2);
     c.beginPath();
@@ -411,12 +554,19 @@ export default async function play(ctx) {
     banner.classList.remove("hidden");
   }
 
+  // space bar = play/pause (hands rarely leave the guitar mid-song otherwise)
+  const onKey = (e) => {
+    if (e.code === "Space" && !e.target.closest("input,select,textarea,button")) { e.preventDefault(); togglePlay(); }
+  };
+  window.addEventListener("keydown", onKey);
+
   // initial paint
   render(-LEAD_IN); updateHud();
 
   // cleanup
   return () => {
     playing = false; ro.disconnect(); player.stop(); Audio.stopMic();
+    window.removeEventListener("keydown", onKey);
     document.getElementById("health-mini")?.classList.add("hidden");
   };
 }

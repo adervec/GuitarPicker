@@ -122,9 +122,11 @@ Store.addHistory({ ts: Date.now(), songId, songTitle: "Test", instrument: "acous
 const views = [
   ["home", []], ["library", []], ["tuner", []], ["settings", []],
   ["editor", []], ["editor(copy)", [songId], "editor"], ["listen", []],
-  ["training", []], ["minigames", []], ["glossary", []], ["history", []],
+  ["training", []], ["minigames", []], ["glossary", []], ["instruments", []], ["history", []],
   ["locker", []],
   ["play", [songId], "play"],
+  ["play(harmonica)", ["bi-saints-harmonica"], "play"],
+  ["play(drums)", ["bi-backbeat"], "play"],
   ["karaoke(picker)", [], "karaoke"],
   ["karaoke(song)", [karaokeId], "karaoke"],
 ];
@@ -146,5 +148,13 @@ for (const [name, params, modName] of views) {
     fail++;
   }
 }
+// AI progress report: seeded history must yield a well-formed markdown report
+const { buildProgressReport } = await import("./src/views/history.js");
+const report = buildProgressReport(Store.historyFor());
+for (const must of ["# GuitarPicker practice report", "Sessions: 2", "Average accuracy: 87%", "| Test |", "28/3/1/0"]) {
+  if (report.includes(must)) { console.log(`  ✓ report contains "${must}"`); pass++; }
+  else { console.log(`  ✗ report missing "${must}"`); fail++; }
+}
+
 console.log(`\n${pass} views OK, ${fail} failed.`);
 process.exit(fail ? 1 : 0);

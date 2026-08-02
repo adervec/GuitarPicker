@@ -1,6 +1,8 @@
 // Functional smoke test of the DOM-free core (music + audio math).
 import assert from "node:assert";
-import { midiToFreq, freqToMidi, nameToMidi, midiToName, scaleNotes, midiToFret } from "./src/music/notes.js";
+import { readFileSync } from "node:fs";
+import { midiToFreq, freqToMidi, nameToMidi, midiToName, scaleNotes, midiToFret, midiToHole, INSTRUMENTS } from "./src/music/notes.js";
+import { GUIDE, instrumentFacts, buildInstrumentsMarkdown } from "./src/music/instrument-guide.js";
 import { chordMidis, identifyChord, suggestCapo, transposeSong } from "./src/music/theory.js";
 import { parseMelody, newSong, validateSong, songDuration } from "./src/music/song-format.js";
 import { builtinSongs } from "./src/music/songs.js";
@@ -26,6 +28,21 @@ ok("nameToMidi F#3", nameToMidi("F#3") === 54);
 ok("midiToName 60 = C4", midiToName(60).full === "C4");
 ok("C major scale pcs", scaleNotes(0, "major").join() === "0,2,4,5,7,9,11");
 ok("guitar low E open -> string0 fret0", JSON.stringify(midiToFret(40)) === JSON.stringify({ string: 0, fret: 0 }));
+ok("harmonica C5 = hole 4 blow", JSON.stringify(midiToHole(72)) === JSON.stringify({ hole: 4, draw: false }));
+ok("harmonica D5 = hole 4 draw", JSON.stringify(midiToHole(74)) === JSON.stringify({ hole: 4, draw: true }));
+ok("harmonica G4 overlap prefers blow 3", JSON.stringify(midiToHole(67)) === JSON.stringify({ hole: 3, draw: false }));
+ok("harmonica F4 unplayable (needs bend)", midiToHole(65) === null);
+
+// ---- instrument guide ----
+ok("guide covers every instrument", Object.keys(INSTRUMENTS).every((id) => GUIDE[id]));
+ok("guide guitar range E2 - C6", instrumentFacts("acoustic-guitar").range === "E2 – C6");
+ok("guide harmonica range C4 - C7", instrumentFacts("harmonica").range === "C4 – C7");
+ok("hole strip is harmonica-only, not all winds", instrumentFacts("flute").panel === null);
+ok("drums are unpitched in the guide", instrumentFacts("e-drums").range.startsWith("Unpitched"));
+const guideMd = buildInstrumentsMarkdown();
+ok("guide md mentions every instrument", Object.values(INSTRUMENTS).every((i) => guideMd.includes(`## ${i.name}`)));
+ok("docs/INSTRUMENTS.md in sync (else run: node gen-docs.mjs)",
+  readFileSync("docs/INSTRUMENTS.md", "utf8").replace(/\r\n/g, "\n").trimEnd() === guideMd.trimEnd());
 
 const cMaj = chordMidis(60, "maj");
 ok("C major chord = C E G", cMaj.join() === "60,64,67");

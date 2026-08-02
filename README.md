@@ -26,6 +26,21 @@ python -m http.server 8080
 Open the URL, go to **Settings**, choose your microphone & output device, then hit a song.
 Allow microphone access when prompted (it never leaves your machine).
 
+On Windows, double-click **`GuitarPicker.cmd`** to start the server and open the app in one go
+(make a desktop shortcut to it for one-click launch).
+
+## Install as an app
+
+GuitarPicker is a PWA. With the server running, open it in Chrome/Edge and use the
+**Install** icon in the address bar — you get a Start-menu/desktop app with its own window,
+taskbar shortcuts (Tuner / Songs / Progress), and offline support after the first visit.
+
+## Analyze your progress with Claude
+
+**Progress → 🤖 Export for Claude** downloads a Markdown practice report (summary, per-song
+bests, full session log). Drop it into [Claude](https://claude.ai), Claude Desktop, or a
+Claude Cowork folder and ask for coaching — the file starts with a suggested prompt.
+
 ## What's inside
 
 - **Note highway** — streaming notes, per-note killfeed (Perfect / Good / Off / Miss), a
@@ -46,6 +61,8 @@ Allow microphone access when prompted (it never leaves your machine).
 - **Training** — courses with progression + tempo-adjustable skill drills.
 - **Theory Games** — ear training and theory quizzes.
 - **Glossary** — a music dictionary with interactive chord/scale/interval players.
+- **Instruments** — a detailed guide to every supported instrument (specs, playing guides,
+  playable reference pitches), also readable standalone as [docs/INSTRUMENTS.md](docs/INSTRUMENTS.md).
 - **Progress** — session history and improvement trends.
 - **Locker** — build a layered player avatar (skin tone, hair, clothing, tattoos, eyewear,
   headwear, jewellery, frames), design a guitar (body shape, finish, hardware, inlays,

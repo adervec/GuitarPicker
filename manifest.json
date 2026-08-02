@@ -1,0 +1,19 @@
+{
+  "name": "GuitarPicker",
+  "short_name": "GuitarPicker",
+  "description": "Learn guitar: play songs with live pitch detection, karaoke, tuner, training and theory games. Local-first, no account.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0f1a",
+  "theme_color": "#0b0f1a",
+  "icons": [
+    { "src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Tuner", "url": "./#/tuner", "icons": [{ "src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Songs", "url": "./#/library", "icons": [{ "src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Progress", "url": "./#/history", "icons": [{ "src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml" }] }
+  ]
+}

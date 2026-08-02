@@ -73,7 +73,27 @@ export const INSTRUMENTS = {
   "violin":          { name: "Violin",          strings: [55, 62, 69, 76],          frets: 0,  kind: "bowed" },
   "piano":           { name: "Piano / Keys",    strings: [],                        frets: 0,  kind: "keys" },
   "voice":           { name: "Voice",           strings: [],                        frets: 0,  kind: "voice" },
+  "harmonica":       { name: "Harmonica (C diatonic)", strings: [],                 frets: 0,  kind: "wind" },
+  "recorder":        { name: "Recorder (soprano)", strings: [],                     frets: 0,  kind: "wind" },
+  "whistle":         { name: "Tin Whistle (D)",   strings: [],                      frets: 0,  kind: "wind" },
+  "flute":           { name: "Flute",             strings: [],                      frets: 0,  kind: "wind" },
+  "melodica":        { name: "Melodica",          strings: [],                      frets: 0,  kind: "keys" },
+  "kalimba":         { name: "Kalimba (17-key C)", strings: [],                     frets: 0,  kind: "tines" },
+  "e-drums":         { name: "Electronic Drums",  strings: [],                      frets: 0,  kind: "percussion" },
 };
+
+// Richter-tuned 10-hole C diatonic: blow/draw note per hole (index = hole-1).
+// ponytail: C harp only; add a key param + transposition if other keys matter.
+export const HARMONICA_BLOW = [60, 64, 67, 72, 76, 79, 84, 88, 91, 96];
+export const HARMONICA_DRAW = [62, 67, 71, 74, 77, 81, 83, 86, 89, 93];
+
+/** Hole + breath for a midi on a C diatonic (blow preferred on overlaps); null if unplayable (no bends). */
+export function midiToHole(midi) {
+  let i = HARMONICA_BLOW.indexOf(midi);
+  if (i >= 0) return { hole: i + 1, draw: false };
+  i = HARMONICA_DRAW.indexOf(midi);
+  return i >= 0 ? { hole: i + 1, draw: true } : null;
+}
 
 export const ALT_TUNINGS = {
   "acoustic-guitar": {

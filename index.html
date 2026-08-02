@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GuitarPicker</title>
+  <meta name="theme-color" content="#0b0f1a" />
+  <link rel="icon" type="image/svg+xml" href="icons/logo.svg" />
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles/themes.css" />
   <link rel="stylesheet" href="styles/main.css" />
 </head>
@@ -11,7 +14,7 @@
   <div id="app">
     <aside id="sidebar">
       <div class="brand">
-        <div class="brand-mark">🎸</div>
+        <div class="brand-mark"><img src="icons/logo.svg" alt="GuitarPicker" width="34" height="34" style="display:block;border-radius:8px" /></div>
         <div class="brand-text">
           <strong>GuitarPicker</strong>
           <span>learn · play · grow</span>
@@ -42,5 +45,10 @@
   <div id="toast-host"></div>
 
   <script type="module" src="src/app.js"></script>
+  <script>
+    // PWA: enables install + offline; skipped on file:// where SW is unavailable
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http"))
+      navigator.serviceWorker.register("sw.js");
+  </script>
 </body>
 </html>
