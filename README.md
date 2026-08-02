@@ -3,6 +3,8 @@
 [![CI](https://github.com/adervec/GuitarPicker/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/GuitarPicker/actions/workflows/ci.yml)
 [![Deploy](https://github.com/adervec/GuitarPicker/actions/workflows/deploy.yml/badge.svg)](https://github.com/adervec/GuitarPicker/actions/workflows/deploy.yml)
 
+**▶ Play it now: [adervec.github.io/GuitarPicker](https://adervec.github.io/GuitarPicker/)** — nothing to install (or install it as an app from the address bar).
+
 An open-source music-learning web app that runs entirely in your browser (in the spirit
 of tools like Yousician) — no build step, no account required, local-first (with optional opt-in cloud sync). Plug in a guitar (or any mic), pick a song, and play along while a
 scrolling note highway grades every note in real time.
