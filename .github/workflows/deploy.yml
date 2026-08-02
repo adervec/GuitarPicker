@@ -44,11 +44,13 @@ jobs:
 
       # Ship only what the running app needs. index.html loads styles/ and
       # src/app.js; everything else is reached via relative imports from there.
+      # manifest.json + sw.js + icons/ make it installable; docs/ is the
+      # readable instrument guide.
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html _site/
-          cp -r src styles _site/
+          cp index.html manifest.json sw.js _site/
+          cp -r src styles icons docs _site/
           cp LICENSE CREDITS.md _site/
 
       - name: Configure Pages
