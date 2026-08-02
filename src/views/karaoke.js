@@ -147,7 +147,7 @@ function stage(ctx, song) {
   ]);
   if (!guide) player.setVocalVolume(0);
 
-  shell.append(canvas, overlay, controls);
+  shell.append(el("div.play-stage", {}, [canvas, overlay]), controls);
   root.appendChild(shell);
   const clockEl = controls.querySelector("#kara-clock");
   const countinEl = stageEl.querySelector("#kara-countin");

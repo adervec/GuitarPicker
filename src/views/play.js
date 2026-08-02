@@ -118,7 +118,7 @@ export default async function play(ctx) {
     karaokeBtn, soundBtn, fretBtn, metroBtn, backBtn,
   ]);
 
-  shell.append(canvas, overlay, controls);
+  shell.append(el("div.play-stage", {}, [canvas, overlay]), controls);
   root.appendChild(shell);
   const clockEl = controls.querySelector("#play-clock");
 
@@ -157,7 +157,11 @@ export default async function play(ctx) {
   let detectedMidi = -1;
   let lastRms = 0, onsetAt = -1, lastOnsetAt = -10;  // percussion hit detection
 
-  const PPS = () => 240 * speed;    // pixels per second on the highway
+  // Pixels per second on the highway. Scaled so a narrow screen still shows ~4s of
+  // notes coming — at a fixed 240 a phone gives barely a second of warning. Capped
+  // at 240 so anything wider than ~1150px keeps the original desktop feel.
+  // ponytail: purely visual; grading is time-based, so this can't move a score.
+  const PPS = () => Math.min(240, (W * 0.84) / 4) * speed;
   const HIT_X = () => W * 0.16;     // x position of the "now" line
   const yFor = (midi) => {
     const pad = 46;

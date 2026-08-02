@@ -6,12 +6,18 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overscroll-behavior: none;                 /* no pull-to-refresh reload mid-song */
+  -webkit-tap-highlight-color: transparent;  /* no grey flash on every tap */
 }
 button, input, select, textarea { font-family: inherit; color: inherit; }
 a { color: var(--accent); }
 .hidden { display: none !important; }
 
-#app { display: grid; grid-template-columns: 248px 1fr; height: 100vh; height: 100dvh; } /* dvh: mobile URL-bar safe */
+/* dvh: mobile URL-bar safe. minmax(0,1fr): an auto row takes its item's max-content
+   height, so a tall canvas grew the row past the window and pushed the play controls
+   out of sight — the 0 minimum lets the row be exactly the window height. */
+#app { display: grid; grid-template-columns: 248px 1fr; grid-template-rows: minmax(0, 1fr);
+  height: 100vh; height: 100dvh; }
 
 /* ---------- Sidebar ---------- */
 #sidebar {
@@ -76,7 +82,10 @@ a { color: var(--accent); }
 }
 select.input:focus, input.input:focus, textarea.input:focus { border-color: var(--accent); }
 
-#view { padding: 22px; overflow-y: auto; flex: 1; }
+/* min-height:0 or the flex item is sized by its content instead of the window —
+   the canvas reports its own (stale, larger) pixel height, which pushed the play
+   controls below the fold. Also what makes .play-shell's height:100% definite. */
+#view { padding: 22px; overflow-y: auto; flex: 1; min-height: 0; }
 #view.no-pad { padding: 0; }
 
 /* ---------- Generic components ---------- */
@@ -182,7 +191,13 @@ table.data tr:hover td { background: var(--panel-2); }
 
 /* ---------- Highway / Play ---------- */
 .play-shell { position: relative; height: 100%; display: flex; flex-direction: column; }
-#highway-canvas { display: block; width: 100%; flex: 1; background: var(--highway); }
+/* Canvas + HUD live on a stage so (a) the overlay covers the highway and not the
+   control bar, and (b) the canvas can shrink: a flex item's min-height is auto,
+   which for a canvas means its own intrinsic height — the one the ResizeObserver
+   keeps writing back. It could grow but never shrink, so on a short screen it
+   pushed the controls off the bottom. */
+.play-stage { position: relative; flex: 1; min-height: 0; }
+#highway-canvas, #kara-canvas { display: block; width: 100%; height: 100%; background: var(--highway); }
 .play-overlay { position: absolute; inset: 0; pointer-events: none; }
 .play-hud { position: absolute; top: 14px; left: 14px; right: 14px; display: flex;
   justify-content: space-between; align-items: flex-start; pointer-events: none; }
@@ -258,6 +273,15 @@ table.data tr:hover td { background: var(--panel-2); }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
+/* ---------- Mobile vs desktop ----------
+   Three switches, each keyed to what it actually detects:
+     width   -> how much layout fits (rail, then bottom tab bar)
+     pointer -> finger or mouse (touch target size)
+     height  -> landscape phone, where the note highway wants the whole screen
+   ponytail: no JS device sniffing and no manual mode toggle — the browser already
+   knows all three, and "Request desktop site" is a built-in browser menu item.
+   Add a stored override only if someone actually wants mobile layout on a desktop. */
+
 /* Tablet / narrow: collapse the sidebar to a centered icon rail. */
 @media (max-width: 820px) {
   #app { grid-template-columns: 60px 1fr; }
@@ -278,10 +302,70 @@ table.data tr:hover td { background: var(--panel-2); }
   #topbar { padding: 10px 14px; }
   #crumb { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .topbar-right { gap: 8px; }
+  /* Give the title the width back: the play view already draws its own health bar,
+     and the theme picker lives in Settings. */
+  #health-mini, #theme-quick { display: none; }
   .panel { padding: 14px; overflow-x: auto; }       /* wide tables scroll in-panel, not off-page */
   .grid { grid-template-columns: 1fr !important; }   /* beat inline gridTemplateColumns on phones */
   .quiz-choices { grid-template-columns: 1fr; }
   .healthbar-big { width: 100%; }
-  #toast-host { left: 14px; right: 14px; }
+  #toast-host { left: 14px; right: 14px; bottom: 78px; }  /* clear of the tab bar */
   .toast { min-width: 0; max-width: none; }
+
+  /* The rail becomes a thumb-reachable bottom tab bar: the note highway scrolls
+     right-to-left, so every pixel of width is lookahead time. */
+  #app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  #sidebar { order: 2; flex-direction: row; padding: 2px 0;
+    border-right: 0; border-top: 1px solid var(--line); }
+  .brand, .nav-sep, .sidebar-foot { display: none; }
+  #nav { flex-direction: row; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  #nav::-webkit-scrollbar { display: none; }
+  .nav-item { flex: none; min-width: 58px; }
+  /* Without this the icon row's content width wins and stretches the whole app
+     wider than the screen — grid/flex items default to min-width:auto. */
+  #sidebar, #nav, #main { min-width: 0; }
+
+  /* One scrollable row of controls instead of four wrapped ones — the rows it
+     saves go to the highway. */
+  .play-controls { flex-wrap: nowrap; overflow-x: auto; gap: 10px; padding: 8px 12px; }
+  .play-controls > * { flex: none; }
+  .play-hud { top: 8px; left: 8px; right: 8px; }
+  .lyric-line { font-size: 17px; }
 }
+
+/* Touch: fingers need ~44px, and manipulation drops the 300ms double-tap delay. */
+@media (pointer: coarse) {
+  .btn, .nav-item, .quiz-choice, select.input, input.input { min-height: 44px; }
+  button, a, select, input, .card, .quiz-choice { touch-action: manipulation; }
+}
+
+/* No hover (touch): a tapped card would otherwise keep its hover lift stuck on. */
+@media (hover: none) {
+  .card:hover, .kara-pick:hover { transform: none; }
+}
+
+/* Landscape phone on the immersive routes (play/karaoke): give them the whole
+   screen. Both views carry their own "← Songs" button, so nothing is trapped. */
+@media (max-height: 500px) and (orientation: landscape) {
+  #app:has(#view.no-pad) { grid-template-columns: 1fr; }
+  #app:has(#view.no-pad) #sidebar,
+  #main:has(#view.no-pad) #topbar { display: none; }
+  /* One swipeable row, not two wrapped ones — 97px of controls out of 390 was
+     a quarter of the screen. */
+  #view.no-pad .play-controls { flex-wrap: nowrap; overflow-x: auto; padding: 5px 10px; gap: 8px; }
+  #view.no-pad .play-controls > * { flex: none; }
+  #view.no-pad .play-avatar { display: none; }
+}
+
+/* Portrait phone: the highway is only as wide as the screen, so say so once and
+   fade out. Pure CSS — no element, no timer, gone the moment you rotate. */
+@media (max-width: 700px) and (orientation: portrait) {
+  .play-shell::after {
+    content: "↻ Rotate for more of the note highway";
+    position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%);
+    background: rgba(0,0,0,.6); border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 15px; font-size: 13px; white-space: nowrap; pointer-events: none;
+    animation: hint-fade 7s forwards;
+  }
+}
+@keyframes hint-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
