@@ -208,4 +208,22 @@ ok("merge of empties is safe", mergeSyncable(null, null).songs.length === 0);
   if (saved === undefined) delete globalThis.location; else globalThis.location = saved;
 }
 
+// ---- daily plan follows the instrument, not the guitar ----
+{
+  const { dailyActivities } = await import("./src/music/daily.js");
+  const day = "2026-08-02";
+  const gtr = dailyActivities(day, "acoustic-guitar");
+  const harp = dailyActivities(day, "harmonica");
+  const drums = dailyActivities(day, "e-drums");
+  ok("guitar gets a tune-up step", gtr.some((a) => a.id === "tune"));
+  ok("harmonica has nothing to tune", !harp.some((a) => a.id === "tune"));
+  ok("drums have nothing to tune", !drums.some((a) => a.id === "tune"));
+  const songOf = (acts) => acts.find((a) => a.id === "song");
+  ok("harmonica's daily song is a harmonica song", songOf(harp).title.includes("Harmonica"));
+  ok("drums' daily song is the drum song", songOf(drums).title.includes("Drums"));
+  ok("pitched instruments get a full plan", [gtr, harp].every((p) => p.length >= 4));
+  ok("drums get no pitch warm-up (no percussion drills exist)", !drums.some((a) => a.id === "warmup"));
+  ok("drums still get a usable plan", drums.length >= 3 && drums.some((a) => a.id === "song"));
+}
+
 console.log(`\n${pass} checks passed.`);

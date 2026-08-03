@@ -24,7 +24,7 @@ function scaleUpDown(rootMidi, scale, octaves = 1) {
 export const DRILLS = [
   {
     id: "drill-chromatic", title: "Chromatic Warm-up", difficulty: "beginner",
-    desc: "1-2-3-4 fingers up the low strings — builds finger independence.",
+    desc: "Chromatic run through the low register — builds finger independence.",
     bpm: 80, gen: (bpm) => seqFromMidis([40, 41, 42, 43, 45, 46, 47, 48, 50, 51, 52, 53, 52, 51, 50, 48, 47, 46, 45, 43, 42, 41], bpm, 0.5),
   },
   {
@@ -34,12 +34,12 @@ export const DRILLS = [
   },
   {
     id: "drill-gmajor2", title: "G Major Scale (2 octaves)", difficulty: "intermediate",
-    desc: "Two-octave G major run for fretboard fluency.",
+    desc: "Two-octave G major run for fluency across the range.",
     bpm: 100, gen: (bpm) => seqFromMidis(scaleUpDown(43, "major", 2), bpm, 0.5),
   },
   {
     id: "drill-pentatonic", title: "A Minor Pentatonic", difficulty: "intermediate",
-    desc: "The lead-guitar staple — box 1 up and down.",
+    desc: "The staple lead scale — up and down.",
     bpm: 100, gen: (bpm) => seqFromMidis(scaleUpDown(45, "minor_pentatonic", 1), bpm, 0.5),
   },
   {
@@ -53,7 +53,7 @@ export const DRILLS = [
   },
   {
     id: "drill-bluespent", title: "Blues Scale Sprint", difficulty: "advanced",
-    desc: "E blues scale, fast — for picking accuracy.",
+    desc: "E blues scale, fast — for accuracy at speed.",
     bpm: 130, gen: (bpm) => seqFromMidis(scaleUpDown(40, "blues", 2), bpm, 0.25),
   },
 ];
