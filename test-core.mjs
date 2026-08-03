@@ -208,6 +208,33 @@ ok("merge of empties is safe", mergeSyncable(null, null).songs.length === 0);
   if (saved === undefined) delete globalThis.location; else globalThis.location = saved;
 }
 
+// ---- instrument roster ----
+{
+  const { instrumentOptions, KIND_LABEL, midiToFret } = await import("./src/music/notes.js");
+  const ids = Object.keys(INSTRUMENTS);
+  ok("every instrument has a name and a known kind",
+    ids.every((id) => INSTRUMENTS[id].name && KIND_LABEL[INSTRUMENTS[id].kind]));
+  const opts = instrumentOptions();
+  ok("the grouped dropdown lists every instrument exactly once",
+    opts.length === ids.length && new Set(opts.map((o) => o.value)).size === ids.length);
+  // optgroup only closes on a change of name, so equal groups must be adjacent
+  const seen = [];
+  for (const o of opts) if (seen[seen.length - 1] !== o.group) seen.push(o.group);
+  ok("dropdown groups are contiguous", seen.length === new Set(seen).size);
+  const tunerOpts = instrumentOptions((i) => i.strings.length);
+  ok("the tuner list is exactly the instruments with strings",
+    tunerOpts.length === ids.filter((id) => INSTRUMENTS[id].strings.length).length &&
+    tunerOpts.every((o) => INSTRUMENTS[o.value].strings.length > 0));
+  // a fretted instrument must be able to place a note somewhere on its neck
+  for (const id of ["banjo", "cavaquinho", "baritone-guitar", "guitar-7", "bass-5"]) {
+    const inst = INSTRUMENTS[id];
+    const mid = Math.max(...inst.strings) + 5;
+    const pos = midiToFret(mid, id);
+    ok(`${id} places a mid-neck note on a real fret`,
+      pos && pos.fret >= 0 && pos.fret <= inst.frets && pos.string >= 0 && pos.string < inst.strings.length);
+  }
+}
+
 // ---- daily plan follows the instrument, not the guitar ----
 {
   const { dailyActivities } = await import("./src/music/daily.js");

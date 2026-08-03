@@ -56,12 +56,17 @@ export function slider({ label, min = 0, max = 1, step = 0.01, value = 0, fmt = 
   return wrap;
 }
 
+// An option may carry `group`; consecutive options sharing one land in an
+// <optgroup>. Ungrouped lists behave exactly as before.
 export function select({ label, options, value, onchange }) {
   const sel = el("select.input", { onchange: (e) => onchange && onchange(e.target.value) });
+  let group = null, groupName = null;
   for (const o of options) {
     const opt = el("option", { value: o.value, text: o.label });
     if (o.value === value) opt.selected = true;
-    sel.appendChild(opt);
+    if (o.group && o.group !== groupName) { groupName = o.group; group = el("optgroup", { label: o.group }); sel.appendChild(group); }
+    else if (!o.group) { group = null; groupName = null; }
+    (group || sel).appendChild(opt);
   }
   const node = label ? el("label.field", {}, [el("span", { text: label }), sel]) : sel;
   node.selectEl = sel;

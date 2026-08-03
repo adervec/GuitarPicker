@@ -1,7 +1,7 @@
 // Instruments guide view — renders src/music/instrument-guide.js (the same
 // source that generates docs/INSTRUMENTS.md), with playable reference pitches.
 import { el, pageHead, download, toast } from "../ui/components.js";
-import { INSTRUMENTS } from "../music/notes.js";
+import { INSTRUMENTS, instrumentOptions } from "../music/notes.js";
 import { GUIDE, instrumentFacts, harmonicaChart, buildInstrumentsMarkdown } from "../music/instrument-guide.js";
 import { HARMONICA_BLOW, HARMONICA_DRAW } from "../music/notes.js";
 import { Synth } from "../audio/synth.js";
@@ -21,7 +21,15 @@ export default function instruments(ctx) {
     ]),
   ]));
 
-  for (const id of Object.keys(GUIDE)) root.appendChild(panel(id));
+  // Grouped by family — a flat list of every instrument is a very long scroll.
+  let lastGroup = null;
+  for (const o of instrumentOptions()) {
+    if (o.group !== lastGroup) {
+      lastGroup = o.group;
+      root.appendChild(el("h2", { text: o.group, style: { margin: "22px 0 10px" } }));
+    }
+    root.appendChild(panel(o.value));
+  }
 
   function panel(id) {
     const g = GUIDE[id], f = instrumentFacts(id);

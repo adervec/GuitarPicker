@@ -1,7 +1,7 @@
 import { el, pageHead, select, slider, toast, download } from "../ui/components.js";
 import { Store } from "../state.js";
 import { Audio } from "../audio/engine.js";
-import { INSTRUMENTS } from "../music/notes.js";
+import { INSTRUMENTS, instrumentOptions } from "../music/notes.js";
 import { SKINS } from "../cosmetics/skins.js";
 import { syncConfigured, isSignedIn, signIn, signOut, syncNow, lastSync } from "../cloud/sync.js";
 
@@ -78,7 +78,7 @@ export default async function settings(ctx) {
         onchange: (v) => { Store.setSetting("theme", v); document.documentElement.setAttribute("data-theme", v);
           const q = document.getElementById("theme-quick"); if (q) q.value = v; } }),
       select({ label: "Default instrument", value: s.instrument,
-        options: Object.entries(INSTRUMENTS).map(([id, i]) => ({ value: id, label: i.name })),
+        options: instrumentOptions(),
         onchange: (v) => Store.setSetting("instrument", v) }),
     ]),
     el("p.muted", { style: { margin: "12px 0 0", fontSize: "13px" },

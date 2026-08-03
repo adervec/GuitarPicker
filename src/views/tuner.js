@@ -3,7 +3,7 @@ import { Store } from "../state.js";
 import { Audio } from "../audio/engine.js";
 import { detectPitch, PitchTracker } from "../audio/pitch.js";
 import { Synth } from "../audio/synth.js";
-import { INSTRUMENTS, ALT_TUNINGS, STRING_LABELS, midiToFreq, midiToName, centsTo, freqToMidi } from "../music/notes.js";
+import { INSTRUMENTS, instrumentOptions, ALT_TUNINGS, STRING_LABELS, midiToFreq, midiToName, centsTo, freqToMidi } from "../music/notes.js";
 
 export default async function tuner(ctx) {
   const { el: root } = ctx;
@@ -21,7 +21,7 @@ export default async function tuner(ctx) {
 
   // controls
   const instSel = select({ label: "Instrument", value: instrument,
-    options: Object.entries(INSTRUMENTS).filter(([, i]) => i.strings.length).map(([id, i]) => ({ value: id, label: i.name })),
+    options: instrumentOptions((i) => i.strings.length),
     onchange: (v) => { instrument = v; tuningName = "standard"; rebuildTuning(); } });
   const tuningSel = select({ label: "Tuning", value: tuningName, options: tuningOptions(),
     onchange: (v) => { tuningName = v; rebuildTuning(); } });

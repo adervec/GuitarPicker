@@ -1,7 +1,7 @@
 import { el, pageHead, stat, tag, progressBar, getVar, toast, select, clear } from "../ui/components.js";
 import { Store } from "../state.js";
 import { allSongs } from "../music/catalog.js";
-import { INSTRUMENTS } from "../music/notes.js";
+import { INSTRUMENTS, instrumentOptions } from "../music/notes.js";
 import { fmtTime } from "../ui/components.js";
 import { dailyActivities, todayKey, streakStatus } from "../music/daily.js";
 import { composeAvatar, composeGuitar, avatarLoadout, guitarLoadout } from "../cosmetics/index.js";
@@ -35,7 +35,7 @@ export default function home(ctx) {
   // about whatever you actually play; everything below keys off it.
   const instSel = select({
     label: "Current instrument", value: inst,
-    options: Object.entries(INSTRUMENTS).map(([id, i]) => ({ value: id, label: i.name })),
+    options: instrumentOptions(),
     onchange: (v) => { Store.setSetting("instrument", v); clear(root); home(ctx); },
   });
   root.appendChild(el("div.panel", { style: { marginBottom: "16px" } }, [

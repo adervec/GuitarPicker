@@ -80,6 +80,67 @@ export const INSTRUMENTS = {
   "melodica":        { name: "Melodica",          strings: [],                      frets: 0,  kind: "keys" },
   "kalimba":         { name: "Kalimba (17-key C)", strings: [],                     frets: 0,  kind: "tines" },
   "e-drums":         { name: "Electronic Drums",  strings: [],                      frets: 0,  kind: "percussion" },
+
+  // --- fretted: open-string MIDI low → high, so the tuner and fretboard hints
+  // --- come for free. Reentrant tunings (banjo's 5th string) are listed in
+  // --- playing order, not pitch order — that is what the player sees.
+  "classical-guitar": { name: "Classical Guitar (nylon)", strings: [40, 45, 50, 55, 59, 64], frets: 19, kind: "fretted" },
+  "baritone-guitar": { name: "Baritone Guitar (B–B)", strings: [35, 40, 45, 50, 54, 59], frets: 22, kind: "fretted" },
+  "guitar-7":        { name: "7-String Guitar",   strings: [35, 40, 45, 50, 55, 59, 64], frets: 24, kind: "fretted" },
+  "guitar-12":       { name: "12-String Guitar",  strings: [40, 45, 50, 55, 59, 64], frets: 20, kind: "fretted" },
+  "bass-5":          { name: "5-String Bass",     strings: [23, 28, 33, 38, 43],    frets: 22, kind: "fretted" },
+  "banjo":           { name: "Banjo (5-string, open G)", strings: [67, 50, 55, 59, 62], frets: 22, kind: "fretted" },
+  "tenor-banjo":     { name: "Tenor Banjo (CGDA)", strings: [48, 55, 62, 69],       frets: 19, kind: "fretted" },
+  "baritone-ukulele": { name: "Baritone Ukulele", strings: [50, 55, 59, 64],        frets: 18, kind: "fretted" },
+  "mandola":         { name: "Mandola",           strings: [48, 55, 62, 69],        frets: 20, kind: "fretted" },
+  "bouzouki":        { name: "Irish Bouzouki",    strings: [43, 50, 57, 62],        frets: 24, kind: "fretted" },
+  "cavaquinho":      { name: "Cavaquinho",        strings: [62, 67, 71, 74],        frets: 17, kind: "fretted" },
+  "dulcimer":        { name: "Mountain Dulcimer", strings: [50, 57, 62],            frets: 17, kind: "fretted" },
+
+  // --- fretless plucked: strings (so the tuner works) but no fret grid
+  "fretless-bass":   { name: "Fretless Bass",     strings: [28, 33, 38, 43],        frets: 0,  kind: "plucked" },
+  "oud":             { name: "Oud",               strings: [36, 41, 45, 50, 55, 60], frets: 0, kind: "plucked" },
+
+  // --- bowed
+  "viola":           { name: "Viola",             strings: [48, 55, 62, 69],        frets: 0,  kind: "bowed" },
+  "cello":           { name: "Cello",             strings: [36, 43, 50, 57],        frets: 0,  kind: "bowed" },
+  "double-bass":     { name: "Double Bass",       strings: [28, 33, 38, 43],        frets: 0,  kind: "bowed" },
+  "erhu":            { name: "Erhu",              strings: [62, 69],                frets: 0,  kind: "bowed" },
+
+  // --- keys
+  "electric-piano":  { name: "Electric Piano",    strings: [], frets: 0, kind: "keys" },
+  "organ":           { name: "Organ",             strings: [], frets: 0, kind: "keys" },
+  "synth":           { name: "Synthesizer",       strings: [], frets: 0, kind: "keys" },
+  "accordion":       { name: "Accordion",         strings: [], frets: 0, kind: "keys" },
+
+  // --- wind. Ranges in the guide are SOUNDING pitch: the mic hears what comes
+  // --- out of the bell, not what is on the page for a transposing instrument.
+  "recorder-alto":   { name: "Recorder (alto)",   strings: [], frets: 0, kind: "wind" },
+  "ocarina":         { name: "Ocarina (12-hole)", strings: [], frets: 0, kind: "wind" },
+  "pan-flute":       { name: "Pan Flute",         strings: [], frets: 0, kind: "wind" },
+  "piccolo":         { name: "Piccolo",           strings: [], frets: 0, kind: "wind" },
+  "clarinet":        { name: "Clarinet (B♭)",     strings: [], frets: 0, kind: "wind" },
+  "alto-sax":        { name: "Alto Saxophone",    strings: [], frets: 0, kind: "wind" },
+  "tenor-sax":       { name: "Tenor Saxophone",   strings: [], frets: 0, kind: "wind" },
+  "trumpet":         { name: "Trumpet",           strings: [], frets: 0, kind: "wind" },
+  "trombone":        { name: "Trombone",          strings: [], frets: 0, kind: "wind" },
+  "french-horn":     { name: "French Horn",       strings: [], frets: 0, kind: "wind" },
+  "tuba":            { name: "Tuba",              strings: [], frets: 0, kind: "wind" },
+  "harmonica-chromatic": { name: "Harmonica (chromatic, C)", strings: [], frets: 0, kind: "wind" },
+
+  // --- struck & tuned percussion (pitched: graded on pitch like anything else)
+  "glockenspiel":    { name: "Glockenspiel",      strings: [], frets: 0, kind: "tines" },
+  "xylophone":       { name: "Xylophone",         strings: [], frets: 0, kind: "tines" },
+  "marimba":         { name: "Marimba",           strings: [], frets: 0, kind: "tines" },
+  "vibraphone":      { name: "Vibraphone",        strings: [], frets: 0, kind: "tines" },
+  "handpan":         { name: "Handpan (D minor)", strings: [], frets: 0, kind: "tines" },
+  "steel-pan":       { name: "Steel Pan (lead)",  strings: [], frets: 0, kind: "tines" },
+
+  // --- unpitched percussion (graded on hit timing)
+  "drum-kit":        { name: "Drum Kit",          strings: [], frets: 0, kind: "percussion" },
+  "cajon":           { name: "Cajón",             strings: [], frets: 0, kind: "percussion" },
+  "djembe":          { name: "Djembe",            strings: [], frets: 0, kind: "percussion" },
+  "bongos":          { name: "Bongos",            strings: [], frets: 0, kind: "percussion" },
 };
 
 // Richter-tuned 10-hole C diatonic: blow/draw note per hole (index = hole-1).
@@ -111,7 +172,35 @@ export const ALT_TUNINGS = {
   ukulele: { standard: [67, 60, 64, 69] },
   mandolin: { standard: [55, 62, 69, 76] },
   violin: { standard: [55, 62, 69, 76] },
+  "classical-guitar": { standard: [40, 45, 50, 55, 59, 64], "drop-d": [38, 45, 50, 55, 59, 64] },
+  "guitar-12": { standard: [40, 45, 50, 55, 59, 64], "drop-d": [38, 45, 50, 55, 59, 64] },
+  "guitar-7": { standard: [35, 40, 45, 50, 55, 59, 64], "drop-a": [33, 40, 45, 50, 55, 59, 64] },
+  "bass-5": { standard: [23, 28, 33, 38, 43], tenor: [28, 33, 38, 43, 48] },
+  banjo: { "open-g": [67, 50, 55, 59, 62], "double-c": [67, 48, 55, 60, 62], "open-d": [66, 50, 54, 57, 62] },
+  dulcimer: { "dad-mixolydian": [50, 57, 62], "daa-ionian": [50, 57, 57], "dgd-dorian": [50, 55, 62] },
+  bouzouki: { gdad: [43, 50, 57, 62], gdae: [43, 50, 57, 64] },
+  viola: { standard: [48, 55, 62, 69] },
+  cello: { standard: [36, 43, 50, 57] },
+  "double-bass": { standard: [28, 33, 38, 43], solo: [30, 35, 40, 45] },
+  "fretless-bass": { standard: [28, 33, 38, 43], "drop-d": [26, 33, 38, 43] },
 };
+
+export const KIND_LABEL = {
+  fretted: "Fretted", plucked: "Plucked (fretless)", bowed: "Bowed", keys: "Keyboard",
+  wind: "Wind", tines: "Tuned percussion", percussion: "Percussion", voice: "Voice",
+};
+const KIND_ORDER = ["fretted", "plucked", "bowed", "keys", "wind", "tines", "percussion", "voice"];
+
+/**
+ * Options for an instrument <select>, grouped by family — a flat list of 59 is
+ * unusable. `filter(inst, id)` narrows it (the tuner passes strings-only).
+ */
+export function instrumentOptions(filter = () => true) {
+  return KIND_ORDER.flatMap((k) =>
+    Object.entries(INSTRUMENTS)
+      .filter(([id, i]) => i.kind === k && filter(i, id))
+      .map(([id, i]) => ({ value: id, label: i.name, group: KIND_LABEL[k] })));
+}
 
 export const STRING_LABELS = {
   "acoustic-guitar": ["E", "A", "D", "G", "B", "e"],
@@ -120,6 +209,24 @@ export const STRING_LABELS = {
   ukulele: ["G", "C", "E", "A"],
   mandolin: ["G", "D", "A", "E"],
   violin: ["G", "D", "A", "E"],
+  "classical-guitar": ["E", "A", "D", "G", "B", "e"],
+  "guitar-12": ["E", "A", "D", "G", "B", "e"],
+  "baritone-guitar": ["B", "E", "A", "D", "F#", "b"],
+  "guitar-7": ["B", "E", "A", "D", "G", "B", "e"],
+  "bass-5": ["B", "E", "A", "D", "G"],
+  "fretless-bass": ["E", "A", "D", "G"],
+  banjo: ["g", "D", "G", "B", "d"],   // the short 5th string first, as it sits under the thumb
+  "tenor-banjo": ["C", "G", "D", "A"],
+  "baritone-ukulele": ["D", "G", "B", "E"],
+  mandola: ["C", "G", "D", "A"],
+  bouzouki: ["G", "D", "A", "d"],
+  cavaquinho: ["D", "G", "B", "d"],
+  dulcimer: ["D", "A", "d"],
+  oud: ["C", "F", "A", "D", "G", "c"],
+  viola: ["C", "G", "D", "A"],
+  cello: ["C", "G", "D", "A"],
+  "double-bass": ["E", "A", "D", "G"],
+  erhu: ["D", "A"],
 };
 
 /** Best (string, fret) for a midi on a fretted instrument, preferring low frets. */
