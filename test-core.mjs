@@ -15,7 +15,7 @@ import { Grader, centsOff, classify, gradeLetter, vocalTargets } from "./src/kar
 import { lineFillHTML, escapeHTML } from "./src/karaoke/render.js";
 import { framesToNotes, quantizeNotes } from "./src/music/transcribe.js";
 import { mergeSyncable } from "./src/cloud/merge.js";
-import { OAUTH_ORIGINS, originAllowed, syncConfigured } from "./src/cloud/config.js";
+import { OAUTH_ORIGINS, originAllowed, syncConfigured, driveClientId, BUILTIN_CLIENT_ID } from "./src/cloud/config.js";
 
 let pass = 0;
 const ok = (name, cond) => { assert.ok(cond, "FAILED: " + name); console.log("  ✓ " + name); pass++; };
@@ -204,7 +204,14 @@ ok("merge of empties is safe", mergeSyncable(null, null).songs.length === 0);
   set("http://localhost:8080"); ok("origin gate allows localhost dev (any port)", originAllowed());
   set(OAUTH_ORIGINS[0]); ok("origin gate allows the production origin", originAllowed());
   set("https://evil.example.com"); ok("origin gate denies an unknown origin", !originAllowed());
-  ok("not configured without a client id, even on an allowed origin", !syncConfigured());
+  // The built-in ID is shared with the author's sibling apps, so the gate is what stops
+  // a fork borrowing this project's consent screen and quota.
+  ok("a fork on an unknown origin gets no built-in client id", !driveClientId() && !syncConfigured());
+  ok("a fork supplying its own client id still works", syncConfigured("my-own-id.apps.googleusercontent.com"));
+  set(OAUTH_ORIGINS[0]);
+  ok("the official origin is configured out of the box", syncConfigured() && driveClientId() === BUILTIN_CLIENT_ID);
+  ok("a user-supplied id overrides the built-in one", driveClientId(" mine.apps.googleusercontent.com ") === "mine.apps.googleusercontent.com");
+  ok("the built-in id is a real Google web client id", /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(BUILTIN_CLIENT_ID));
   if (saved === undefined) delete globalThis.location; else globalThis.location = saved;
 }
 

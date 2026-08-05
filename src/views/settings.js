@@ -3,7 +3,7 @@ import { Store } from "../state.js";
 import { Audio } from "../audio/engine.js";
 import { INSTRUMENTS, instrumentOptions } from "../music/notes.js";
 import { SKINS } from "../cosmetics/skins.js";
-import { syncConfigured, isSignedIn, signIn, signOut, syncNow, lastSync } from "../cloud/sync.js";
+import { syncConfigured, isSignedIn, signIn, signOut, syncNow, lastSync, account } from "../cloud/sync.js";
 
 export default async function settings(ctx) {
   const { el: root } = ctx;
@@ -103,10 +103,25 @@ export default async function settings(ctx) {
   // --- Cloud sync (Google Drive, opt-in) ---
   const cloud = el("div.panel", {}, [el("h2", { text: "Account & Sync (cloud)" })]);
   root.appendChild(cloud);
+  // The built-in client ID is origin-gated, so a fork deployed elsewhere lands here
+  // and can paste its own ID rather than editing source and redeploying.
+  const clientIdField = el("input.input", {
+    type: "text", placeholder: "1234-abc.apps.googleusercontent.com",
+    value: Store.settings().driveClientId || "",
+    onchange: (e) => { Store.setSetting("driveClientId", e.target.value.trim()); location.reload(); },
+  });
+  const clientIdRow = el("details", { style: { marginTop: "12px" } }, [
+    el("summary.muted", { style: { fontSize: "12px", cursor: "pointer" }, text: "Use your own Google OAuth client ID (forks & self-hosting)" }),
+    el("p.muted", { style: { fontSize: "12px", lineHeight: "1.5", margin: "8px 0" },
+      html: "The built-in ID only works on the official site and on localhost. Running your own copy elsewhere? Create a free OAuth <b>Web</b> client " +
+        "(see <code>docs/CLOUD-SYNC-SETUP.md</code>), authorise your origin, and paste the ID here. Blank uses the built-in one." }),
+    clientIdField,
+  ]);
+
   if (!syncConfigured()) {
     cloud.append(el("p.muted", { style: { fontSize: "13px", lineHeight: "1.5" },
-      html: "Cloud sync is <b>not configured</b> for this build — GuitarPicker is running 100% locally (no account, no network). " +
-        "To sync your songs, history, and progress to your own Google Drive, follow <code>docs/CLOUD-SYNC-SETUP.md</code> and add a Google OAuth client ID." }));
+      html: "Cloud sync is <b>not available on this origin</b> — GuitarPicker is running 100% locally (no account, no network). " +
+        "The built-in Google client ID is restricted to the official site; add your own below to enable sync on this deployment." }), clientIdRow);
   } else {
     const status = el("span.muted", {});
     const signinBtn = el("button.btn.primary", { onclick: doSignIn }, ["Sign in with Google"]);
@@ -117,14 +132,17 @@ export default async function settings(ctx) {
         html: "Sync your <b>songs, history, progress, and unlocks</b> to a hidden, app-private folder in your own Google Drive. " +
           "Device settings (mic/output, theme) stay local. Opt-in — nothing leaves your device until you sign in, and you can sign out anytime." }),
       el("div.row", { style: { alignItems: "center", gap: "10px" } }, [signinBtn, syncBtn, signoutBtn, status]),
+      clientIdRow,
     );
     function refresh() {
       const on = isSignedIn();
       signinBtn.classList.toggle("hidden", on);
       syncBtn.classList.toggle("hidden", !on);
       signoutBtn.classList.toggle("hidden", !on);
+      const who = account();
       status.textContent = on
-        ? (lastSync() ? `Synced at ${new Date(lastSync()).toLocaleTimeString()}` : "Connected to Google Drive")
+        ? (who ? `${who.name}${who.email && who.email !== who.name ? ` (${who.email})` : ""}` : "Connected to Google Drive") +
+          (lastSync() ? ` — synced ${new Date(lastSync()).toLocaleTimeString()}` : "")
         : "Not signed in — your data stays on this device.";
     }
     async function doSignIn() {
@@ -153,7 +171,7 @@ export default async function settings(ctx) {
       html: "I'm a software developer — <b>not a doctor, music teacher, coach, or lawyer</b>. Nothing here is professional instruction or medical, hearing, or legal advice. Play at a comfortable volume and protect your hearing. Not affiliated with or endorsed by Yousician or any other company." }),
     el("p.muted", { style: { margin: "0 0 8px", fontSize: "13px", lineHeight: "1.5" },
       html: "<b>Privacy:</b> everything runs in your browser and works fully offline. No analytics, and no servers operated by this project. Microphone audio is analysed locally and never leaves your device. " +
-        "<b>Cloud sync is optional and off by default</b> — if you enable it and sign in with Google, your songs/history/progress sync to a private folder in <i>your own</i> Google Drive (minimal <code>drive.appdata</code> scope); sign out anytime. Otherwise your data lives only in this browser." }),
+        "<b>Cloud sync is optional and off by default</b> — if you enable it and sign in with Google, your songs/history/progress sync to a private folder in <i>your own</i> Google Drive (minimal <code>drive.appdata</code> scope, plus your name and email so this page can show which account is connected); sign out anytime. Otherwise your data lives only in this browser." }),
     el("p.muted", { style: { margin: "0 0 10px", fontSize: "13px", lineHeight: "1.5" },
       html: "Built-in songs are traditional / public-domain works and the glossary is original. No third-party code, fonts, images, or audio are bundled." }),
     el("div.row", {}, [

@@ -76,8 +76,8 @@ Claude Cowork folder and ask for coaching — the file starts with a suggested p
   each day, tracks what you've completed, and pays coins.
 - **Themes**, clear input/output device display, customizable backing & vocal volumes.
 - **Cloud sync (optional, opt-in)** — sync your songs, history, and progress to a private folder
-  in your *own* Google Drive. Off by default; the app is fully local/offline until you sign in.
-  No backend, no database — see [docs/CLOUD-SYNC-SETUP.md](docs/CLOUD-SYNC-SETUP.md).
+  in your *own* Google Drive. Off until you sign in; the app is fully local/offline until then.
+  No backend, no database, and no setup on the live site — see [docs/CLOUD-SYNC-SETUP.md](docs/CLOUD-SYNC-SETUP.md).
 
 ## Verify it works
 
@@ -107,7 +107,8 @@ this project.** Microphone audio is analysed locally for pitch detection and **n
 your device.** Your songs, settings, and progress are stored only in this browser's
 `localStorage` — export or wipe them anytime from **Settings → Data**. **Cloud sync is opt-in
 and off by default**: if you enable it and sign in with Google, your songs/history/progress
-sync to a private folder in *your own* Google Drive (`drive.appdata` scope) — nothing else
+sync to a private folder in *your own* Google Drive (`drive.appdata` scope, plus your name/email
+so Settings can show which account is connected) — nothing else
 goes over the network. Otherwise the app makes no network requests.
 
 ## Credits & content

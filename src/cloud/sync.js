@@ -5,19 +5,27 @@
 // Storage: the Drive v3 REST API (plain fetch) reads/writes a single JSON file
 // in the user's hidden appDataFolder. Data never touches any server we operate.
 import { Store } from "../state.js";
-import { GOOGLE_CLIENT_ID, DRIVE_SCOPE, SYNC_FILENAME, syncConfigured } from "./config.js";
+import { DRIVE_SCOPE, SYNC_FILENAME, driveClientId } from "./config.js";
 
 const DRIVE = "https://www.googleapis.com/drive/v3";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3";
+// Drive's simple/multipart uploads cap out at 5 MB. A song with an imported backing
+// track carries it as a data URL, so a library of two or three blows straight past
+// that — anything larger goes via the resumable protocol instead.
+const RESUMABLE_OVER = 4 * 1024 * 1024;
 
 let _gis = null;            // promise resolving once GIS script is loaded
 let _token = null;          // current access token
 let _tokenExp = 0;          // epoch ms when it expires
 let _lastSync = 0;          // epoch ms of last successful sync
+let _profile = null;        // { name, email, picture } of the connected account (cosmetic)
 
-export { syncConfigured };
+/** The client ID in force: a user-supplied override wins, else the built-in one. */
+function clientId() { return driveClientId(Store.settings().driveClientId); }
+export function syncConfigured() { return !!clientId(); }
 export function isSignedIn() { return !!_token && Date.now() < _tokenExp; }
 export function lastSync() { return _lastSync; }
+export function account() { return _profile; }
 
 function loadGIS() {
   if (window.google?.accounts?.oauth2) return Promise.resolve();
@@ -33,14 +41,10 @@ function loadGIS() {
   return _gis;
 }
 
-// Obtain an access token. `interactive` shows the Google account chooser.
-async function getToken(interactive) {
-  if (!syncConfigured()) throw new Error("Cloud sync is not configured");
-  if (_token && Date.now() < _tokenExp - 60000) return _token;
-  await loadGIS();
+function requestToken(prompt) {
   return new Promise((resolve, reject) => {
     const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
+      client_id: clientId(),
       scope: DRIVE_SCOPE,
       callback: (resp) => {
         if (resp.error) return reject(new Error(resp.error_description || resp.error));
@@ -48,10 +52,36 @@ async function getToken(interactive) {
         _tokenExp = Date.now() + (Number(resp.expires_in) || 3600) * 1000;
         resolve(_token);
       },
+      // Without this a dismissed or blocked popup never settles the promise.
       error_callback: (err) => reject(new Error(err?.message || "Sign-in was cancelled")),
     });
-    client.requestAccessToken({ prompt: interactive ? "" : "none" });
+    client.requestAccessToken({ prompt });
   });
+}
+
+// Obtain an access token. `interactive` may open the Google account chooser; otherwise
+// it only ever reuses an existing grant silently.
+async function getToken(interactive) {
+  if (!syncConfigured()) throw new Error("Cloud sync is not configured");
+  if (_token && Date.now() < _tokenExp - 60000) return _token;
+  await loadGIS();
+  // Try silent first even when interactive: a returning user with a live Google
+  // session gets reconnected with no popup at all.
+  let token = null;
+  try { token = await requestToken("none"); }
+  catch (e) { if (!interactive) throw e; }
+  if (!token) token = await requestToken("consent");
+  if (!_profile) await fetchProfile(token);
+  return token;
+}
+
+// Best-effort: which Google account is connected, for display in Settings only.
+async function fetchProfile(token) {
+  try {
+    const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: { Authorization: `Bearer ${token}` } });
+    if (r.ok) { const j = await r.json(); _profile = { name: j.name || j.email || "Google account", email: j.email || "", picture: j.picture || "" }; }
+  } catch { /* cosmetic only — never fails a sync */ }
+  return _profile;
 }
 
 async function api(url, opts = {}) {
@@ -74,8 +104,26 @@ async function downloadPayload(id) {
   try { return await res.json(); } catch { return null; }
 }
 
+// Big payloads (any song with imported audio) use the resumable protocol: initiate,
+// then a single PUT of the bytes. Simple and multipart uploads would 413 at 5 MB.
+async function uploadResumable(id, body) {
+  const meta = id ? {} : { name: SYNC_FILENAME, parents: ["appDataFolder"] };
+  const init = await api(
+    id ? `${UPLOAD}/files/${id}?uploadType=resumable` : `${UPLOAD}/files?uploadType=resumable`,
+    { method: id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": "application/json" },
+      body: JSON.stringify(meta) });
+  const session = init.headers.get("Location");
+  if (!session) throw new Error("Drive upload session was not created");
+  // No auth header here on purpose — the session URL carries its own credentials.
+  const put = await fetch(session, { method: "PUT", body });
+  if (!put.ok) throw new Error(`Drive upload failed (${put.status})`);
+  return id || (await put.json()).id;
+}
+
 async function uploadPayload(id, payload) {
   const body = JSON.stringify(payload);
+  if (body.length > RESUMABLE_OVER) return uploadResumable(id, body);
   if (id) {
     await api(`${UPLOAD}/files/${id}?uploadType=media`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body });
     return id;
@@ -102,7 +150,7 @@ export function signOut() {
   if (_token && window.google?.accounts?.oauth2) {
     try { window.google.accounts.oauth2.revoke(_token); } catch {}
   }
-  _token = null; _tokenExp = 0;
+  _token = null; _tokenExp = 0; _profile = null;
 }
 
 // Pull remote → merge into local → push merged back. Returns a small summary.

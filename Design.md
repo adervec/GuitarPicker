@@ -91,7 +91,7 @@ src/
     components.js     Small shared render helpers (el builder, sliders, charts, toasts)
     backgrounds.js    Canvas song backgrounds (solid / animated / slideshow)
   cloud/
-    config.js         Sync config (GOOGLE_CLIENT_ID; empty = sync off / fully local)
+    config.js         Sync config (built-in OAuth client id + origin allowlist)
     merge.js          Pure merge of two sync payloads (union content, LWW coins) — tested
     sync.js           Google Drive appData sync (GIS token + Drive REST via fetch; no SDK)
 serve.mjs             Zero-dependency Node static server
@@ -277,7 +277,7 @@ play continues. Killfeed shows the last several note judgments with note name + 
   CREDITS.md. Traditional melodies are hand-transcribed and tagged `verify-melody` — word-timing
   is exact (one note per word), but **pitches need an ear-check before public release**.
 - **Optional Google Drive cloud sync (opt-in, local-first):** added `cloud/` — `config.js`
-  (`GOOGLE_CLIENT_ID`; empty ⇒ sync off and the app stays fully local/offline), `merge.js` (pure,
+  (`BUILTIN_CLIENT_ID` + `OAUTH_ORIGINS`; off-origin or no id ⇒ sync unavailable), `merge.js` (pure,
   tested union-merge of two payloads: songs/history/progress/unlocks unioned, coin balance
   last-write-wins by `savedAt`), and `sync.js` (Google Identity Services token + Drive v3 REST via
   `fetch` — no bundled SDK, GIS loaded only on sign-in; reads/writes one file in the user's hidden
