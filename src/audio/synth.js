@@ -1,24 +1,14 @@
-// Lightweight oscillator synth for note previews, reference tones, and metronome.
+// One-shot synth: note previews, tuning reference tones, and the metronome.
+// Timbres live in voices.js — pass `instrument` (or `voice`) to hear a note the
+// way that instrument would actually sound.
 import { Audio } from "./engine.js";
-import { midiToFreq } from "../music/notes.js";
+import { playVoice, voiceFor } from "./voices.js";
 
 export const Synth = {
-  /** Pluck-ish tone for a midi note. */
-  playMidi(midi, { dur = 0.7, type = "triangle", gain = 0.25, a4 = 440 } = {}) {
+  /** Play a midi note in an instrument's voice. Returns kill(when). */
+  playMidi(midi, { dur = 0.7, gain = 0.25, a4 = 440, instrument = null, voice = null } = {}) {
     const ctx = Audio.ctx(); Audio.resume();
-    const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    const f = midiToFreq(midi, a4);
-    osc.type = type; osc.frequency.value = f;
-    // subtle second partial
-    const osc2 = ctx.createOscillator(); osc2.type = "sine"; osc2.frequency.value = f * 2;
-    const g2 = ctx.createGain(); g2.gain.value = gain * 0.3;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(gain, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
-    osc.connect(g); osc2.connect(g2); g2.connect(g); g.connect(ctx.destination);
-    osc.start(t); osc2.start(t); osc.stop(t + dur + 0.05); osc2.stop(t + dur + 0.05);
+    return playVoice(ctx, ctx.destination, voice || voiceFor(instrument), midi, { dur, gain, a4 });
   },
 
   /** Sustained reference tone for tuning a single string. Returns a stop() fn. */

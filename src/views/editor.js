@@ -178,7 +178,7 @@ export default function editor(ctx) {
     if (hitIdx >= 0) { arr.splice(hitIdx, 1); refreshVoice(); return; }
     const snapped = Math.floor(beat / snap) * snap;
     arr.push({ time: +(snapped * spb()).toFixed(4), dur: +(noteLen * spb() * 0.92).toFixed(4), midi: [midi] });
-    Synth.playMidi(midi, { dur: 0.3 });
+    Synth.playMidi(midi, { dur: 0.3, instrument: song.instrument });
     refreshVoice();
   });
 

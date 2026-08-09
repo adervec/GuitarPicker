@@ -58,6 +58,13 @@ const SONGS = [
     background: { type: "solid", value: "" },
     notes: parseMelody(110,
       "C4:1 E4:1 F4:1 G4:2 r:1 C4:1 E4:1 F4:1 G4:2 r:1 C4:1 E4:1 F4:1 G4:2 E4:1 C4:1 E4:1 D4:3"),
+    // A two-instrument arrangement: play the guitar melody and the harmonica
+    // answers, or set your instrument to harmonica and the guitar plays instead.
+    // Every pitch here is a plain blow/draw on a C diatonic — no bends.
+    parts: [{
+      instrument: "harmonica", name: "Harmonica",
+      notes: parseMelody(110, "r:3 B4:2 D5:0.5 B4:0.5 r:3 B4:2 G5:0.5 E5:0.5 r:3 D5:2 r:3 D5:3"),
+    }],
     lyrics: [
       { time: 0, text: "Oh, when the saints" }, { time: 3.3, text: "go marching in," },
       { time: 6.5, text: "Oh when the saints go marching in," },

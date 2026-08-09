@@ -23,6 +23,9 @@ export function newSong(partial = {}) {
     tags: partial.tags || [],
     background: partial.background || { type: "solid", value: "" },
     audio: partial.audio || { backing: null, vocal: null },
+    // Other instruments in the arrangement. Whichever part matches the player's
+    // instrument becomes the highway; the rest are synthesized as the backing.
+    parts: partial.parts || [],
     lyrics: partial.lyrics || [],
     voice: partial.voice || { notes: [] },
     notes: partial.notes || [],
@@ -50,7 +53,28 @@ export function validateSong(o) {
     if (typeof o.voice !== "object") errors.push("voice must be an object");
     else if (o.voice.notes != null && !Array.isArray(o.voice.notes)) errors.push("voice.notes must be an array");
   }
+  if (o.parts != null) {
+    if (!Array.isArray(o.parts)) errors.push("parts must be an array");
+    else o.parts.forEach((p, i) => {
+      if (!p || typeof p !== "object") errors.push(`part ${i}: not an object`);
+      else if (!Array.isArray(p.notes)) errors.push(`part ${i}: notes[]`);
+      else if (!p.instrument) errors.push(`part ${i}: instrument`);
+    });
+  }
   return { ok: errors.length === 0, errors };
+}
+
+/** Every part of the arrangement, the song's own notes first. */
+export function songParts(song) {
+  const lead = { instrument: song.instrument || "acoustic-guitar", name: song.partName || "Lead", notes: song.notes || [] };
+  return [lead, ...(song.parts || []).filter((p) => p?.notes?.length)];
+}
+
+/** Which part the player plays: theirs if the song has one, else the lead. */
+export function pickPart(song, instrument) {
+  const parts = songParts(song);
+  const index = Math.max(0, parts.findIndex((p) => p.instrument === instrument));
+  return { parts, index, lead: parts[index] };
 }
 
 export function serialize(song) { return JSON.stringify(song, null, 2); }

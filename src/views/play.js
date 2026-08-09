@@ -4,8 +4,10 @@ import { Audio } from "../audio/engine.js";
 import { detectPitch, PitchTracker } from "../audio/pitch.js";
 import { Synth } from "../audio/synth.js";
 import { TrackPlayer } from "../audio/player.js";
+import { Band } from "../audio/band.js";
 import { findSong } from "../music/catalog.js";
-import { songDuration } from "../music/song-format.js";
+import { songDuration, pickPart } from "../music/song-format.js";
+import { autoAccompaniment } from "../music/accompany.js";
 import { freqToMidiFloat, midiToName, midiToFret, midiToHole, INSTRUMENTS } from "../music/notes.js";
 import { suggestCapo, describeMidiSet } from "../music/theory.js";
 import { drawBackground } from "../ui/backgrounds.js";
@@ -31,11 +33,15 @@ export default async function play(ctx) {
   const s = Store.settings();
   const a4 = s.a4;
   const speed = s.noteSpeed;
-  const duration = songDuration(song);
-  const capo = song.capo || suggestCapo(((song.notes[0]?.midi[0] ?? 60) % 12)).capo;
-  const inst = INSTRUMENTS[song.instrument] || INSTRUMENTS["acoustic-guitar"];
+  // Which part you play: yours if the arrangement has one, else the song's lead.
+  // Everything else in the arrangement becomes the synth band.
+  const { parts, index: leadIdx, lead } = pickPart(song, s.instrument);
+  const playInst = lead.instrument;
+  const duration = songDuration({ notes: lead.notes });
+  const capo = song.capo || suggestCapo(((lead.notes[0]?.midi[0] ?? 60) % 12)).capo;
+  const inst = INSTRUMENTS[playInst] || INSTRUMENTS["acoustic-guitar"];
   const fretted = inst.kind === "fretted";
-  const harp = song.instrument === "harmonica";   // hole panel is harmonica-specific, not all winds
+  const harp = playInst === "harmonica";   // hole panel is harmonica-specific, not all winds
   const percussion = inst.kind === "percussion";  // unpitched: graded on hit timing, not pitch
   // with a capo, fingering is relative to the capo; midiToFret sees shifted open strings
   const capoStrings = fretted ? inst.strings.map((v) => v + capo) : null;
@@ -46,10 +52,10 @@ export default async function play(ctx) {
   let karaokeLyrics = lyricTimeline ? (s.karaokeLyrics ?? true) : false;
 
   // ----- per-note runtime state -----
-  const notes = song.notes.map((n) => ({
+  const notes = lead.notes.map((n) => ({
     time: n.time, dur: n.dur || 0.4, midi: n.midi, chord: n.chord || n.midi.length > 1,
     state: "pending", best: 999, frames: 0,
-    frets: fretted ? n.midi.map((m) => midiToFret(m, song.instrument, capoStrings)) : null,
+    frets: fretted ? n.midi.map((m) => midiToFret(m, playInst, capoStrings)) : null,
     holes: harp ? n.midi.map(midiToHole) : null,
   }));
   notes.sort((a, b) => a.time - b.time);
@@ -63,6 +69,8 @@ export default async function play(ctx) {
     el("div", { html: `<b>${song.title}</b>` }),
     el("div.muted", { style: { fontSize: "12px" }, html:
       `${song.artist} · key ${song.key} · ${song.bpm} BPM` + (capo ? ` · <span class="capo-note" style="padding:2px 8px">🔼 Capo ${capo}</span>` : "") }),
+    parts.length > 1 ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" },
+      text: `🎯 Your part: ${inst.name}` }) : null,
     (song.lyrics && song.lyrics.length)
       ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" }, text: `🎤 Singalong${song.genre ? " · " + song.genre : ""}` })
       : (song.genre ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" }, text: song.genre }) : null),
@@ -85,8 +93,25 @@ export default async function play(ctx) {
   const backBtn = el("button.btn.ghost", { onclick: () => navigate("#/library") }, ["← Songs"]);
   const player = new TrackPlayer();
   player.load(song);
+
+  // ----- synth backing band -----
+  // Authored parts you're not playing, plus generated bass/comp/drums for the
+  // roles nothing covers. An imported backing track wins by default.
+  const bandParts = parts.filter((_, i) => i !== leadIdx);
+  bandParts.push(...autoAccompaniment({ ...song, notes: lead.notes, instrument: playInst }, parts));
+  const band = new Band(bandParts, { a4, volume: s.backingVolume });
+  let bandOn = !band.empty && !player.backing && (s.band ?? true);
+  const bandBtn = band.empty ? null : el("button.btn", {
+    class: bandOn ? "primary" : "", title: "Synthesized accompaniment: " + band.names.join(", "),
+    onclick: () => {
+      bandOn = !bandOn; Store.setSetting("band", bandOn);
+      bandBtn.classList.toggle("primary", bandOn);
+      if (bandOn) band.seek(Math.max(0, clock)); else band.silence();
+    },
+  }, ["🎺 Band"]);
+
   const volB = slider({ label: "Backing", value: s.backingVolume, fmt: (v) => Math.round(v * 100) + "%",
-    oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); } });
+    oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); band.setVolume(v); } });
   const volV = slider({ label: "Vocal", value: s.vocalVolume, fmt: (v) => Math.round(v * 100) + "%",
     oninput: (v) => { Store.setSetting("vocalVolume", v); player.setVocalVolume(v); } });
   const metroBtn = el("button.btn", { onclick: () => { metro = !metro; metroBtn.classList.toggle("primary", metro); } }, ["🥁 Metronome"]);
@@ -112,10 +137,10 @@ export default async function play(ctx) {
     playBtn, restartBtn,
     el("div.muted", { style: { minWidth: "70px" }, id: "play-clock", text: "0:00" }),
     el("div", { style: { flex: "1" } }),
-    !player.hasAudio() ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
-    player.backing ? wrapNarrow(volB) : null,
+    (!player.hasAudio() && band.empty) ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
+    (player.backing || !band.empty) ? wrapNarrow(volB) : null,
     player.vocal ? wrapNarrow(volV) : null,
-    karaokeBtn, soundBtn, fretBtn, metroBtn, backBtn,
+    karaokeBtn, bandBtn, soundBtn, fretBtn, metroBtn, backBtn,
   ]);
 
   shell.append(el("div.play-stage", {}, [canvas, overlay]), controls);
@@ -187,7 +212,7 @@ export default async function play(ctx) {
   }
   function pause() {
     playing = false; playBtn.textContent = "▶ Resume";
-    player.pause();
+    player.pause(); band.silence();
   }
   function restart() {
     pause();
@@ -197,7 +222,7 @@ export default async function play(ctx) {
     soundIdx = 0; onsetAt = -1; lastOnsetAt = -10; lastRms = 0;
     notes.forEach((n) => { n.state = "pending"; n.best = 999; n.frames = 0; });
     killfeed.innerHTML = "";
-    player.seek(0);
+    player.seek(0); band.seek(0);
     playBtn.textContent = "▶ Start";
     render(0); updateHud();
   }
@@ -216,6 +241,9 @@ export default async function play(ctx) {
       if (clock >= 0 && player.hasAudio() && (player.backing?.paused)) player.play(clock);
     }
 
+    // synth band (schedules ahead of the clock, so it stays in time regardless of frame rate)
+    if (bandOn) band.schedule(clock);
+
     // metronome
     if (metro) {
       const beat = Math.floor(clock / beatLen);
@@ -226,7 +254,7 @@ export default async function play(ctx) {
     while (soundIdx < notes.length && notes[soundIdx].time <= clock) {
       const n = notes[soundIdx++];
       if (noteSounds && clock - n.time < 0.3) {
-        for (const m of n.midi) Synth.playMidi(m, { dur: Math.max(0.4, Math.min(n.dur, 2)), a4, gain: 0.18 });
+        for (const m of n.midi) Synth.playMidi(m, { dur: Math.max(0.4, Math.min(n.dur, 2)), a4, gain: 0.18, instrument: playInst });
       }
     }
 
@@ -523,13 +551,13 @@ export default async function play(ctx) {
   }
 
   function finish() {
-    finished = true; playing = false; player.pause();
+    finished = true; playing = false; player.pause(); band.silence();
     playBtn.textContent = "⟲ Play again";
     const acc = accuracy();
     const passed = !failed && acc >= 60;
     const grade = gradeLetter(acc, failed);
     const entry = {
-      ts: Date.now(), songId: song.id, songTitle: song.title, instrument: song.instrument,
+      ts: Date.now(), songId: song.id, songTitle: song.title, instrument: playInst,
       score, accuracy: acc, maxStreak, passed, durationSec: Math.round(duration),
       notes: { ...counts },
     };
@@ -569,7 +597,7 @@ export default async function play(ctx) {
 
   // cleanup
   return () => {
-    playing = false; ro.disconnect(); player.stop(); Audio.stopMic();
+    playing = false; ro.disconnect(); player.stop(); band.stop(); Audio.stopMic();
     window.removeEventListener("keydown", onKey);
     document.getElementById("health-mini")?.classList.add("hidden");
   };

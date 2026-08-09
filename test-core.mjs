@@ -4,7 +4,10 @@ import { readFileSync } from "node:fs";
 import { midiToFreq, freqToMidi, nameToMidi, midiToName, scaleNotes, midiToFret, midiToHole, INSTRUMENTS } from "./src/music/notes.js";
 import { GUIDE, instrumentFacts, buildInstrumentsMarkdown } from "./src/music/instrument-guide.js";
 import { chordMidis, identifyChord, suggestCapo, transposeSong } from "./src/music/theory.js";
-import { parseMelody, newSong, validateSong, songDuration } from "./src/music/song-format.js";
+import { parseMelody, newSong, validateSong, songDuration, songParts, pickPart } from "./src/music/song-format.js";
+import { VOICES, voiceFor, playVoice, KICK, SNARE, HAT } from "./src/audio/voices.js";
+import { Band } from "./src/audio/band.js";
+import { parseKey, chordPlan, autoAccompaniment } from "./src/music/accompany.js";
 import { builtinSongs } from "./src/music/songs.js";
 import { DRILLS, buildDrillSong, COURSES } from "./src/music/drills.js";
 import { detectPitch } from "./src/audio/pitch.js";
@@ -258,6 +261,147 @@ ok("merge of empties is safe", mergeSyncable(null, null).songs.length === 0);
   ok("pitched instruments get a full plan", [gtr, harp].every((p) => p.length >= 4));
   ok("drums get no pitch warm-up (no percussion drills exist)", !drums.some((a) => a.id === "warmup"));
   ok("drums still get a usable plan", drums.length >= 3 && drums.some((a) => a.id === "song"));
+}
+
+// ---- synth voices ----
+{
+  const ids = Object.keys(INSTRUMENTS);
+  ok("every instrument maps to a real voice", ids.every((id) => VOICES[voiceFor(id)]));
+  ok("a harmonica is a reed, not a generic flute", voiceFor("harmonica") === "reed" && voiceFor("flute") === "flute");
+  ok("a banjo doesn't sound like a nylon guitar", voiceFor("banjo") !== voiceFor("classical-guitar"));
+  ok("percussion uses the drum voice", voiceFor("drum-kit") === "drum" && VOICES.drum.drum === true);
+  ok("more than one voice is actually in use", new Set(ids.map(voiceFor)).size >= 8);
+}
+
+// A stub AudioContext that enforces the two Web Audio rules a scheduler breaks
+// first: automation events must be in time order, and an exponential ramp may
+// never target 0. Both throw in a browser and would be invisible here otherwise.
+function fakeCtx() {
+  const param = (name) => {
+    let last = -Infinity;
+    const at = (v, t, kind) => {
+      assert.ok(Number.isFinite(t) && Number.isFinite(v), `${name}: non-finite ${kind} (${v} @ ${t})`);
+      assert.ok(t >= last - 1e-9, `${name}: ${kind} at ${t} scheduled after ${last} - out of order`);
+      last = t;
+    };
+    const p = {
+      value: 0,
+      setValueAtTime: (v, t) => (at(v, t, "set"), p),
+      linearRampToValueAtTime: (v, t) => (at(v, t, "linear"), p),
+      exponentialRampToValueAtTime: (v, t) => {
+        assert.ok(v !== 0, `${name}: exponential ramp to 0 throws in Web Audio`);
+        at(v, t, "exp");
+        return p;
+      },
+      setTargetAtTime: (v, t) => (at(v, t, "target"), p),
+      cancelScheduledValues: () => { last = -Infinity; return p; },
+    };
+    return p;
+  };
+  const node = (extra) => ({ connect() {}, disconnect() {}, ...extra });
+  return {
+    currentTime: 10, sampleRate: 48000, destination: node({}),
+    createGain: () => node({ gain: param("gain") }),
+    createOscillator: () => node({ type: "sine", frequency: param("freq"), detune: param("detune"), start() {}, stop() {} }),
+    createBiquadFilter: () => node({ type: "lowpass", frequency: param("cutoff"), Q: param("Q") }),
+    createBufferSource: () => node({ buffer: null, loop: false, start() {}, stop() {} }),
+    createBuffer: (ch, len) => ({ getChannelData: () => new Float32Array(len) }),
+  };
+}
+
+{
+  const ctx = fakeCtx();
+  for (const id of Object.keys(VOICES)) {
+    for (const dur of [0.05, 0.5, 4]) playVoice(ctx, ctx.destination, id, 60, { at: 11, dur, gain: 0.25 });
+  }
+  ok("every voice schedules legal automation at any note length", true);
+  for (const m of [KICK, SNARE, HAT, 46, 49, 51, 99]) playVoice(ctx, ctx.destination, "drum", m, { at: 11, dur: 0.2, gain: 0.3 });
+  ok("the drum map handles every lane and an unknown one", true);
+  ok("a scheduled note can be killed early", typeof playVoice(ctx, ctx.destination, "pluck", 64, { at: 11 }) === "function");
+}
+
+// ---- backing band scheduler ----
+{
+  const notes = [{ time: 0, dur: 0.5, midi: [60] }, { time: 1, dur: 0.5, midi: [62] }, { time: 5, dur: 0.5, midi: [64] }];
+  const mk = () => new Band([{ instrument: "piano", notes }], { ctx: fakeCtx() });
+  const b = mk();
+  b.schedule(0);
+  ok("only notes inside the lookahead are queued", b._live.length === 1);
+  b.schedule(0);
+  ok("re-scheduling the same clock doesn't double-fire", b._live.length === 1);
+  b.schedule(1);
+  ok("the next note queues as the clock reaches it", b._live.length === 2);
+  ok("distant notes stay unqueued", b.parts[0].i === 2);
+  b.seek(0);
+  ok("seek silences what was queued", b._live.length === 0);
+  b.schedule(0);
+  ok("seek rewinds the playhead", b._live.length === 1);
+  const jump = mk();
+  jump.schedule(2);
+  ok("a clock jump drops the backlog instead of firing it at once", jump._live.length === 0);
+  const fwd = mk();
+  fwd.seek(5); fwd.schedule(5);
+  ok("seeking forward starts from the right note", fwd._live.length === 1);
+  ok("an empty band is inert", new Band([]).empty && new Band([{ instrument: "piano", notes: [] }]).empty);
+}
+
+// ---- auto-accompaniment ----
+{
+  ok("key C parses to C major", parseKey("C").pc === 0 && parseKey("C").minor === false);
+  ok("key Am parses to A minor", parseKey("Am").pc === 9 && parseKey("Am").minor === true);
+  ok("flat and sharp keys parse", parseKey("Bb").pc === 10 && parseKey("F#m").pc === 6);
+  ok("a junk key falls back to C major", parseKey("???").pc === 0);
+
+  const byId = Object.fromEntries(builtinSongs().map((x) => [x.id, x]));
+  const twinkle = chordPlan(byId["bi-twinkle"]);
+  ok("Twinkle opens on the tonic", twinkle[0].pc === 0 && twinkle[0].type === "maj");
+  ok("Twinkle gets one chord per bar", twinkle.length === Math.ceil(songDuration(byId["bi-twinkle"]) / (4 * 60 / 100)));
+  ok("Twinkle's chords all sit in C major", twinkle.every((c) => [0, 2, 4, 5, 7, 9, 11].includes(c.pc)));
+
+  // a song already made of chords states its own harmony
+  const blues = chordPlan(byId["bi-12bar"]);
+  ok("12-bar blues reads its own chords", blues[0].pc === 9 && blues[4].pc === 2 && blues[8].pc === 4);
+  const pop = chordPlan(byId["bi-popprog"]);
+  ok("I-V-vi-IV is read back exactly", [pop[0].pc, pop[1].pc, pop[2].pc, pop[3].pc].join() === "0,7,9,5");
+
+  const parts = autoAccompaniment(byId["bi-twinkle"], songParts(byId["bi-twinkle"]));
+  const names = parts.map((p) => p.name);
+  ok("a bare melody gets bass and chords", names.includes("Bass") && parts.some((p) => p.notes[0].midi.length >= 3));
+  ok("generated bass stays in the bass register",
+    parts.find((p) => p.name === "Bass").notes.every((n) => n.midi[0] >= 36 && n.midi[0] <= 47));
+  ok("every generated note has a time, duration and pitches",
+    parts.every((p) => p.notes.every((n) => Number.isFinite(n.time) && n.dur > 0 && n.midi.length)));
+  ok("generated parts name real instruments", parts.every((p) => INSTRUMENTS[p.instrument]));
+
+  // roles an existing part already covers are not doubled
+  const bassSong = byId["bi-saints-bass"];
+  ok("no second bass under a bass player", !autoAccompaniment(bassSong, songParts(bassSong)).some((p) => p.name === "Bass"));
+  const drumSong = byId["bi-backbeat"];
+  ok("a drum chart invents no harmony from its kit lanes", autoAccompaniment(drumSong, songParts(drumSong)).length === 0);
+  const chordSong = byId["bi-popprog"];
+  ok("no chord comp under a chord trainer",
+    !autoAccompaniment(chordSong, songParts(chordSong)).some((p) => p.name !== "Bass" && p.notes[0].midi.length >= 3));
+  ok("quiet genres get no drum kit",
+    !autoAccompaniment({ ...byId["bi-amazing"], genre: "Hymn/Gospel" }, []).some((p) => p.name === "Drums"));
+  ok("a song with no notes gets no band", autoAccompaniment(newSong({ title: "x" }), []).length === 0);
+}
+
+// ---- multi-instrument arrangements ----
+{
+  const saints = builtinSongs().find((x) => x.id === "bi-saints");
+  ok("the demo arrangement has two instruments", songParts(saints).length === 2);
+  ok("a guitarist plays the guitar part", pickPart(saints, "acoustic-guitar").lead.instrument === "acoustic-guitar");
+  ok("a harmonica player plays the harmonica part", pickPart(saints, "harmonica").lead.instrument === "harmonica");
+  ok("an instrument the song doesn't cover falls back to the lead", pickPart(saints, "cello").index === 0);
+  ok("every authored part names a real instrument",
+    builtinSongs().every((sg) => (sg.parts || []).every((p) => INSTRUMENTS[p.instrument] && p.notes.length)));
+  // an authored harmonica line the instrument physically can't play is a bug, not a style choice
+  ok("authored harmonica parts are playable without bends",
+    builtinSongs().flatMap((sg) => (sg.parts || []).filter((p) => p.instrument === "harmonica"))
+      .flatMap((p) => p.notes).flatMap((n) => n.midi).every((m) => midiToHole(m) !== null));
+  ok("parts survive validation and normalisation", validateSong(newSong(saints)).ok && newSong(saints).parts.length === 1);
+  ok("a part missing its instrument is rejected",
+    !validateSong({ ...newSong({ title: "t" }), parts: [{ notes: [] }] }).ok);
 }
 
 console.log(`\n${pass} checks passed.`);

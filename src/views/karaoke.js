@@ -11,8 +11,10 @@ import { Store } from "../state.js";
 import { Audio } from "../audio/engine.js";
 import { detectPitch, PitchTracker } from "../audio/pitch.js";
 import { TrackPlayer } from "../audio/player.js";
+import { Band } from "../audio/band.js";
 import { findSong, allSongs } from "../music/catalog.js";
-import { songDuration } from "../music/song-format.js";
+import { songDuration, songParts } from "../music/song-format.js";
+import { autoAccompaniment } from "../music/accompany.js";
 import { freqToMidiFloat, midiToName } from "../music/notes.js";
 import { drawBackground } from "../ui/backgrounds.js";
 import { renderAvatar } from "../cosmetics/index.js";
@@ -123,8 +125,23 @@ function stage(ctx, song) {
   const player = new TrackPlayer();
   player.load(song);
   let guide = !!player.vocal;     // guide vocal on when the song has one
+
+  // You sing, so the whole arrangement is synthesized — every part plus a
+  // generated bass/comp/drums for the roles the song doesn't already cover.
+  const allParts = songParts(song);
+  const band = new Band([...allParts, ...autoAccompaniment(song, allParts)], { a4, volume: s.backingVolume });
+  let bandOn = !band.empty && !player.backing && (s.band ?? true);
+  const bandBtn = band.empty ? null : el("button.btn", {
+    class: bandOn ? "primary" : "", title: "Synthesized accompaniment: " + band.names.join(", "),
+    onclick: () => {
+      bandOn = !bandOn; Store.setSetting("band", bandOn);
+      bandBtn.classList.toggle("primary", bandOn);
+      if (bandOn) band.seek(Math.max(0, clock)); else band.silence();
+    },
+  }, ["🎺 Band"]);
+
   const volB = slider({ label: "Music", value: s.backingVolume, fmt: (v) => Math.round(v * 100) + "%",
-    oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); } });
+    oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); band.setVolume(v); } });
   const guideBtn = el("button.btn", { class: guide ? "primary" : "", onclick: () => {
     guide = !guide; guideBtn.classList.toggle("primary", guide);
     player.setVocalVolume(guide ? (Store.settings().vocalVolume || 0.7) : 0);
@@ -140,10 +157,10 @@ function stage(ctx, song) {
     playBtn, restartBtn,
     el("div.muted", { style: { minWidth: "92px" }, id: "kara-clock", text: "0:00" }),
     el("div", { style: { flex: "1" } }),
-    !player.hasAudio() ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
-    player.backing ? wrapNarrow(volB) : null,
+    (!player.hasAudio() && band.empty) ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
+    (player.backing || !band.empty) ? wrapNarrow(volB) : null,
     player.vocal ? guideBtn : null,
-    scoreBtn, backBtn,
+    bandBtn, scoreBtn, backBtn,
   ]);
   if (!guide) player.setVocalVolume(0);
 
@@ -197,14 +214,14 @@ function stage(ctx, song) {
     lastTs = performance.now();
     requestAnimationFrame(loop);
   }
-  function pause() { playing = false; playBtn.textContent = "▶ Resume"; player.pause(); }
+  function pause() { playing = false; playBtn.textContent = "▶ Resume"; player.pause(); band.silence(); }
   function restart() {
     pause();
     finished = false; banner.classList.add("hidden");
     clock = -LEAD_IN; detectedMidi = -1;
     grader.reset();
     targets.forEach((n) => { n.state = "pending"; n.best = 999; n.frames = 0; });
-    player.seek(0); playBtn.textContent = "▶ Start";
+    player.seek(0); band.seek(0); playBtn.textContent = "▶ Start";
     render(-LEAD_IN); updateHud();
   }
 
@@ -218,6 +235,7 @@ function stage(ctx, song) {
       clock += dt;
       if (clock >= 0 && player.hasAudio() && player.backing?.paused) player.play(clock);
     }
+    if (bandOn) band.schedule(clock);
     if (scoring && Audio.readTimeDomain(buf)) {
       const { freq } = detectPitch(buf, Audio.ctx().sampleRate, s.micGate);
       const f = tracker.push(freq, a4);
@@ -321,7 +339,7 @@ function stage(ctx, song) {
   }
 
   function finish() {
-    finished = true; playing = false; player.pause();
+    finished = true; playing = false; player.pause(); band.silence();
     playBtn.textContent = "⟲ Sing again";
     if (!scoring) { showBanner(null, 0, false, 0, false); return; }
     const acc = grader.accuracy();
@@ -356,7 +374,7 @@ function stage(ctx, song) {
   }
 
   render(-LEAD_IN); updateHud();
-  return () => { playing = false; ro.disconnect(); player.stop(); Audio.stopMic(); };
+  return () => { playing = false; ro.disconnect(); player.stop(); band.stop(); Audio.stopMic(); };
 }
 
 // ---------- helpers ----------

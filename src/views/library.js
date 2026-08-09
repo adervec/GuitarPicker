@@ -113,9 +113,10 @@ export default function library(ctx) {
       keyLine,
       el("div.row", { style: { margin: "10px 0" } }, [
         tag(song.difficulty, song.difficulty),
-        song.audio?.backing ? tag("has backing") : tag("no backing"),
+        song.audio?.backing ? tag("has backing") : tag("🎺 synth band"),
         song.audio?.vocal ? tag("has vocal") : null,
         song.lyrics?.length ? tag("🎤 karaoke") : null,
+        ...(song.parts || []).map((p) => tag("+ " + (INSTRUMENTS[p.instrument]?.name || p.instrument))),
       ]),
       el("div.panel.tight", { style: { background: "var(--panel-2)" } }, [
         el("div.spread", {}, [
@@ -123,7 +124,7 @@ export default function library(ctx) {
           el("div.row", { style: { gap: "6px" } }, [
             el("button.btn", { onclick: () => doTranspose(-1) }, ["♭ −1"]),
             el("button.btn", { onclick: () => doTranspose(1) }, ["♯ +1"]),
-            el("button.btn", { onclick: () => Synth.playMidi((song.notes[0]?.midi[0]) || 60) }, ["🔊 Preview"]),
+            el("button.btn", { onclick: () => Synth.playMidi((song.notes[0]?.midi[0]) || 60, { instrument: song.instrument }) }, ["🔊 Preview"]),
           ]),
         ]),
       ]),
@@ -146,6 +147,9 @@ export default function library(ctx) {
       const copy = newSong({ ...working, id: uid(), source: "manual",
         title: working.title.replace(/ \([+-]\d+\)$/, "") + ` (${semi > 0 ? "+" : ""}${semi})`,
         notes: transposeSong(working.notes, semi),
+        // the whole arrangement moves, not just the part on screen
+        parts: (working.parts || []).map((p) => ({ ...p, notes: transposeSong(p.notes, semi) })),
+        voice: working.voice?.notes?.length ? { ...working.voice, notes: transposeSong(working.voice.notes, semi) } : working.voice,
         key: keyName(((noteToPc(working.key) + semi) % 12 + 12) % 12, /m$/.test(working.key)),
       });
       Store.saveSong(copy); working = copy; refreshKeyLine();

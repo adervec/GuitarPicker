@@ -51,6 +51,11 @@ Claude Cowork folder and ask for coaching — the file starts with a suggested p
 - **Songs** — a 45+ song **public-domain** library (folk, spirituals, nursery rhymes, carols,
   classical themes, plus chord-progression trainers) tagged by **genre**, with singalong
   **lyrics**, plus import / export / transpose / capo suggestions.
+- **Synthesized backing band** — every song gets one, with no audio files to download. The app
+  works out the chords and plays bass, chord comp and (where it suits the song) drums underneath
+  you, each in its own instrument voice. Songs can also carry **parts for other instruments**:
+  play the guitar line on "When the Saints" and the harmonica answers you — or switch your
+  instrument to harmonica and the guitar plays instead. Toggle it with **🎺 Band**.
 - **Karaoke** — a full sing-along mode: a scrolling teleprompter that highlights lyrics
   **word-by-word**, a per-line count-in, backing track + an optional guide vocal, and an
   optional **sing-and-score** pass that grades your pitch against the vocal melody (with a live

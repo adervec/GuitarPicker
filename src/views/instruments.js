@@ -57,7 +57,7 @@ export default function instruments(ctx) {
         ...f.strings.map((s) => el("tr", {}, [
           el("td", { text: s.label }), el("td", { text: s.note }), el("td", { text: s.midi }),
           el("td", { text: s.freq.toFixed(1) + " Hz" }),
-          el("td", {}, [el("button.btn.ghost", { title: "Hear this open string", onclick: () => Synth.playMidi(s.midi, { dur: 1.2 }) }, ["▶"])]),
+          el("td", {}, [el("button.btn.ghost", { title: "Hear this open string", onclick: () => Synth.playMidi(s.midi, { dur: 1.2, instrument: id }) }, ["▶"])]),
         ])),
       ]));
       const alts = f.tunings.filter((t) => t.name !== "standard");
@@ -70,10 +70,10 @@ export default function instruments(ctx) {
       body.appendChild(el("table.data", {}, [
         el("tr", {}, [el("th", { text: "Hole" }), ...harmonicaChart().map((h) => el("th", { text: String(h.hole) }))]),
         el("tr", {}, [el("th", { text: "Blow ↑" }), ...HARMONICA_BLOW.map((m, i) => el("td", {}, [
-          el("button.btn.ghost", { title: `Hear hole ${i + 1} blow`, onclick: () => Synth.playMidi(m, { dur: 0.8 }) }, [harmonicaChart()[i].blow]),
+          el("button.btn.ghost", { title: `Hear hole ${i + 1} blow`, onclick: () => Synth.playMidi(m, { dur: 0.8, instrument: "harmonica" }) }, [harmonicaChart()[i].blow]),
         ]))]),
         el("tr", {}, [el("th", { text: "Draw ↓" }), ...HARMONICA_DRAW.map((m, i) => el("td", {}, [
-          el("button.btn.ghost", { title: `Hear hole ${i + 1} draw`, onclick: () => Synth.playMidi(m, { dur: 0.8 }) }, [harmonicaChart()[i].draw]),
+          el("button.btn.ghost", { title: `Hear hole ${i + 1} draw`, onclick: () => Synth.playMidi(m, { dur: 0.8, instrument: "harmonica" }) }, [harmonicaChart()[i].draw]),
         ]))]),
       ]));
     }
