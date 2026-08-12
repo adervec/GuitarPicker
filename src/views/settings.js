@@ -178,6 +178,7 @@ export default async function settings(ctx) {
       el("a.btn", { href: "https://github.com/adervec/GuitarPicker", target: "_blank", rel: "noopener" }, ["GitHub"]),
       el("a.btn", { href: "https://github.com/adervec/GuitarPicker/blob/main/LICENSE", target: "_blank", rel: "noopener" }, ["MIT License"]),
       el("a.btn", { href: "https://github.com/adervec/GuitarPicker/blob/main/CREDITS.md", target: "_blank", rel: "noopener" }, ["Credits"]),
+      el("a.btn", { href: "https://adervec.github.io", target: "_blank", rel: "noopener" }, ["More apps by this maker"]),
     ]),
   );
 }
