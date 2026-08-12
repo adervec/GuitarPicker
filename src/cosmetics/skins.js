@@ -27,6 +27,14 @@ export const SKINS = [
   { id: "terminal", name: "Terminal", rarity: "rare", desc: "Green phosphor CRT readout.", swatch: ["#020a02", "#33ff66", "#9dff7a"] },
   { id: "mono", name: "Mono Ink", rarity: "uncommon", desc: "Quiet greyscale, zero distraction.", swatch: ["#101012", "#d8d8de", "#9a9aa2"] },
   { id: "slate", name: "Blue Slate", rarity: "common", desc: "Soft steel-blue and amber.", swatch: ["#10151d", "#5e9bd6", "#e0a85a"] },
+
+  // ---- daylight & warm sets ------------------------------------------------
+  { id: "parchment", name: "Parchment", rarity: "common", desc: "Warm paper and sienna ink.", swatch: ["#f7f1e3", "#a3612b", "#2f6f5e"] },
+  { id: "sakura", name: "Sakura", rarity: "uncommon", desc: "Blossom pink over sage.", swatch: ["#fdf2f6", "#d94f86", "#5f9e7d"] },
+  { id: "espresso", name: "Espresso", rarity: "rare", desc: "Dark roast with a crema top.", swatch: ["#17100c", "#d9a05b", "#7fb08a"] },
+  { id: "borealis", name: "Aurora Borealis", rarity: "epic", desc: "Northern lights over polar night.", swatch: ["#050b16", "#4dffa8", "#a86bff"] },
+  { id: "coral", name: "Coral Reef", rarity: "rare", desc: "Shallow-water teal and coral.", swatch: ["#06171a", "#ff7f6b", "#ffd8a8"] },
+  { id: "peacock", name: "Peacock", rarity: "legendary", desc: "Plumage emerald trimmed in gold.", swatch: ["#071019", "#17c9a3", "#e3b23c"] },
 ];
 
 const BY_ID = Object.fromEntries(SKINS.map((s) => [s.id, s]));

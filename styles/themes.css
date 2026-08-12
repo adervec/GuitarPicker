@@ -190,3 +190,51 @@
   --accent-2: #e0a85a; --accent-ink: #08111c; --good: #4fd18b; --warn: #ffc457;
   --bad: #ff6b7d; --highway: #0c121a; --highway-line: #283446;
 }
+
+/* ---- Parchment (light) ---- */
+[data-theme="parchment"] {
+  --bg: #f7f1e3; --bg-2: #efe7d5; --panel: #fffaf0; --panel-2: #f5eddc;
+  --line: #ddd0b4; --text: #33291c; --muted: #7a6a52; --accent: #a3612b;
+  --accent-2: #2f6f5e; --accent-ink: #fffaf0; --good: #2f7d4f; --warn: #b3730c;
+  --bad: #b3382f; --highway: #ece2cc; --highway-line: #d5c6a6;
+}
+
+/* ---- Sakura (light) ---- */
+[data-theme="sakura"] {
+  --bg: #fdf2f6; --bg-2: #f8e6ee; --panel: #ffffff; --panel-2: #fdeef4;
+  --line: #f0cfdd; --text: #3a2430; --muted: #8a6577; --accent: #d94f86;
+  --accent-2: #5f9e7d; --accent-ink: #ffffff; --good: #2f8a5e; --warn: #c07a12;
+  --bad: #cf3b52; --highway: #f6e3ec; --highway-line: #e6c6d6;
+}
+
+/* ---- Espresso ---- */
+[data-theme="espresso"] {
+  --bg: #17100c; --bg-2: #1e1610; --panel: #261c15; --panel-2: #31251b;
+  --line: #4a3626; --text: #f3e6d5; --muted: #b39a80; --accent: #d9a05b;
+  --accent-2: #7fb08a; --accent-ink: #1a120c; --good: #6fc08a; --warn: #e0a83c;
+  --bad: #e0645c; --highway: #120c08; --highway-line: #34251a;
+}
+
+/* ---- Aurora Borealis ---- */
+[data-theme="borealis"] {
+  --bg: #050b16; --bg-2: #08121f; --panel: #0c1a2b; --panel-2: #122438;
+  --line: #1d3550; --text: #e6f6ff; --muted: #8fb0c9; --accent: #4dffa8;
+  --accent-2: #a86bff; --accent-ink: #04140c; --good: #4dffa8; --warn: #ffd166;
+  --bad: #ff6b8a; --highway: #040914; --highway-line: #15293e;
+}
+
+/* ---- Coral Reef ---- */
+[data-theme="coral"] {
+  --bg: #06171a; --bg-2: #0a2026; --panel: #0e2a31; --panel-2: #14373f;
+  --line: #205059; --text: #e8fbfb; --muted: #8fb9bd; --accent: #ff7f6b;
+  --accent-2: #ffd8a8; --accent-ink: #23120e; --good: #3fd6a8; --warn: #ffc266;
+  --bad: #ff5f70; --highway: #051317; --highway-line: #17414a;
+}
+
+/* ---- Peacock ---- */
+[data-theme="peacock"] {
+  --bg: #071019; --bg-2: #0b1a26; --panel: #0f2333; --panel-2: #153042;
+  --line: #22475f; --text: #e9f4fb; --muted: #90aec4; --accent: #17c9a3;
+  --accent-2: #e3b23c; --accent-ink: #032019; --good: #17c9a3; --warn: #e3b23c;
+  --bad: #f0616f; --highway: #050d14; --highway-line: #1a3a4d;
+}

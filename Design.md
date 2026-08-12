@@ -189,7 +189,7 @@ play continues. Killfeed shows the last several note judgments with note name + 
 - [x] Glossary / music dictionary
 - [x] Theory minigames
 - [x] History views + improvement trending charts
-- [x] Locker: layered SVG player avatars, customisable guitar avatars, and 20 app skins
+- [x] Locker: layered SVG player avatars, customisable guitar avatars, and 26 app skins
 - [x] Coin economy: earn by playing + daily activities, rarity-priced cosmetic unlocks
 - [x] Player avatar shown in the play HUD; coins-earned shown in the finish banner
 - [x] Recommended daily activities (date-seeded) on the home dashboard, with coin rewards
@@ -321,3 +321,8 @@ play continues. Killfeed shows the last several note judgments with note name + 
   including a stub AudioContext that enforces Web Audio's automation-ordering and no-exponential-
   ramp-to-zero rules. Verified end-to-end by rendering every voice and the full band through an
   OfflineAudioContext in headless Chrome (no NaN, no clipping, peak ~0.6).
+- **Six more app skins** (26 total): Parchment and Sakura (the first light themes besides
+  Daylight), Espresso, Aurora Borealis, Coral Reef and Peacock. test-cosmetics now checks that
+  every skin has a `[data-theme]` block, that every block belongs to a skin, that all themes
+  define the same variable set as the default, and that each `swatch` matches the theme's own
+  `--bg`/`--accent`/`--accent-2` — a skin listed without CSS renders unstyled and throws nothing.

@@ -9,6 +9,7 @@
 //   (2) Coin economy: pricing, earning, spending, unlocks, ownership, and
 //       collection stats, exercised against the real Store.
 import assert from "node:assert";
+import { readFileSync } from "node:fs";
 
 // Pure cosmetic modules — no DOM, no Store — safe to import statically.
 import { composeAvatar, AVATAR_PARTS, AVATAR_CATEGORY_ORDER, DEFAULT_AVATAR } from "./src/cosmetics/avatars.js";
@@ -101,6 +102,27 @@ ok("SKINS list is valid", Array.isArray(SKINS) && SKINS.length >= 10 &&
     s.swatch.every((h) => typeof h === "string" && h.startsWith("#"))));
 ok("getSkin resolves known id and falls back to SKINS[0]", getSkin(SKINS[0].id).id === SKINS[0].id && getSkin("does-not-exist").id === SKINS[0].id);
 ok("skinIds covers the whole catalog", skinIds().length === SKINS.length && skinIds().includes(SKINS[0].id));
+
+// A skin with no [data-theme] block loads with zero CSS variables — the app
+// renders unstyled and nothing throws, so only a check catches it.
+{
+  const css = readFileSync("styles/themes.css", "utf8");
+  const blocks = new Map();
+  for (const m of css.matchAll(/\[data-theme="([^"]+)"\]\s*\{([^}]*)\}/g)) {
+    const vars = new Map([...m[2].matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+)/g)].map((v) => [v[1], v[2].trim()]));
+    blocks.set(m[1], vars);
+  }
+  ok("every skin has a theme block", SKINS.every((sk) => blocks.has(sk.id)));
+  ok("every theme block belongs to a skin", [...blocks.keys()].every((id) => skinIds().includes(id)));
+  const base = blocks.get(SKINS[0].id);
+  ok("every theme defines the same variables as the default",
+    [...blocks].every(([, vars]) => vars.size === base.size && [...base.keys()].every((v) => vars.has(v))));
+  ok("swatches match the theme's own background and accents",
+    SKINS.every((sk) => {
+      const v = blocks.get(sk.id);
+      return ["--bg", "--accent", "--accent-2"].map((k) => v.get(k)).join().toLowerCase() === sk.swatch.join().toLowerCase();
+    }));
+}
 ok("shadeColor identity and extremes", shadeColor("#808080", 0) === "#808080" && shadeColor("#808080", 1) === "#ffffff" && shadeColor("#808080", -1) === "#000000");
 ok("mixColor midpoint of black/white", mixColor("#000000", "#ffffff", 0.5) === "#808080");
 ok("pickById falls back to first item", pickById([{ id: "a" }, { id: "b" }], "zzz").id === "a");
