@@ -138,10 +138,28 @@ function refreshCrumb() {
   document.getElementById("crumb").textContent = crumbTitles[route] || "GuitarPicker";
 }
 
+// ---- portal beacon ----
+// Let the maker's app portal (same origin) know this app is installed. Purely
+// local: one same-origin localStorage flag, no network, and nothing is written
+// when we're just a tab in the browser.
+const INSTALLED_MODES = ["standalone", "minimal-ui", "fullscreen", "window-controls-overlay"];
+function markInstalled() {
+  try {
+    const installed = navigator.standalone ||
+      INSTALLED_MODES.some((m) => matchMedia(`(display-mode: ${m})`).matches);
+    if (!installed) return;
+    const key = "portal-installed";
+    const reg = JSON.parse(localStorage.getItem(key) || "{}");
+    reg["GuitarPicker"] = Date.now();
+    localStorage.setItem(key, JSON.stringify(reg));
+  } catch {}
+}
+
 function init() {
   applyTheme(Store.settings().theme);
   buildNav();
   buildThemePicker();
+  markInstalled();
   refreshIO();
   refreshCoins();
   window.addEventListener("hashchange", () => { refreshCrumb(); router(); });
