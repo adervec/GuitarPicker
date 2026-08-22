@@ -39,6 +39,36 @@ export default function history(ctx) {
     el("div.row", {}, [instSel, viewSel, el("div", { style: { flex: "1" } }), aiBtn]),
   ]));
 
+  // Folder cowork through the maker's shared panel (https://adervec.github.io/cowork.js, fs mode):
+  // the same Markdown report goes to coach/request.json in a folder you pick; an agent
+  // (CoworkSyncHub, Claude Desktop, a person) answers in coach/reply.json and it shows here.
+  const cwHost = el("div", { style: { marginBottom: "16px" } });
+  const cwReply = el("pre.panel.tight", { style: { whiteSpace: "pre-wrap", display: "none" } });
+  root.appendChild(cwHost); root.appendChild(cwReply);
+  const showReply = (text) => { cwReply.textContent = text; cwReply.style.display = text ? "" : "none"; };
+  showReply(localStorage.getItem("gp-coach-reply") || "");
+  loadCowork().then((cw) => {
+    if (!cw || !cwHost.isConnected) return;
+    cw.mount(cwHost, {
+      app: "guitarpicker",
+      manifest: { protocol: "cowork-manifest", protocolVersion: 1, app: "guitarpicker",
+        channels: [{ name: "coach", request: ["coach/request.json"], instructions: "coach/INSTRUCTIONS.md", replyPath: "coach/reply.json" }] },
+      files: () => {
+        const payload = { report: buildProgressReport(Store.historyFor()) };
+        return {
+          "coach/request.json": { protocol: "guitarpicker-coach", protocolVersion: 1, kind: "coach-request",
+            generatedAt: new Date().toISOString(), requestHash: djb2(JSON.stringify(payload)), payload },
+          "coach/INSTRUCTIONS.md": COWORK_INSTRUCTIONS,
+        };
+      },
+      apply: (_ch, reply) => {
+        const text = typeof reply === "string" ? reply : (reply?.reply ?? reply?.payload?.reply ?? JSON.stringify(reply, null, 2));
+        try { localStorage.setItem("gp-coach-reply", text); } catch { /* quota */ }
+        showReply(text);
+      },
+    });
+  });
+
   // cosmetics collection progress (independent of the session filters)
   root.appendChild(buildCollectionPanel(navigate));
 
@@ -131,6 +161,26 @@ export default function history(ctx) {
   window.addEventListener("resize", onResize);
   return () => window.removeEventListener("resize", onResize);
 }
+
+function loadCowork() {
+  if (window.cowork) return Promise.resolve(window.cowork);
+  return new Promise((res) => {
+    const s = document.createElement("script"); s.src = "https://adervec.github.io/cowork.js"; s.async = true;
+    s.onload = () => res(window.cowork || null); s.onerror = () => res(null);
+    document.head.appendChild(s);
+  });
+}
+function djb2(text) { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0; return h.toString(16); }
+const COWORK_INSTRUCTIONS = `# GuitarPicker — coach channel
+
+Read \`coach/request.json\`: \`payload.report\` is the player's practice report (Markdown:
+sessions, accuracy, per-song bests, streaks). Write \`coach/reply.json\`:
+
+\`\`\`json
+{ "requestHash": "<copy the request's requestHash verbatim>",
+  "reply": "<coaching in markdown — what's improving, what to drill next (name songs / drills / instruments from the report), one concrete plan for the week. Encouraging, specific, short.>" }
+\`\`\`
+`;
 
 // Markdown practice report for AI analysis (Claude / Claude Cowork). Plain
 // tables, newest first — no app knowledge needed to read it.
