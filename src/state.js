@@ -89,6 +89,8 @@ export const Store = {
   // ----- history / progress -----
   addHistory(entry) {
     state.history.unshift(entry);
+    // maker-portal character sheet (same-origin localStorage; stays in this browser)
+    try { const k = "portal-activity", a = JSON.parse(localStorage.getItem(k) || "[]"); a.push([Math.round(Date.now() / 1000), "GuitarPicker", "practice", Math.max(1, Math.round((entry.durationSec || 120) / 600))]); localStorage.setItem(k, JSON.stringify(a.slice(-2000))); } catch (_) { /* quota — ignore */ }
     if (state.history.length > 1000) state.history.length = 1000;
     // award xp on the instrument
     const inst = entry.instrument || "acoustic-guitar";
