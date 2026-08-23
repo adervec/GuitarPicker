@@ -164,10 +164,14 @@ export default function history(ctx) {
 
 function loadCowork() {
   if (window.cowork) return Promise.resolve(window.cowork);
+  const head = document.head || document.documentElement;   // the DOM smoke test has no <head>
+  if (!head || typeof head.appendChild !== "function") return Promise.resolve(null);
   return new Promise((res) => {
-    const s = document.createElement("script"); s.src = "https://adervec.github.io/cowork.js"; s.async = true;
-    s.onload = () => res(window.cowork || null); s.onerror = () => res(null);
-    document.head.appendChild(s);
+    try {
+      const s = document.createElement("script"); s.src = "https://adervec.github.io/cowork.js"; s.async = true;
+      s.onload = () => res(window.cowork || null); s.onerror = () => res(null);
+      head.appendChild(s);
+    } catch { res(null); }
   });
 }
 function djb2(text) { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0; return h.toString(16); }
