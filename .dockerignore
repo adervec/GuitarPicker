@@ -1,0 +1,9 @@
+.git
+.github
+node_modules
+*.log
+.vscode
+.idea
+# The FSD/Next/RQ Tuner pilot is a separate project with its own Dockerfile
+# (web/Dockerfile) — nothing in it belongs in the vanilla app's image.
+web

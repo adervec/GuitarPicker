@@ -27,3 +27,1014 @@
 -graphics should be very clean and crisp throughout
 -needs to be constantly clear what input and output devices are used
 -need to be able to select various themes
+-need an isolated Docker build/run: build + verification suite + the static
+	server all execute inside the container, no host Node/npm install required
+-need option to slow down (and speed up) song playback for practice, without
+	changing pitch — affects the backing/vocal audio, the synthesized band, the
+	note highway timing, and grading windows together, not just visual scroll
+-need an optional "strict" practice mode (checkbox toggle) in Play: a missed
+	or fumbled note rewinds the song to just before it and repeats it until
+	played correctly, with no health/score penalty for the failed attempts —
+	only a clean pass finalizes and counts
+	-the rewind must be short (back up one note, not several seconds)
+	-don't replay music that was already played correctly — freeze exactly on
+	 the missed note and wait there (nothing plays) until it's hit right, then
+	 ease back up to normal speed rather than snapping straight to it
+-need a settings option for how fretboard strings are labelled: note names
+	(E A D G B e) or numbers (1-6)
+-need a way to resize the fretboard/fingering display from the Play controls
+-need the ability to pick an arbitrary segment of a song myself and loop it
+	for practice, not just play the whole song top to bottom
+	-selection should be a visible timeline I can drag on, like a video editor
+	 (Sony Vegas etc), not just "mark start/end at the current position"
+-need a guided "Learn this song" mode: the song is split into segments, and I
+	practice each one at a slow speed, gradually speeding it up as I get it
+	right, before moving to the next segment
+	-Learn mode should be its own separate component (not wedged into the Play
+	 view's code) so it can keep growing on its own
+	-Learn mode uses the same timeline, showing segment boundaries + which one
+	 is active
+-explored refactoring onto FSD + Next.js (React) + TanStack Query — this
+	contradicts the app's own zero-build/zero-dependency stance (see the Tech
+	stack table in Design.md), so agreed a scoped pilot instead of a full
+	rewrite: one feature (Tuner) ported end to end in a new web/ directory,
+	the vanilla app stays the deployed one, TanStack Query used only for the
+	one real network call (Google sign-in) since everything else is
+	synchronous localStorage, not server state
+	-decide later whether to carry the pattern further or fold it back
+	-Play (note highway, grading, backing band, strict mode, practice
+	 timeline, Learn mode) ported into the pilot too, as a near-verbatim
+	 imperative engine mounted from a React page rather than rewritten in
+	 JSX — see the "Play ported into the FSD/Next/RQ pilot" Design.md entry
+	 for why (preserves already-tuned gameplay/audio-timing logic)
+	-Google sign-in in the pilot is on hold for now — the widget/entity code
+	 stays in the tree but isn't wired into any page
+	-Karaoke (teleprompter, word-by-word fill, sing-and-score) ported into
+	 the pilot next, same imperative-engine approach as Play — reused almost
+	 all of Play's audio/pitch/band infrastructure
+	-History (session list, filters, trend charts, export-for-Claude report)
+	 ported next, as plain React/JSX rather than an imperative engine —
+	 closes the loop on Play/Karaoke, which had been recording sessions with
+	 nowhere to view them
+	-Settings ported next (devices incl. output selection, sound/detection,
+	 defaults, data export/reset) — device enumeration is genuinely async, so
+	 it's TanStack Query's second active use in the pilot (Google sign-in,
+	 the first, is still disabled)
+	-Instruments (specs/playing-guide reference, trimmed to the 16
+	 instruments this pilot models, out of the vanilla app's 59) ported next,
+	 once every previously agreed-scope feature was done and the remaining
+	 vanilla views were all things already marked out of scope
+	-mid-port, user asked for the pilot to move to TypeScript — scoped to
+	 web/ only (root vanilla app stays zero-build/zero-dependency); all
+	 source files renamed .js/.jsx -> .ts/.tsx with real types added
+	 throughout (strict mode, no blanket any), pragmatic dynamic typing
+	 kept only where the DOM genuinely is (the two canvas-engine files'
+	 el() hyperscript builder and querySelector casts)
+	-Home (landing page at "/", replacing the earlier redirect to /library)
+	 ported next — hero/continue, session stats, "Jump back in" song row;
+	 dropped XP/leveling, coins, the avatar/guitar cosmetics panel, and the
+	 gamified daily-practice checklist, same as the other out-of-scope
+	 Locker/cosmetics/coin-economy items
+	-Glossary ported next — chord/scale explorer, interval table, circle of
+	 fifths, searchable term dictionary; ported in full, nothing dropped
+	 (it was already just forms/filtering, no cosmetics/coins/canvas)
+	-Theory Games ported next — 5 quizzes (interval ear training, chord
+	 quality by ear, interval spelling, key signatures, scale degrees),
+	 8 questions each, persisted high score per quiz; high score only, no
+	 XP/coins carried over (vanilla XP only comes from playing a song, never
+	 a drill). Hit and fixed a bug: playing a question's audio from a lazy
+	 useState initializer crashed under SSR (no window/AudioContext there);
+	 moved audio playback into a real useEffect, kept question generation
+	 (pure) in the initializer
+	-Song Editor ported next, heavily trimmed — metadata form (title/artist/
+	 bpm/capo/instrument/key/difficulty/genre) + text-notation note entry
+	 (PITCH:beats, same syntax the built-in library's data already uses),
+	 saved to a new localStorage user-song store; dropped the piano-roll
+	 canvas, audio-file attach, background picker, vocal-melody/hum-to-capture
+	 layer, and the whole Lyrics & Karaoke (LRC import/tap-to-time) panel.
+	 Library shows saved songs with edit/delete; Play/Karaoke resolve them
+	 too. Hit and fixed an RSC bug: a helper exported from a "use client"
+	 file can't be called directly from a Server Component page — moved the
+	 blank-song construction into the plain (non-client) song-format module
+	-Training ported next — 3 course progressions (built-in songs + drills,
+	 step-locked until the previous one passes) + 6 skill drills with a
+	 tempo slider; step-lock/pass state was already derived from session
+	 history in the vanilla source (not the XP object), so only the header's
+	 Level/XP stat pair needed dropping. Drills save through the same
+	 user-song store the Song Editor uses — one shared store for both
+	-Listen & Make ported next, mic path only (no screen-capture slideshow,
+	 no in-page difficulty/background pickers) — record, transcribe
+	 (framesToNotes, same transcriber the vanilla Editor's hum-to-capture
+	 uses), then hand off to the Song Editor to name/save, reusing its
+	 existing /editor/[id] resolution instead of a new state-handoff
+	 mechanism. That choice was made after spotting (but leaving alone, as
+	 out of scope for this task) a latent hydration-mismatch bug in Theory
+	 Games: its first question is generated via Math.random() inside a lazy
+	 useState initializer, which also runs during SSR, so server and client
+	 compute different questions (a console warning + one-time flash on hard
+	 refresh, not a crash — low severity, common Next.js tradeoff, disclosed
+	 rather than silently left). With this, only Locker/cosmetics/coin
+	 economy remains unported from the vanilla app's top-level views
+	-user pointed out the pilot had no left sidebar like the original app's
+	 (#app grid: #sidebar + #main/#topbar, styles/main.css) — added
+	 widgets/app-shell, mounted once in the root layout around every page,
+	 mirroring that structure (grouped nav: Play/Create/Grow/System, no
+	 "You"/Locker group; topbar breadcrumb; no coin chip). Retired the old
+	 per-page pill nav (widgets/pilot-nav) that every view used to render
+	 inline at its own top. Play/Karaoke's fullscreen stage bypasses the
+	 shell entirely via a route check, same as the vanilla app's
+	 #view.no-pad. Copied the vanilla app's own logo.svg for the sidebar
+	 brand mark; added the vanilla midnight theme's color tokens to
+	 globals.css for the shell to use (existing pages' own hardcoded colors
+	 weren't migrated — separate, larger task)
+	-user then asked for the sidebar's live IO indicator (mic/output status,
+	 like the original) and, separately, for a way to hear the Sound &
+	 detection sliders' combined effect on Settings while adjusting them —
+	 added audioEngine.onChange()/currentDevices() (ported from
+	 src/audio/engine.js) for the former, wired into AppShell via
+	 useSyncExternalStore; added a "Preview mix" button to Settings for the
+	 latter, synthesizing a chord (backingVolume) + melody (vocalVolume) at
+	 the current a4 via Synth.playMidi — noteSpeed/micGate aren't audio
+	 settings, so the panel says so rather than pretending to reflect them
+	-user asked for a full audit ("все ли перенесли и все ли ок") — diffed
+	 vanilla src/views + src/music + src/audio + src/karaoke + src/learn
+	 against the pilot, confirmed full coverage except the intentionally
+	 excluded Locker and its cosmetics/cloud-sync/daily-streak dependencies;
+	 tsc/lint/build all reconfirmed clean; no stray console.log/TODO in
+	 web/src. Fixed the previously-disclosed-but-not-fixed Theory Games
+	 hydration bug for real this time (question generation moved from a
+	 lazy useState initializer to a mount useEffect, with a targeted
+	 eslint-disable for react-hooks/set-state-in-effect and an explanation
+	 of why that's the correct exception). Fixed two stale "Tuner pilot"
+	 doc mentions (docker-compose.yml, docs/DOCKER.md) and added a pointer
+	 to web/ from the root README.md, which never mentioned the pilot at
+	 all. Flagged but did not act on: the entire web/ directory is still
+	 untracked in git (`?? web/`) — every phase of this pilot has been
+	 sitting uncommitted; raised directly to the user rather than committed
+	 unilaterally
+	-user asked to port the Song Editor fully ("Перенеси SongEditor
+	 полностью") — the trimmed version's dropped pieces are all in now:
+	 background picker, backing/vocal audio-file attach, click-to-paint
+	 piano roll (new PianoRoll.tsx, redraws in a useEffect — no game loop
+	 here, unlike Play/Karaoke, so no reason to be a mounted engine), vocal
+	 melody layer (copy/octave-shift/hum-to-capture — reuses
+	 useListenRecorder as a second instance), and the full Lyrics & Karaoke
+	 panel (add/import/paste/export .lrc, tap-to-time — new
+	 useTapToTime.ts, keeps its word-queue/position in refs rather than
+	 state so the Space-key handler never stamps against a stale closure).
+	 New small ports: lrc.ts, ANIMATED_BACKGROUNDS/SOLID_SWATCHES in
+	 backgrounds.ts, pickFile() in dom.ts, serialize() in song-format.ts.
+	 tsc/lint clean on first try for every new file this time
+	-user asked to split the now-full Song Editor page into tabs — "Vocal
+	 melody (Karaoke scoring)" and "Lyrics & Karaoke (optional)" each got
+	 their own tab, reusing the existing pillRow/pill selector look
+	 already used for the Background type picker and the piano roll's
+	 layer toggle; Details/Background/Audio tracks/Notes/Piano roll stay
+	 together under a default "Song" tab since only the other two were
+	 named. No state moved, so switching tabs never loses edits on a
+	 hidden panel — it just stops rendering it
+	-user asked for Details/Background/Audio tracks to start collapsed —
+	 switched those three panels to native details/summary (same
+	 disclosure pattern the Instruments page already uses), left Notes
+	 and Piano roll always-open since editing notes is the page's job
+	-user asked for a way to enter guitar tabs on the piano roll, pointing
+	 to a Yousician screenshot — added a Guitar tab view (fretted
+	 instruments only): one lane per string, fret numbers on the notes
+	 instead of pitch rows; click to add/remove an open-string note,
+	 scroll a placed note to change its fret. Note gained an optional
+	 str field so a tab-placed note remembers which string it's on
+	 rather than a pitch getting silently reassigned to whichever string
+	 has the lowest fret
+	-user sent a full 24-section brief for a Yousician-style tab editor
+	 (time/string/fret/duration/finger, sequential keyboard entry, drag,
+	 undo/redo, playback, an MVP list) — rebuilt the Guitar tab view as
+	 its own component (TabRoll.tsx) against that MVP list: selection +
+	 an Inspector panel, per-note finger/color, drag (fret stays fixed
+	 across a string move, per the brief), local undo/redo per layer,
+	 Sequential input (type digits to place frets and auto-advance the
+	 cursor without touching the mouse — the brief's headline workflow),
+	 and a Play/Pause/Stop preview. Note gained id (lazy, for selection/
+	 drag/undo) and finger. Left out for this pass: multi-select, bulk
+	 edit, velocity, hammer-on/pull-off/slide/bend/vibrato/mute, two-digit
+	 fret typing, a separate Play-mode screen — all named in the docs and
+	 the in-app hint text rather than silently dropped
+	-user asked to keep the .gpsong.json export and add MusicXML (the
+	 actual industry standard for tab — defines string/fret) as the
+	 default, plus ASCII Tab and a string:fret:beats quick-entry text
+	 notation, per a written brief. Added shared/lib/musicxml.ts
+	 (import+export, round-trips pitch/rhythm/chords/tempo/key/finger;
+	 doesn't trust a file's own tuning for string/fret, recomputes it
+	 against whichever instrument is currently selected instead, so a
+	 mismatched file can't point at a nonexistent string), shared/lib/
+	 ascii-tab.ts (export only — too lossy on rhythm to import back
+	 reliably), shared/lib/tab-entry.ts (Quick entry row in the Guitar
+	 tab view, mirrors the piano roll's own notation panel). EditorPage's
+	 header gained an Import button + a format picker. Verified with a
+	 standalone round-trip test script (tsx + a temporary jsdom install
+	 for DOMParser, removed afterward) since this is real parsing logic
+	 with no browser available to click through by hand
+	-user asked for a speed control on "the player" (no view named — read
+	 as TabRoll's own preview player, the most recently-built one, since
+	 Play/Karaoke's engines already each have their own Speed slider from
+	 way earlier in this pilot) — added a 0.5x-2x range slider; changing
+	 it mid-playback restarts the scheduled notes from the current
+	 position at the new rate instead of requiring Stop first
+	-mid-edit, user also asked for a second ASCII tab import path "with a
+	 dialog window", pasting the exact e|--5--0--...| example as the
+	 target shape — added asciiTabToNotes() and a "Paste ASCII tab"
+	 button in TabRoll (same window.prompt() dialog EditorPage's own
+	 "Paste LRC" already uses), superseding the previous entry's "export
+	 only" call for that format. Trusts line ORDER for string assignment
+	 (top = highest), not the label text; reads digit-run column position
+	 literally rather than assuming this app's own export spacing, since
+	 the user's own pasted example turned out to use different spacing —
+	 confirmed there's no real fallback other than reading it as typed
+	-user asked for a hand icon on the right of the nav panel (the
+	 topbar's own already-empty right side) that opens a modal explaining
+	 finger colors on click, with a Yousician screenshot + a reference
+	 glove image and an exact color list: thumb white, index yellow/
+	 mustard, middle purple, ring light blue, pinky orange-red/terracotta.
+	 Didn't use the reference image itself — it's a JPEG with a
+	 transparent-checkerboard pattern baked into its actual pixels (no
+	 real alpha), which would look broken at icon size — built a small
+	 inline SVG hand instead. New shared/lib/finger-colors.ts is now the
+	 one source of truth for finger->color, used by both this new
+	 FingerLegend widget and TabRoll (whose own placeholder colors from
+	 when Finger support first shipped are retired in favor of the real
+	 requested ones)
+	-user asked for the finger legend to also be inside the guitar tab
+	 editor, not just the topbar — TabRoll now renders a second
+	 FingerLegend instance next to its own Finger pill row (the same
+	 self-contained widget, no new component)
+	-user reported that scrolling to change a note's fret in the Guitar
+	 tab view also scrolled the whole page underneath it — root cause was
+	 React's onWheel prop being passive by default, silently ignoring
+	 preventDefault(); fixed with a native, non-passive wheel listener
+	 attached straight to the canvas. Went past the literal bug too, per
+	 the user's broader ask: any vertical wheel motion inside the editor
+	 is now blocked from reaching the page regardless of whether it lands
+	 on a note, while horizontal wheel/trackpad-swipe still pans the
+	 timeline
+	-user asked for a second Play engine "by analogy" (guitar-tab note
+	 highway, string/fret/finger colors, synced to real audio playback,
+	 from a 26-section Yousician-modeled brief) plus a Settings toggle for
+	 which player opens (old/new, new by default, old kept around rather
+	 than deleted). Added features/play-song/model/createPerformanceEngine.ts
+	 alongside the untouched classic engine; playerVersion setting picks
+	 between them in PlayPage.tsx, falling back to classic automatically
+	 for non-fretted instruments. Reused heavily rather than building from
+	 scratch: TrackPlayer (audio position as the sync source, pitch-
+	 preserving speed for free), practice-timeline.ts's existing drag-to-
+	 select timeline for both seek and loop, finger-colors.ts for the same
+	 note colors TabRoll uses, Synth.click() for the metronome. Scoped to
+	 the brief's own MVP list; stage-2 (mic/MIDI grading, score) is not
+	 implemented, only the NotePerformanceResult interface it asks for.
+	 Doesn't log to History — no real performance data to report, and
+	 fake scores would corrupt Training/History's real progress data.
+	 Caught two bugs in self-review (no browser to click-test): a Space-
+	 key guard that broke after the first button click, and a fixed
+	 46px lane height leaving dead space on wide screens
+	-user reported Performance Mode's string lanes were pinned to the top
+	 of the canvas, overlapped by the HUD (back/title/time/fullscreen
+	 overlay) — reserved a band at the top for the HUD and centered the
+	 lane block in the remaining space instead of starting at y=0; the
+	 playhead line now only spans the lane block too, not the full canvas
+	-user asked for Performance Mode's string lanes to look like real
+	 guitar strings (Yousician screenshot as reference) — thick and
+	 copper/bronze for the low strings, thin and silvery-white for the
+	 high ones, not flat UI rules. Added a color+thickness gradient by
+	 string index (low=thick+copper, high=thin+silver) plus a subtle
+	 white sheen line on top of each for a metallic look; note pills stay
+	 colored by finger, unrelated to this
+	-user asked to be able to jump from the player into editing a song,
+	 with edits kept as a separate draft rather than overwriting the
+	 track (e.g. to tweak a note or set finger assignments) — added
+	 cloneSongAsDraft() (fresh id + "(draft)" title suffix) and an Edit
+	 button in Performance Mode's HUD; built-in songs clone into a new
+	 user song and open that, already-editable user songs just open
+	 directly since there's nothing to protect from being overwritten
+	-user hit "This page couldn't load" opening a freshly-cloned draft's
+	 /editor/<uuid> URL — couldn't reproduce directly (the URL itself
+	 served fine on re-check; possibly just a stale-bundle hiccup from
+	 the server having been rebuilt repeatedly right around then). Found
+	 and fixed a real bug anyway while auditing: cloneSongAsDraft() was a
+	 shallow copy, sharing nested arrays/objects with the source song —
+	 for a built-in, that traces back to a module-level singleton shared
+	 across every request, so mutating a draft in place could eventually
+	 corrupt the built-in catalog itself. Switched to a real deep clone
+	 (JSON parse/stringify, same as serialize() already does). Verified
+	 against all 25 built-in songs via script — all still produce
+	 complete, valid Song objects, and mutating a draft no longer touches
+	 the original. Asked the user to retry and report back since this
+	 isn't confirmed as the actual cause
+	-user came back with the real console error: React #185 (maximum
+	 update depth exceeded) — found the actual cause: getUserSong()
+	 broke useSyncExternalStore's stability contract by returning a
+	 brand-new object every call even when nothing changed, so React
+	 re-rendered forever. A real, pre-existing bug (not introduced this
+	 session), just never hit by a live browser before now. Fixed with a
+	 single-slot memo so repeated calls for the same id return the same
+	 object until an actual write happens. User asked to connect via
+	 Playwright MCP and check directly — not configured in this
+	 environment, and claude-in-chrome reported not connected either, so
+	 still no live verification possible; said so rather than guessing
+	-user added Playwright MCP — first real browser testing this whole
+	 engagement. Verified live: the React #185 fix holds (clicked the
+	 real Edit button, 0 console errors), the draft's "(draft)" title
+	 and notes carry over correctly, and Performance Mode's string lanes
+	 render centered with the copper-to-silver gradient as intended
+	-user asked to remove the finger-color legend from the global topbar
+	 (cluttered every page) and put it in the bottom-right corner of
+	 Performance Mode specifically instead — removed FingerLegend from
+	 AppShell (TabRoll keeps its own separate copy, untouched), added a
+	 vanilla-DOM rebuild of the same widget (hand icon + modal) directly
+	 in createPerformanceEngine.ts, fixed-positioned bottom-right, since
+	 that engine is plain JS and can't mount the React component.
+	 Verified live: gone from Home's topbar, present bottom-right on the
+	 player, opens/closes correctly, 0 console errors
+	-user asked to lower the Speed slider's minimum from 0.5x to 0.1x —
+	 changed both TabRoll's and Performance Mode's sliders together
+	 (they were deliberately matched to each other originally), verified
+	 live via browser_evaluate on both pages
+	-user asked for "various control buttons too," pasting Classic's own
+	 control-bar labels verbatim: ported the rest of Classic's controls
+	 onto Performance Mode, reusing Classic's own modules rather than
+	 reimplementing them: Band (shared/lib/band.ts + autoAccompaniment),
+	 Karaoke lyric overlay (karaoke-timeline.ts/karaoke-render.ts, same
+	 helpers Karaoke's own stage uses), Notes mute, Frets toggle + S/M/L
+	 fretboard size (Classic's own FRET_SCALE), and Learn mode
+	 (features/learn-mode/model/createLearnMode.ts, verbatim). Strict
+	 mode ("Repeat till right") left genuinely disabled with a tooltip
+	 explaining why (needs mic/MIDI grading, stage 2, not built) rather
+	 than faked; Learn mode's segment/loop/slow-start half works for
+	 real, only its auto-speed-up-on-pass half is inert (nothing grades
+	 a note, so nothing ever calls it). Found and fixed a real bug in
+	 self-review before any live test: applySegment() was unconditionally
+	 re-enabling the loop, which fought Learn mode's own exit sequence
+	 (setLoop(false) then applySegment(0,duration)) — moved that side
+	 effect to the one caller that wants it (manual drag-to-select) and
+	 added an explicit loop-state reset on Learn-mode exit. Verified live
+	 end to end via Playwright: full playback with Band+Karaoke+Notes on,
+	 every toggle button, fretSize cycling, Learn mode enter/Next/Prev/
+	 exit, a simulated timeline drag-select, and Clear — 0 console errors
+	 throughout; all sixteen routes still 200 after rebuild
+	-user asked for the practice timeline to draw at least a minimal
+	 version of the big highway, so you can roughly tell what's coming —
+	 new (not in vanilla's own timeline.js either), added to the one
+	 shared/lib/practice-timeline.ts module both engines already build
+	 their scrubber from: small pitch-height ticks (x=time, y=pitch
+	 normalized across the song's range, same padded min/max shape as
+	 Classic's own yFor), deliberately generic (pitch not string/fret) so
+	 it works for both Classic's continuous-pitch highway and Performance
+	 Mode's string-lane one. New optional `notes` param on
+	 createTimeline(), leanest shape that both engines' existing note
+	 arrays already satisfy. Verified live on both engines (toggled
+	 Settings' Song player) via screenshot plus reading the canvas's own
+	 pixel data back to confirm the y-axis genuinely tracks the melody's
+	 shape, not a flat placeholder bar — 0 console errors, all sixteen
+	 routes still 200 after rebuild
+	-user pasted Performance Mode's segment row (segLabel/Loop/Clear/
+	 Learn) and asked to make it one common panel, not separate — it was
+	 its own floating box (marginTop gap) between the transport controls
+	 and the timeline, which was also its own separately backed/bordered
+	 box, three stacked bars total. Wrapped the segment row + timeline
+	 together in one new container with a single shared background/
+	 border; segment row's class swapped from .play-controls to a new
+	 .segment-bar (no bg/border of its own), and .timeline-wrap's own
+	 bg/border are switched off only when nested in the new wrapper, so
+	 it still looks normal standalone. Classic's own layout puts its
+	 timeline in a different spot (above controls, not below), so left
+	 it untouched rather than guess at reordering it — same request
+	 could mean something bigger there. Verified live: before/after
+	 screenshots, Learn mode's active-segment highlight still renders
+	 correctly under the merged row, 0 console errors, all sixteen
+	 routes still 200 after rebuild
+	-user then said no, that row needs to be in the SAME row as
+	 everything else (Speed/Karaoke/Band/Notes/Frets/size/Repeat till
+	 right/Metronome), not just paneled with the timeline below it —
+	 folded segLabel/loopBtn/clearLoopBtn/prevSegBtn/learnBtn/nextSegBtn
+	 directly into the main controls array so they're just more buttons
+	 in the one flex-wrap row (spill onto the second wrapped line same
+	 as any other overflow button). Dropped the flex:1 spacer that used
+	 to push Learn/Prev/Next to the row's far right, since that only
+	 made sense as its own row — in the shared multi-line row it would
+	 land wherever it happened to wrap to. The previous entry's
+	 controls2/timeline-panel wrapper became dead code since controls2
+	 no longer exists, so removed it and the now-unused .timeline-panel/
+	 .segment-bar CSS — controls and timeline.el still read as one
+	 surface since they already share the same background color, no new
+	 CSS needed. Verified live: screenshots, Learn mode's Prev/Learn/
+	 Next + segment label still work correctly inline in the shared row,
+	 0 console errors, all sixteen routes still 200 after rebuild
+	-user reported fret numbers gone and no sound on /play/bi-twinkle —
+	 traced to leftover localStorage state from this session's own
+	 Playwright testing (band/noteSounds/showFingering/karaokeLyrics all
+	 left false from single-click toggle tests never clicked back, plus
+	 playbackSpeed permanently stuck at 0.5 since Learn mode's automatic
+	 slow-start persists via the same setSetting() path as a manual
+	 speed change) — not a code bug, confirmed by re-reading the source
+	 (all three default true via `?? true` when unset) and by simply
+	 re-toggling the buttons back on, which fixed both symptoms with no
+	 code change. Verified sound is real (not just silently scheduled
+	 into a suspended context) by patching window.AudioContext to check
+	 ctx.state === "running" after Play, and watched createOscillator
+	 call count climb during playback. Lesson for future test passes:
+	 restore every toggled setting to its pre-test value afterward, since
+	 this session's toggle-once-to-verify convention leaves state behind
+	 in the real browser's localStorage
+	-user then asked for the fret-number text 2.5x bigger, tracking the
+	 ⚙ S/M/L string-size control — the font was already laneH-relative
+	 (laneH * 0.4, and laneH already scales with the S/M/L setting), so
+	 just bumped the multiplier to 1.0 (0.4*2.5), keeping it laneH-
+	 relative rather than switching to a fixed px size so it keeps
+	 tracking size changes. Verified live at both L and S sizes — digits
+	 clearly bigger, still fit inside the note blocks, scale down
+	 correctly at S. Scoped to Performance Mode only (the ⚙ S/M/L control
+	 it references doesn't exist in Classic or TabRoll). 0 console
+	 errors, tsc/lint/build clean, all sixteen routes still 200 after
+	 rebuild
+	-user reported the same "numbers gone / no sound" symptom again right
+	 after the previous fix — this time it was a different browser, not a
+	 different bug: Playwright drives its own separate browser profile,
+	 so fixing localStorage there never touched the user's own browser's
+	 localStorage. A hard reload doesn't clear localStorage either (by
+	 design, that's what makes settings persist) — explained this rather
+	 than re-fixing a browser that was never broken. No files touched
+	-user asked for what 🎸 Frets used to mean in Classic: a "modal
+	 window with a guitar riff" (drawFretboard from createPlayEngine.ts —
+	 a Now:/Next: chord panel with a mini fretboard diagram, where to put
+	 your fingers), plus a separate size control just for that window,
+	 while keeping ⚙ S/M/L controlling the main highway's string size as
+	 before. Asked via AskUserQuestion whether to repurpose 🎸 Frets for
+	 this (vs. add a new button) — user chose to repurpose. Ported
+	 drawFretboard into a new drawDiagram(t) in createPerformanceEngine.ts
+	 (dropped the capo term — Performance Mode doesn't model capo
+	 anywhere else, keeps it consistent with the highway's own fret
+	 numbers). Needed a new grouped-note array (diagramNotes, one entry
+	 per chord with every pitch's fret position) alongside the existing
+	 flattened `flat` (one entry per pitch) since the diagram needs to
+	 plot a whole chord at once. 🎸 Frets now toggles showDiagram
+	 (persisted as showFingering, same key Classic uses for its own Frets
+	 button) instead of the inline fret-number digits, which are
+	 unconditional now (always drawn). Added 🖐 S/M/L next to Frets,
+	 cycling a new fretDiagramSize setting, independent from fretboardSize
+	 (⚙ S/M/L, untouched) — same FRET_SCALE factors, separate state.
+	 Verified live: diagram renders and updates live during playback,
+	 disappears when Frets is off (highway numbers unaffected), 🖐 and ⚙
+	 resize independently. 0 console errors, tsc/lint/build clean, all
+	 sixteen routes still 200 after rebuild
+	-user asked to join 🎸 Frets and its 🖐 S/M/L into one button, no
+	 gap between them — added a generic .btn-group CSS rule (zeroed
+	 border-radius except outer corners, -1px margin on the second child
+	 so borders overlap into one line instead of doubling), wrapped
+	 fretBtn+diagramSizeBtn in a div.btn-group and put that in the
+	 controls row instead of the two buttons separately, so the row's
+	 own gap doesn't apply between them. ⚙ S/M/L (main highway size)
+	 stays a separate button, untouched. Verified: screenshot shows one
+	 seamless pill-shaped control, measured both buttons' rects to
+	 confirm the 1px border overlap is real not accidental, clicked the
+	 second (overlapping) button directly and confirmed it still cycles
+	 independently of the first. 0 console errors, tsc/lint/build clean,
+	 all sixteen routes still 200 after rebuild
+	-user asked for the highway's fret numbers even bigger — "maximally
+	 big, by the size of the block" — previous pass was a fixed laneH*1.0
+	 multiple, leaving unclaimed space since the actual note block is
+	 smaller than laneH (laneH - pad*2). Switched to a fit-to-block calc:
+	 start at blockH*1.3 (bold monospace cap-height ~0.72em, so 1.3em
+	 lands ink at ~95% of blockH), then measureText() against that note's
+	 own width and shrink only if it'd overflow. Still laneH-relative via
+	 blockH, so ⚙ S/M/L keeps resizing it. Verified at S/M/L — digits
+	 visibly fill nearly the whole block at every size, clear jump from
+	 before, no overflow. 0 console errors, tsc/lint/build clean, all
+	 sixteen routes still 200 after rebuild
+	-user asked to split the highway's canvas elements into components
+	 too, and specifically that notes be separate components with their
+	 own status/content/text-size. Asked whether "component" meant real
+	 React/DOM elements (would reverse this engine's whole canvas-not-
+	 React architecture decision) or internal JS objects still drawn via
+	 Canvas2D — user confirmed the latter. New file highway-elements.ts:
+	 factory functions returning plain objects with draw(ctx) —
+	 createNoteBlockElement (status: pending/active/past, content, color,
+	 fontSize computed once via the previous entry's fit-to-block sizing),
+	 createChordTieElement, createStringLineElement, createGutterElement,
+	 createPlayheadElement, plus a shared roundRectPath helper replacing
+	 the old local closure (was duplicated conceptually between the note
+	 loop and drawDiagram's panel). Plain factory functions not classes —
+	 matches the codebase's existing functional style (el()/slider())
+	 better than introducing OOP where it wasn't already used (Band is
+	 the only class, a different kind of thing — a stateful audio engine,
+	 not a per-frame draw object). draw() now just builds each element
+	 from the same per-frame math it already had and calls .draw(c) —
+	 same output, reorganized code, nothing behavioral changed. Verified:
+	 before/after screenshots pixel-identical, played the song and
+	 confirmed all three note states (past fades, active gets white
+	 outline, pending normal) still render correctly through the new
+	 component. 0 console errors, tsc/lint/build clean, all sixteen
+	 routes still 200 after rebuild
+	-user said text size still doesn't change with S/M/L and stays too
+	 small even at S — found the REAL bug behind all the "make it bigger"
+	 requests: Canvas2D's ctx.font property does not resolve CSS var()
+	 at all (confirmed by patching CanvasRenderingContext2D.prototype's
+	 font setter and logging attempted-vs-applied values — every `ctx.
+	 font = "...px var(--mono)"` silently failed, read back as the
+	 canvas's own default "10px sans-serif"). Root cause was two-fold:
+	 --mono/--font were never actually defined anywhere in web/src
+	 (confirmed via grep of every .css file), AND even after manually
+	 defining --mono and retrying, ctx.font still rejected the var()
+	 syntax — canvas font is not a normal CSS property and doesn't do
+	 var() substitution regardless. getVar() (shared/lib/dom.ts) already
+	 existed and is used correctly for colors everywhere — font strings
+	 just needed the same treatment: getVar("--mono") resolved to a
+	 literal string, not the raw token "var(--mono)". This explains why
+	 S/M/L stopped mattering once the fit-to-block width-shrink started
+	 dominating: shrinking by a width measured against the WRONG (fallback)
+	 font's metrics cancels the height term out of the formula entirely,
+	 making the result a function of note width only — invariant to
+	 laneH, invariant to S/M/L.
+	 Not Performance-Mode-only — same pattern found in 8 files total
+	 (grep'd the whole tree): createPerformanceEngine.ts, highway-
+	 elements.ts, createPlayEngine.ts (Classic's drawFretboard/drawHoles
+	 and countdown number), createKaraokeEngine.ts, shared/lib/dom.ts's
+	 lineChart (History charts), TabRoll.tsx and PianoRoll.tsx (Editor).
+	 Fixed all of them rather than leaving seven silently broken after
+	 fixing the one reported. Defined real --mono/--font values in
+	 globals.css (didn't exist before), replaced every embedded var()
+	 font string with a getVar()-resolved literal.
+	 With the real font actually rendering, the fit-to-block sizing
+	 itself needed retuning — it was calibrated against the tiny fallback
+	 font, so once the real (bigger) monospace font applied, blockH*1.3
+	 overshot badly. Replaced the fixed-ratio guess with a self-
+	 calibrating one: measure the digit's actual ink box (TextMetrics
+	 actualBoundingBox*) at a 100px probe size, scale to whichever of
+	 "85% of block height" or "block width minus margin" is more
+	 restrictive — correct for whatever font is actually active. Verified
+	 via a cropped/zoomed canvas screenshot that digits genuinely stay
+	 within their own block edges (the "overflow" seen at full-page scale
+	 was adjacent tightly-packed blocks reading as one shape when small,
+	 not real spillover). Also confirmed M and L render identically in a
+	 tall-enough viewport because laneH's own clamp saturates at
+	 avail/rows for both — pre-existing, unrelated to this bug, left as
+	 is. Verified live: ctx.font reads back correctly resolved on a fresh
+	 load (was always "10px sans-serif" before), S genuinely smaller than
+	 M/L, live playback status transitions still correct, same fix
+	 confirmed in Classic engine too. 0 console errors, tsc/lint/build
+	 clean, all sixteen routes still 200 after rebuild
+	-user asked to triple "the number's size" with no element named and
+	 no image — asked which one via AskUserQuestion, confirmed it meant
+	 the small fret-position number inside each dot on Performance
+	 Mode's fretboard-diagram panel (drawDiagram()), untouched by the
+	 earlier highway-digit passes. Tripled it (9*sc -> 27*sc) and resized
+	 the dot (was a fixed 6.5*sc radius) to match, measuring the label's
+	 real ink box the same self-calibrating way the highway digits are
+	 sized — otherwise the enlarged number would've spilled past a dot
+	 three times too small. Rewrote the label position from a manual
+	 length-based offset hack to textAlign=center/textBaseline=middle.
+	 User immediately said it came out too big — "smaller, by a bit less
+	 than half." Verified via a cropped/3x-magnified canvas screenshot
+	 (full-page screenshots are too small to judge this element's size)
+	 that 3x really was oversized relative to the fretboard grid.
+	 Dialed down to ~1.8x original (16*sc) — dot-sizing logic needed no
+	 change since it already derives from the label's measured size.
+	 Verified again via the same crop technique: reads clearly, fits
+	 comfortably in its dot. 0 console errors, tsc/lint/build clean,
+	 rebuilt twice (once per size change), all sixteen routes still 200
+	 after the final rebuild
+	-user asked what unit the diagram's fret-number font is sized in and
+	 for 3 concrete S/M/L options to pick from. Explained the formula
+	 (base * sc, same FRET_SCALE as the size button). Rendered a live
+	 3x3 comparison grid directly on the running page via browser_evaluate
+	 (no rebuild needed) reusing the real ink-box-measurement/dot-sizing
+	 code, labeled "12" to stress-test worst-case width: A Compact
+	 (base=12: S9/M12/L16), B Current (base=16: S12/M16/L21, already
+	 live), C Bold (base=20: S16/M20/L26, crowds adjacent frets). User
+	 picked B, confirming the existing value — no code change, just
+	 recorded as a deliberate choice
+	-user said "smaller" then "0.7 of current size" — applied both to
+	 the diagram dot (base 16->12->8.4), same thread as the comparison
+	 just confirmed. User then clarified: meant the HIGHWAY's own fret
+	 digits (perf-canvas), not the diagram at all — two bare "smaller"
+	 messages right after confirming a considered 3-way choice reads
+	 more like a change of subject than reopening a decision just made.
+	 Reverted diagram back to base=16 (net no change from the previous
+	 entry) and applied 0.7x to where it belonged: highway-elements.ts's
+	 createNoteBlockElement, targetH was a flat h*0.85, now h*0.85*0.7
+	 (kept unmultiplied in source for traceability). Width-based safety
+	 margin (w-6) untouched — request was about font size specifically.
+	 Verified live: highway digits visibly smaller with more breathing
+	 room, diagram confirmed back to the earlier comparison's size. 0
+	 console errors throughout, tsc/lint/build clean, all sixteen routes
+	 still 200 after rebuild. Net files changed: createPerformanceEngine.ts
+	 (diagram, unchanged net state) and highway-elements.ts (targetH)
+	-user asked for the timeline's note-preview strip to draw by string,
+	 not by pitch/note. It used to compute row internally from midi
+	 (shared/lib/practice-timeline.ts), reasoning that worked "well
+	 enough" for both engines — wrong for Performance Mode specifically,
+	 since two different frets on the same string are different pitches
+	 but the same highway row, so pitch-based rows spread them apart when
+	 the highway itself doesn't. Restructured TimelineNote from
+	 {time,dur,midi} to {time,dur,row} — row is now a pre-normalized 0-1
+	 value the CALLER supplies, shared module no longer knows about
+	 pitch/strings at all. Performance Mode's call site now computes row
+	 from strIdx/(rows-1) (matches the highway's own row layout exactly).
+	 Classic's call site keeps pitch-based rows, since Classic's own
+	 highway IS continuous pitch, not string-lanes — moved its
+	 allMidi/loM/hiM computation earlier in the file (was only defined
+	 for yFor, after the timeline's own construction) so the timeline
+	 call site can use it too; removed the now-duplicate later
+	 definition. Verified via pixel scan of the timeline canvas: exactly
+	 2 distinct tick heights on Performance Mode (matching the 2 strings
+	 this song's melody uses, not continuous pitch variation), 6 distinct
+	 heights on Classic (matching actual pitch variety, unaffected). 0
+	 console errors on either engine, tsc/lint/build clean, all sixteen
+	 routes still 200 after rebuild
+	-user asked to add live note-reading grading to Performance Mode,
+	 same as Classic has - Repeat till right specifically named. This
+	 reverses a standing scope decision (stage-2 grading explicitly out,
+	 addHistory() never called). Asked via AskUserQuestion: just the
+	 strict-mode retry mechanic, or the full Classic system (health/
+	 score/streak/killfeed too) - user picked the full system. Read
+	 Classic's whole grading pipeline first (readPitch/grade/finalize/
+	 retry/checkWaitingPitch/resolveWait/applyJudgment/pushKill,
+	 shared/lib/pitch.ts's detectPitch/PitchTracker) - the cents-based
+	 pitch-matching math is instrument-agnostic, ports directly; only
+	 the data model and clock needed real adaptation:
+	 - grading data model: added gradeNotes[] (one entry per note/chord,
+	   mutable state/best/frames) alongside the existing per-pitch
+	   `flat`, keyed by the same groupId so the highway's per-pitch draw
+	   loop can look up its parent note's grade and color the block
+	   (judgmentColor[state], same --j-* CSS vars Classic uses)
+	 - clock: Classic's own clock is a frame-accumulated variable so
+	   "freeze" = "stop incrementing"; Performance Mode's now() is
+	   computed from AudioContext.currentTime, can't freeze that way -
+	   added the same rate/effRate split Classic has, retry() reuses the
+	   engine's own pause()/seekTo() (seekTo now also resets grading
+	   state for that note and everything after, needed on every seek
+	   not just retries) plus a dedicated waitTick() rAF loop distinct
+	   from tick() to poll the mic while frozen. tick() bails out right
+	   after grade() if a retry just fired (if(waitingFor) return) - a
+	   bug caught in self-review before testing (without it, tick()'s
+	   own tail would've immediately overwritten retry()'s freeze)
+	 - Play/Pause button: Classic never flips its own playing flag for a
+	   retry; Performance Mode's retry needs playing=false for now() to
+	   freeze, so updatePlayBtn() shows "⏸" for playing||waitingFor, and
+	   clicking during a wait cancels it rather than trying to
+	   distinguish a real pause from the freeze already in effect
+	 - restart: Classic has separate Start/Restart buttons; Performance
+	   Mode has one toggle - play() calls restart() first when finished,
+	   same as Classic's togglePlay()'s own finished check, one button
+	   instead of two
+	 Added the HUD pieces Performance Mode never had (scoreBox/
+	 healthWrap/killfeed/banner, same markup/CSS classes as Classic's
+	 own, already in the shared play-engine.css) as a third topHud row -
+	 grew TOP_HUD_RESERVE 76->140px to fit without overlapping the
+	 highway. finish() now calls addHistory() (mode: "performance" tag,
+	 the field already existed optional/unused) - confirmed via grep
+	 that History's own UI never reads .mode, so this couldn't break it.
+	 Found and fixed a real pre-existing bug along the way, not
+	 introduced by this port: ensureMic()'s bare await getUserMedia()
+	 (ported verbatim from Classic) can hang forever if the browser
+	 never settles the permission prompt - confirmed live that Classic's
+	 own "▶ Start" hangs identically in this environment, proving it
+	 predates this entry. Fixed only on Performance Mode's own copy
+	 (Classic stays untouched, separate deliberate call) - races
+	 Audio.startMic() against an 8s timeout, falling into the same
+	 graceful no-mic-play-anyway path the catch already handles for an
+	 explicit denial. Also fixed stale "no scoring yet" copy in
+	 SettingsPage.tsx.
+	 Verified live end to end: HUD doesn't overlap highway, Play no
+	 longer hangs (8s timeout, toasts, proceeds), full playthrough with
+	 no mic available shows every note finalizing as miss (killfeed red
+	 entries, highway blocks switch to --j-miss red, health to 0, score
+	 box shows FAILED), song end shows the pass/fail banner (grade F,
+	 correct 42/42-missed stats) and genuinely writes addHistory (read
+	 localStorage back directly, confirmed mode:"performance"), strict
+	 mode froze exactly at the first note (time genuinely stopped,
+	 button showed ⏸) rather than continuing past a miss, canceling the
+	 wait via the Play button worked cleanly, turning strict back off
+	 let normal playback resume and finish a second time. 0 console
+	 errors throughout. Cleared the fake test history afterward. tsc/
+	 lint/build clean, all sixteen routes still 200 after rebuild
+	-user asked for a new mode: "тренировка в своем темпе. (свободный режим) где идет ожидание след. ноты. последовательно без автовоспроизведения" - practice
+	 at your own pace, waits for the next note, sequential, no
+	 auto-playback. Asked via AskUserQuestion which engine (Performance
+	 Mode only, not Classic), how a note advances (mic pitch detection
+	 only, no manual skip fallback), what happens on a wrong note (same
+	 health/killfeed accounting Repeat till right's own wait already
+	 uses, not a separate penalty scheme).
+	 Built entirely on strict mode's existing freeze-and-wait primitives
+	 (waitTick/checkWaitingPitch/resolveWait) rather than a parallel
+	 mechanism - strict mode's own retry already freezes the clock and
+	 polls the mic for one note before resuming timed playback; Free
+	 mode just chains that same freeze through every note from the
+	 start, no clock-driven playback in between at all (no backing/
+	 vocal audio, no note-sound/metronome scheduling, no band). Play
+	 routes to a new playFree() instead of the normal clock path;
+	 resolveWait() now branches on a freeMode flag - normally it ramps
+	 back up to speed and resumes playback, in Free mode it calls a new
+	 pickNextFree() instead, which finds the next not-yet-graded note
+	 (firstPendingFrom(), time-sorted) and freezes there. Had to be
+	 careful about where the next animation frame gets scheduled:
+	 resolveWait() calls pickNextFree() from *within* waitTick()'s own
+	 call stack (via checkWaitingPitch()) - if pickNextFree() also called
+	 requestAnimationFrame(waitTick) itself, that's a second scheduled
+	 frame on top of waitTick()'s own trailing reschedule, doubling (then
+	 quadrupling...) every note. pickNextFree() doesn't schedule
+	 anything; only playFree() (the actual entry point, not already
+	 inside that call stack) does. Because Repeat till right's own wait
+	 only ever resolves a note as perfect/good (a wrong pitch just keeps
+	 waiting, never graded off/miss), Free mode's killfeed reads the
+	 same way for free - no penalties, matching what was asked, no extra
+	 code needed for that part.
+	 Mutually exclusive with Learn mode (each disables the other's
+	 button; enabling Free mode force-exits Learn if it's active) since
+	 Learn's segment/loop bounds are enforced inside the normal
+	 clock-driven tick(), which Free mode never runs. Also disables
+	 Repeat till right's own toggle - nothing left for it to do once
+	 every note already waits. New s.freeMode setting (player-
+	 settings.ts).
+	 Fixed two small pre-existing rough edges hit while building this:
+	 seekTo() never resynced the Play button after a timeline seek
+	 interrupted a strict/Free-mode wait (could get stuck showing pause
+	 forever) - added a trailing updatePlayBtn() call; and Learn's own
+	 tooltip still said auto-speed-up-on-clean-pass "won't fire yet,"
+	 true before the grading port two entries up, not since.
+	 Verified live via Playwright on /play/bi-twinkle: toggling Free mode
+	 on correctly disabled Repeat till right + Learn; Play with mic
+	 denied correctly toasted "Mic off" and left everything exactly
+	 where it was (no freeze, button back to play) rather than getting
+	 stuck - confirms the no-manual-fallback design holds. This sandbox
+	 has no real mic, so mocked navigator.mediaDevices.getUserMedia to
+	 return a MediaStreamDestination fed by a real OscillatorNode -
+	 an actual synthesized tone through the app's own real detectPitch/
+	 PitchTracker pipeline, not a stubbed result. Set to 261.63Hz (C4,
+	 this song's first two notes): score went to 200/streak 2, froze
+	 exactly at the third note's time (didn't drift past a note the tone
+	 didn't match). Retuned live to 391.995Hz (G4, notes 3-4) without
+	 pausing: score to 360/streak 4, confirming the chain resumed and
+	 discriminated pitch note-by-note rather than advancing on any
+	 sound. Paused mid-wait, confirmed it canceled cleanly (button back
+	 to play, no stray loop). 0 console errors throughout. tsc/lint/build
+	 clean, Docker rebuilt, /play/bi-twinkle still 200. Also updated
+	 Settings' "Song player" copy to mention Free mode. Root vanilla app
+	 untouched - genuinely new mode, no Classic/brief counterpart to
+	 port from.
+	-user asked to add finger colors to the Frets diagram: "+ на
+	 Freets - вставляем цвета
+	 пальцев". drawDiagram()'s dots used a flat accent-when-
+	 active/translucent-white-when-next color before, unrelated to the
+	 finger-colors.ts palette the highway and its own legend already use.
+	 diagramNotes didn't carry a finger field at all - added it
+	 (finger: n.finger, same as flat's own copy for the highway); the dot
+	 loop now does fingerColor(cur.finger) once per chord for both the
+	 fretted-dot fill and the open-string ring stroke. A chord's finger is
+	 one value for the whole note, not per-string - same simplification
+	 the highway's own per-groupId coloring already makes, not a new
+	 limitation. Kept the old accent-vs-white "Now:" vs "Next:" contrast
+	 by driving globalAlpha off the existing active boolean instead (1.0
+	 active, 0.55 previewing next) rather than stacking a second color
+	 scheme on top.
+	 Verified live via Playwright on /play/bi-twinkle: before, this song's
+	 B-string note (no assigned finger - "Unassigned" default) showed the
+	 old accent/white on the diagram while the highway's own block for the
+	 same note already showed finger-colors.ts's Unassigned gray-blue
+	 (#8fa0c7) - visibly disagreed. After, a screenshot confirms the
+	 diagram dot now matches that same gray-blue exactly. Tried to also
+	 show actual color variety by assigning a real finger to a note via
+	 the Guitar tab editor (opened this song's auto-cloned draft), but no
+	 built-in song carries finger data and driving the tab canvas via
+	 synthetic MouseEvent/dispatchEvent didn't register a selection
+	 (real pointer events likely needed) - didn't chase further since the
+	 default-case comparison already exercises the same fingerColor() call
+	 this entry added, only the input value differs; no draft was saved.
+	 0 console errors, tsc/lint/build clean, Docker rebuilt, all sixteen
+	 routes still 200. Root vanilla app untouched - only
+	 createPerformanceEngine.ts touched, no Classic counterpart for this
+	 diagram.
+	-bugfix: user reported "баг что на Freets не
+	 хватает размера грифа
+	 сейчас всего 12 - а нужно
+	 расширить". drawDiagram()'s const FRETS = 12 was a
+	 hardcoded constant regardless of which chord the panel showed - any
+	 note whose minimal fret position (midiToFret()) landed past the 12th
+	 (routine on instruments reaching 15-22 frets, e.g. electric-guitar's
+	 22) got positioned by nutX + (pos.fret - 0.5) * cell with cell sized
+	 for only 12 frets - past fret 12 that's past the panel's own edge,
+	 off it entirely. The cell/fbW math itself was fine; the neck was just
+	 never widened to match what could actually be drawn on it.
+	 Fixed by computing FRETS per draw call from the currently shown
+	 chord's own fret positions (Math.max(12, ...cur.frets, floored at
+	 12 so an ordinary low-fret song keeps the same compact view), capped
+	 at the instrument's own frets count (no point drawing frets that
+	 don't exist). fbW now scales with FRETS/12 so each fret stays roughly
+	 the same physical width as the neck widens, rather than cramming more
+	 into the old fixed panel - still bounded by W*0.42 so a genuinely
+	 wide span compresses gracefully instead of overflowing. Extended the
+	 hardcoded [3,5,7,9,12] position-marker row to
+	 [3,5,7,9,12,15,17,19,21,24] (filtered to <= FRETS) so a chord up
+	 around fret 15-17 still gets landmarks past the 12th.
+	 Verified live via Playwright: this song's own melody never goes past
+	 fret 1, so reproducing the bug needed editing a draft's Notes field
+	 to C4:1 G5:2 C4:1 (G5 = midi 79, fret 15 on acoustic guitar's high E
+	 string) via the Song Editor's quick-entry textarea - used
+	 browser_fill_form, not raw DOM .value assignment (tried that first,
+	 confirmed it silently didn't register with the editor's own React
+	 state - Apply notation kept using the stale original melody until
+	 switched to a real fill). Also hit, and left alone as out of scope:
+	 a hard page.goto() navigation straight to a user-drafted song's
+	 /play/[id] rendered a fully blank mount div while the same URL via
+	 an in-app link click rendered correctly every time - used in-app
+	 navigation for the rest of verification instead of chasing that.
+	 Confirmed on the resulting page: mid-playback screenshot shows the
+	 diagram reading "Now: G5" with fret 15 plotted cleanly on a widened
+	 neck (its own "15" marker visible at the panel's right edge), where
+	 before this fix the dot would've rendered past a 12-fret-wide panel's
+	 edge. Cleaned up the test draft from localStorage directly (user-
+	 songs.v1 + play-history.v1), not through the UI's own Delete button
+	 (raises a blocking confirm() this session avoids triggering). 0
+	 console errors, tsc/lint/build clean, Docker rebuilt, /play/bi-
+	 twinkle still 200. Root vanilla app untouched, only
+	 createPerformanceEngine.ts touched.
+	-user asked to review Frets/Performance Mode once more for other
+	 bugs (no new feature). Read through createPerformanceEngine.ts
+	 looking for issues in the same family as the two just fixed. Found:
+	 freeModeBtn's onclick wrapped its "stop whatever's running" cleanup
+	 (cancel any wait, or pause()) in if (freeMode) {...} - only ran when
+	 turning Free mode ON. Turning it OFF mid-wait left waitingFor set and
+	 waitTick() still polling; if the person then actually played the
+	 note, resolveWait() fired as normal but re-checked the now-false
+	 freeMode flag and fell into its other branch (beginTempoRamp();
+	 play();) - silently starting a strict-mode-style tempo ramp and full
+	 timed auto-playback right after the person had just turned auto-
+	 playback off.
+	 Fixed by moving the stop-logic out from under the if (freeMode) guard
+	 so it always runs either direction; only the Learn-mode auto-exit
+	 stays specific to turning Free mode ON (turning it off never needs to
+	 touch Learn, already inactive/disabled the whole time).
+	 Also chased, and ruled out as unreachable, a related-looking
+	 suspicion: that same learnBtn.click() line runs right after
+	 learnBtn.disabled was set true two lines above, and .click() on a
+	 disabled button doesn't fire its listener in real browsers - looked
+	 like a second bug. Isn't one in practice: learnBtn.disabled always
+	 mirrors freeMode, and freeModeBtn itself only stays clickable while
+	 learn.isActive is false (learnBtn's own onclick disables freeModeBtn
+	 the instant Learn turns on) - so freeModeBtn's handler can never run
+	 with learn.isActive true in the first place, since the button would
+	 already be disabled. Dead defensive code, left as-is.
+	 Verified live via Playwright on /play/bi-twinkle: mocked
+	 getUserMedia with a real OscillatorNode off-pitch (300Hz vs the
+	 song's first note C4/261.63Hz) so the engine entered and stayed in a
+	 Free-mode wait; confirmed the button read pause (waiting); toggled
+	 Free mode off and - before the fix - the button incorrectly kept
+	 reading pause; retuned to the correct pitch and confirmed the bug:
+	 score jumped to 60 and normal timed playback silently started. Reran
+	 after the fix: toggling off mid-wait now snaps the button back
+	 immediately, and feeding the correct pitch afterward does nothing at
+	 all (score stays 0, button stays play). 0 console errors both runs,
+	 tsc/lint/build clean, Docker rebuilt, all sixteen routes still 200.
+	 Root vanilla app untouched, only createPerformanceEngine.ts touched.
+	-user repeated the exact same Frets-neck-size report verbatim
+	 after the pilot fix (two entries up) had already shipped. Checked
+	 docker-compose.yml: guitarpicker (root app, :8080) and
+	 guitarpicker-web (pilot, :3000) are two separate services - the
+	 person's actual testing surface is almost certainly the root app,
+	 not the pilot ("a separate app... not the deployed one" per its own
+	 README), so the original report was never about the pilot at all.
+	 Checked src/views/play.js's own drawFretboard() (what the pilot's
+	 drawDiagram() was itself ported from) and found the identical bug:
+	 same flat FRETS=12, same fixed [3,5,7,9,12] marker row, same
+	 off-the-panel positioning past fret 12 - routine on instruments
+	 reaching 15-24 frets (guitar-7 goes to 24).
+	 Applied the identical fix: FRETS computed per draw call from the
+	 current chord's own frets (floored 12, capped at inst.frets), fbW
+	 scaling with FRETS/12, marker row extended to
+	 [3,5,7,9,12,15,17,19,21,24]. One wrinkle handled: this file's fret
+	 *labels* add +capo for display, but the *positioning* math (here and
+	 in the new sizing calc) uses the raw capo-relative pos.fret
+	 throughout (capoStrings already folds capo in before midiToFret()
+	 runs) - so no separate capo handling was needed, the fix just works
+	 in the same capo-relative space everything else here already uses.
+	 Did not port the earlier finger-colors change (pilot-only, never
+	 requested here) - scoped strictly to the neck-size bug.
+	 Verified with real song data this time, no fabrication needed:
+	 scripted a quick Node check against builtinSongs()/midiToFret() to
+	 find a built-in song already needing a fret past 12 - bi-canon
+	 (Canon in D) does, up to fret 14, right at its first note. Ran the
+	 root app's own harness first (check-imports.cjs + test-core.mjs +
+	 dom-smoke.mjs, same as npm test) - 148 + 23-view checks all clean.
+	 Then live via Playwright on :8080/#/play/bi-canon: toggled Frets on
+	 (first click didn't stick, a second one did - confirmed via
+	 localStorage's showFingering before/after, likely just session
+	 timing, unrelated to the fix) and confirmed the panel now reads
+	 "Next: F#5 - capo 2" with the neck extended to a 14 marker at its own
+	 right edge and the dot sitting cleanly on it. 0 console errors.
+	 Rebuilt the Docker container (reruns the same test suite in its own
+	 build step), reconfirmed :8080 serves 200. Only src/views/play.js
+	 touched - the pilot's createPerformanceEngine.ts (already fixed) not
+	 touched again.
+	-user pasted a generic reference explainer (from another chat, not
+	 their own words) on standard fretboard-marker conventions - inlay
+	 dots at 3/5/7/9/12/15/17/19/21, 12th doubled - after the two neck-
+	 size bugfixes above. Asked via AskUserQuestion: fix the numeric
+	 label row to match, add actual inlay-dot graphics on the neck, or
+	 both - picked both.
+	 The label row in both drawDiagram() (pilot) and drawFretboard()
+	 (root) had grown to [3,5,7,9,12,15,17,19,21,24] across the two
+	 neck-size fixes - 24 isn't a standard marker (real necks mark up to
+	 21), trimmed back to the standard nine and factored into a shared
+	 FRET_MARKERS constant (was inlined at each call site before) so the
+	 label row and the new dots can't drift apart.
+	 Added the inlay dots as a new drawing pass: small translucent
+	 circles centered vertically between the extreme strings at each
+	 FRET_MARKERS position up to FRETS, 12th drawn as two dots (above +
+	 below center) not one - same spacing a real fretboard uses.
+	 Deliberately faint and drawn before the finger-color note dots, so a
+	 played note at a marker fret still reads clearly on top. Root app's
+	 dots use the same raw capo-relative pos.fret positioning the rest of
+	 that function already does (capoStrings folds capo in before
+	 midiToFret() runs) - only the numeric labels add +capo for display,
+	 matching existing convention; pilot has no capo concept, needed no
+	 such split.
+	 Verified live via Playwright on both apps: pilot on /play/bi-twinkle
+	 - dots visible at 3/5/7/9 and doubled at 12, label row correctly
+	 stops at 12 (this song's own max fret), never reaches a stray 24;
+	 root app on #/play/bi-canon (capo 2) - label row reads "5, 7, 9, 11,
+	 14" (raw 3/5/7/9/12 shifted by the song's capo, exactly as
+	 expected) with faint dots at each position, confirming capo-relative
+	 positioning and capo-adjusted labels still agree after the marker
+	 list swap. Also hit, and ruled out as pre-existing/unrelated: a
+	 fresh root-app play page renders a fully blank canvas with zero
+	 console output until something forces a render (clicking Frets, or
+	 Start) - render() was never wired to fire once automatically on
+	 mount, unrelated to anything touched this session; confirmed by
+	 reproducing the same blank-then-click-then-appears sequence on a
+	 different untouched song (bi-rising) with onerror/unhandledrejection
+	 listeners installed the whole time, catching nothing. 0 console
+	 errors throughout actual verification. tsc/lint/build clean on the
+	 pilot; check-imports.cjs + test-core.mjs + dom-smoke.mjs clean on
+	 root (148 + 23-view checks). Rebuilt both Docker containers
+	 together, reconfirmed :8080 and all sixteen :3000 routes still 200.
+	 This entry touched createPerformanceEngine.ts and src/views/play.js.
+	-user: "таб увеличь до размеров
+	 гитарного а то сейчас всего 12" - third instance of
+	 the same neck-size bug. Grepped both apps for FRETS=12, found exactly
+	 one remaining hit: the pilot's own Classic engine
+	 (createPlayEngine.ts's drawFretboard()) - kept untouched through
+	 every Performance-Mode entry above, but this is a direct report about
+	 Classic itself, gets the same direct fix. Checked TabRoll.tsx (the
+	 Guitar-tab editor, the other thing "таб" could mean) first - no
+	 fixed fret cap there at all (scrollable grid), ruled out before
+	 touching anything.
+	 Applied the identical fix a third time: FRETS from the current
+	 chord's own frets (floored 12, capped at inst.frets), fbW scaling
+	 with FRETS/12, same FRET_MARKERS constant + inlay-dot pass (this
+	 copy hadn't gotten the inlay-dot treatment yet either, folded into
+	 this same entry rather than deferred - same code shape as the two
+	 already-fixed copies). Same capo split as the root app's copy: label
+	 text adds +capo, position math stays in raw capo-relative pos.fret
+	 space.
+	 Verified live via Playwright: switched Settings to Classic, opened
+	 /play/bi-canon (same fret-14 capo-2 song used for the root app) -
+	 after one render()-forcing Frets click (same cold-mount quirk noted
+	 two entries up, now on the pilot), panel read "Next: F#5 - capo 2"
+	 with markers "5, 7, 9, 11, 14" and the dot correct on the widened
+	 neck, matching the root app's own verification exactly. 0 console
+	 errors, tsc/lint/build clean, Docker rebuilt, all sixteen routes
+	 still 200. Only createPlayEngine.ts touched - root app and pilot's
+	 Performance Mode (both already fixed) not touched again.
+	-user: "все равно вижу когда
+	 нажимаю Freets вижу только 12 а хочу полностью
+	 видеть" - reported against one of this session's own leftover
+	 test drafts (unedited Twinkle Twinkle clone, melody never leaves
+	 frets 0-5). Explains the "only 12": the three neck-size fixes above
+	 deliberately sized the diagram to whatever the current chord needed
+	 (floored 12, never more) - a song that never plays past fret 5 was
+	 always going to show a 12-fret neck, working exactly as designed,
+	 just not what was actually wanted. "хочу полностью видеть" makes
+	 the real ask clear: always show the instrument's entire fret range,
+	 not one that only grows when a chord happens to need it.
+	 Simplified all three copies (createPerformanceEngine.ts and
+	 createPlayEngine.ts in the pilot, src/views/play.js in the root app)
+	 from Math.max(12, ...chord's own frets) down to a flat
+	 inst.frets || 12 (inst?.frets in the Performance Mode copy) - always
+	 the instrument's own full fret count. fbW's FRETS/12 scaling, the
+	 FRET_MARKERS list, and the capo-relative positioning from the prior
+	 entries needed no changes - already written against "whatever FRETS
+	 turns out to be," not the old chord-driven formula specifically.
+	 Verified live via Playwright on the exact draft URL from the report
+	 (in-app nav via /library, not page.goto() - a hard reload to a
+	 user-drafted song's /play/[id] renders a blank mount div, separate
+	 pre-existing quirk noted two entries up): after the usual one-click
+	 render-forcing Frets toggle, the panel now shows markers out to "19"
+	 (continuing off-panel to the guitar's own 20) even though this
+	 song's own notes never ask for anything past fret 1 - confirms the
+	 neck no longer tracks the current chord at all. 0 console errors
+	 (only pre-existing CSS-preload warnings). tsc/lint/build clean on
+	 the pilot; check-imports.cjs + test-core.mjs + dom-smoke.mjs clean
+	 on root (148 + 23-view checks). Rebuilt both Docker containers,
+	 reconfirmed :8080 and all sixteen :3000 routes still 200. All three
+	 files touched: createPerformanceEngine.ts, createPlayEngine.ts,
+	 src/views/play.js.
+
+
+
+

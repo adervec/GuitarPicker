@@ -1,0 +1,130 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  color: #d7dce6;
+}
+.title {
+  font-size: 26px;
+  margin: 0 0 4px;
+}
+.subtitle {
+  color: #8892a4;
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+.muted {
+  color: #8892a4;
+  font-size: 12px;
+}
+.panel {
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  padding: 18px;
+  margin-top: 16px;
+}
+.panel h3 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.instName {
+  font-size: 18px;
+  font-weight: 600;
+}
+.heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lg {
+  padding: 10px 16px;
+  font-size: 14px;
+}
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.stat {
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.statNum {
+  font-size: 20px;
+  font-weight: 700;
+}
+.statLbl {
+  font-size: 11px;
+  color: #8892a4;
+  margin-top: 2px;
+}
+.sectionTitle {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.card {
+  display: block;
+  padding: 16px;
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms, transform 120ms;
+}
+.card:hover {
+  border-color: #6ea8fe;
+  transform: translateY(-2px);
+}
+.cardTitle {
+  font-weight: 600;
+  font-size: 15px;
+}
+.cardSub {
+  font-size: 12px;
+  color: #8892a4;
+  margin-top: 4px;
+}
+.tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.tag {
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #1b2440;
+  border: 1px solid #2a3142;
+  color: #8892a4;
+}
+.tips {
+  color: #8892a4;
+  font-size: 13px;
+  line-height: 1.7;
+  padding-left: 20px;
+  margin: 0;
+}

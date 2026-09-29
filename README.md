@@ -23,13 +23,20 @@ powershell -ExecutionPolicy Bypass -File .\serve.ps1
 
 # Option C — Python
 python -m http.server 8080
+
+# Option D — Docker (isolated build + run, nothing installed on your host)
+docker build -t guitarpicker . && docker run --rm -p 8080:8080 guitarpicker
 ```
 
 Open the URL, go to **Settings**, choose your microphone & output device, then hit a song.
-Allow microphone access when prompted (it never leaves your machine).
+Allow microphone access when prompted (it never leaves your machine) — `http://localhost`
+is a secure context for microphone access even when served from a container.
 
 On Windows, double-click **`GuitarPicker.cmd`** to start the server and open the app in one go
 (make a desktop shortcut to it for one-click launch).
+
+See [docs/DOCKER.md](docs/DOCKER.md) for `docker compose`, running just the test suite in a
+container, and live-mounting the repo for development.
 
 ## Install as an app
 
@@ -47,6 +54,15 @@ Claude Cowork folder and ask for coaching — the file starts with a suggested p
 
 - **Note highway** — streaming notes, per-note killfeed (Perfect / Good / Off / Miss), a
   healthbar that dips on mistakes but lets you finish (a failed run just won't count as a pass).
+  A **Speed** slider (25%–125%) in Play and Karaoke slows a song down for practice — audio, notes
+  and grading all slow together, pitch unchanged. Play also has a **☑ Repeat till right** toggle:
+  fumble a note and everything freezes right there — nothing you already played gets replayed —
+  and waits until you get that one note, then eases back up to speed, no penalty until you nail it.
+  A **Vegas-style timeline** under the highway lets you drag out a passage to practice and loop
+  (🔁), or click to jump anywhere; **🎓 Learn** mode splits the whole song into segments on that
+  same timeline and ramps each one's speed up automatically as you nail it. A **⚙** button
+  resizes the fretboard/fingering display, and Settings lets you label strings by note name or
+  by number (1–6).
 - **Tuner** — live pitch + cents needle, out-of-tune detection, multiple instruments & tunings.
 - **Songs** — a 45+ song **public-domain** library (folk, spirituals, nursery rhymes, carols,
   classical themes, plus chord-progression trainers) tagged by **genre**, with singalong
@@ -125,3 +141,7 @@ or audio are bundled. See **[CREDITS.md](./CREDITS.md)** for per-song provenance
 ## Architecture
 
 See **[Design.md](./Design.md)** for architecture, the song file format, and known limitations.
+
+There's also an experimental **[`web/`](./web) pilot** — the same app rebuilt on Feature-Sliced
+Design + Next.js + TanStack Query + TypeScript, covering everything above except Locker. It's not
+the deployed app (this root project stays zero-dependency/zero-build); see [web/README.md](./web/README.md).

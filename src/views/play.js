@@ -8,12 +8,14 @@ import { Band } from "../audio/band.js";
 import { findSong } from "../music/catalog.js";
 import { songDuration, pickPart } from "../music/song-format.js";
 import { autoAccompaniment } from "../music/accompany.js";
-import { freqToMidiFloat, midiToName, midiToFret, midiToHole, INSTRUMENTS } from "../music/notes.js";
+import { freqToMidiFloat, midiToName, midiToFret, midiToHole, stringLabel, INSTRUMENTS } from "../music/notes.js";
 import { suggestCapo, describeMidiSet } from "../music/theory.js";
 import { drawBackground } from "../ui/backgrounds.js";
 import { renderAvatar } from "../cosmetics/index.js";
 import { buildLyricTimeline, activeAt } from "../karaoke/timeline.js";
 import { lineFillHTML, escapeHTML as esc } from "../karaoke/render.js";
+import { createTimeline } from "../ui/timeline.js";
+import { createLearnMode } from "../learn/learn-mode.js";
 
 const LEAD_IN = 3.0;          // count-in seconds before notes start
 const HIT_PAD = 0.16;         // detection window pad around a note
@@ -33,11 +35,26 @@ export default async function play(ctx) {
   const s = Store.settings();
   const a4 = s.a4;
   const speed = s.noteSpeed;
+  // Practice tempo: slows/speeds the backing audio, synth band, note timing and
+  // grading windows together (pitch held constant) — distinct from `noteSpeed`
+  // above, which only scales how fast the highway scrolls on screen.
+  let rate = s.playbackSpeed || 1;
+  // The rate actually driving playback right now — normally == rate, but strict
+  // mode's retry() dips it briefly so there's time to see what went wrong, then
+  // eases it back up (see applyRate/setEffRate near the grading functions).
+  let effRate = rate;
+  let retryPhase = null;   // { from, until, rampUntil } while easing back up to speed
+  let waitingFor = null;   // the note strict mode has frozen the transport on, or null
   // Which part you play: yours if the arrangement has one, else the song's lead.
   // Everything else in the arrangement becomes the synth band.
   const { parts, index: leadIdx, lead } = pickPart(song, s.instrument);
   const playInst = lead.instrument;
   const duration = songDuration({ notes: lead.notes });
+  const beatLen = 60 / song.bpm;
+  // ----- practice segment -----
+  // A segment is just [segStart, segEnd) in song-time; "Loop" repeats it forever.
+  // Picked either by hand (drag on the timeline) or by Learn mode (see below).
+  let segStart = 0, segEnd = duration, loopOn = false;
   const capo = song.capo || suggestCapo(((lead.notes[0]?.midi[0] ?? 60) % 12)).capo;
   const inst = INSTRUMENTS[playInst] || INSTRUMENTS["acoustic-guitar"];
   const fretted = inst.kind === "fretted";
@@ -93,6 +110,7 @@ export default async function play(ctx) {
   const backBtn = el("button.btn.ghost", { onclick: () => navigate("#/library") }, ["← Songs"]);
   const player = new TrackPlayer();
   player.load(song);
+  player.setSpeed(rate);
 
   // ----- synth backing band -----
   // Authored parts you're not playing, plus generated bass/comp/drums for the
@@ -114,6 +132,9 @@ export default async function play(ctx) {
     oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); band.setVolume(v); } });
   const volV = slider({ label: "Vocal", value: s.vocalVolume, fmt: (v) => Math.round(v * 100) + "%",
     oninput: (v) => { Store.setSetting("vocalVolume", v); player.setVocalVolume(v); } });
+  const speedSlider = slider({ label: "Speed", min: 0.25, max: 1.25, step: 0.05, value: rate,
+    fmt: (v) => Math.round(v * 100) + "%",
+    oninput: (v) => { applyRate(v); Store.setSetting("playbackSpeed", v); } });
   const metroBtn = el("button.btn", { onclick: () => { metro = !metro; metroBtn.classList.toggle("primary", metro); } }, ["🥁 Metronome"]);
   let metro = false;
   let noteSounds = s.noteSounds ?? true;
@@ -127,6 +148,66 @@ export default async function play(ctx) {
     fretBtn.classList.toggle("primary", showFrets);
     if (!playing) render(clock);
   } }, [harp ? "🎺 Holes" : "🎸 Frets"]) : null;
+  const FRET_SIZE_ORDER = ["S", "M", "L"];
+  let fretSize = FRET_SIZE_ORDER.includes(s.fretboardSize) ? s.fretboardSize : "M";
+  const fretSizeBtn = (fretted || harp) ? el("button.btn", { title: "Fretboard/holes display size — click to cycle Small / Medium / Large", onclick: () => {
+    fretSize = FRET_SIZE_ORDER[(FRET_SIZE_ORDER.indexOf(fretSize) + 1) % FRET_SIZE_ORDER.length];
+    Store.setSetting("fretboardSize", fretSize);
+    fretSizeBtn.textContent = `⚙ ${fretSize}`;
+    if (!playing) render(clock);
+  } }, [`⚙ ${fretSize}`]) : null;
+  let strict = s.strictMode ?? false;
+  const strictBtn = el("button.btn", { class: strict ? "primary" : "",
+    title: "Miss or fumble a note and everything stops right there — nothing already played gets replayed, it just waits for you to get this one note, then eases back up to speed (no health/score hit while waiting)",
+    onclick: () => { strict = !strict; Store.setSetting("strictMode", strict); strictBtn.classList.toggle("primary", strict); } },
+    ["☑ Repeat till right"]);
+
+  // ----- practice timeline + Learn mode -----
+  // Vegas-style: drag on the timeline to select a segment, click to seek.
+  // `learn` is a separate, UI-agnostic component (src/learn/learn-mode.js) that
+  // owns segment slicing + the speed ramp; here we just wire it to this view's
+  // own transport (rewindTo/applySegment) and reflect its state on the timeline.
+  const timeline = createTimeline({
+    duration,
+    onSeek: (t) => { if (!learn.isActive) { rewindTo(t); if (!playing) render(clock); } },
+    onSelect: (a, b) => { if (!learn.isActive) applySegment(a, b); },
+  });
+  const learn = createLearnMode({
+    duration, beatLen,
+    applySegment,
+    rewindTo,
+    getRate: () => rate,
+    setRate: (v) => { applyRate(v); speedSlider.setValue(v); Store.setSetting("playbackSpeed", v); },
+    setLoop: (v) => { loopOn = v; loopBtn.classList.toggle("primary", v); },
+    toast,
+  });
+  const segLabel = el("span.muted", { style: { fontSize: "12px", minWidth: "170px" }, text: "Full song" });
+  const loopBtn = el("button.btn", { title: "Loop the selected segment (drag on the timeline to pick one)", onclick: () => {
+    if (segEnd <= segStart) { toast("Drag on the timeline to mark a segment first", "bad"); return; }
+    loopOn = !loopOn; loopBtn.classList.toggle("primary", loopOn);
+    if (loopOn && (clock < segStart || clock > segEnd)) rewindTo(segStart);
+  } }, ["🔁 Loop"]);
+  const clearSegBtn = el("button.btn.ghost", { title: "Clear the practice segment (back to the full song)", onclick: () => {
+    loopOn = false; loopBtn.classList.remove("primary");
+    applySegment(0, duration);
+  } }, ["✕"]);
+  const prevSegBtn = el("button.btn.ghost", { style: { display: "none" }, onclick: () => { learn.prev(); syncLearnUI(); } }, ["◀"]);
+  const nextSegBtn = el("button.btn.ghost", { style: { display: "none" }, onclick: () => { learn.next(); syncLearnUI(); } }, ["▶"]);
+  const learnBtn = el("button.btn", {
+    title: "Split the song into segments and drill them one at a time — each segment starts slow and speeds up automatically once you're playing it cleanly",
+    onclick: () => {
+      const on = learn.toggle();
+      learnBtn.classList.toggle("primary", on);
+      clearSegBtn.disabled = on;
+      prevSegBtn.style.display = nextSegBtn.style.display = on ? "" : "none";
+      timeline.setInteractive(!on);
+      syncLearnUI();
+    },
+  }, ["🎓 Learn"]);
+  function syncLearnUI() {
+    timeline.setSegments(learn.isActive ? learn.segments : null, learn.index);
+    updateSegLabel();
+  }
   const karaokeBtn = lyrics.length ? el("button.btn", { class: karaokeLyrics ? "primary" : "", title: "Word-by-word singalong highlight", onclick: () => {
     karaokeLyrics = !karaokeLyrics; Store.setSetting("karaokeLyrics", karaokeLyrics);
     karaokeBtn.classList.toggle("primary", karaokeLyrics);
@@ -138,12 +219,18 @@ export default async function play(ctx) {
     el("div.muted", { style: { minWidth: "70px" }, id: "play-clock", text: "0:00" }),
     el("div", { style: { flex: "1" } }),
     (!player.hasAudio() && band.empty) ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
+    wrapNarrow(speedSlider),
     (player.backing || !band.empty) ? wrapNarrow(volB) : null,
     player.vocal ? wrapNarrow(volV) : null,
-    karaokeBtn, bandBtn, soundBtn, fretBtn, metroBtn, backBtn,
+    karaokeBtn, bandBtn, soundBtn, fretBtn, fretSizeBtn, strictBtn, metroBtn, backBtn,
+  ]);
+  const controls2 = el("div.play-controls", { style: { marginTop: "6px" } }, [
+    segLabel, loopBtn, clearSegBtn,
+    el("div", { style: { flex: "1" } }),
+    prevSegBtn, learnBtn, nextSegBtn,
   ]);
 
-  shell.append(el("div.play-stage", {}, [canvas, overlay]), controls);
+  shell.append(el("div.play-stage", {}, [canvas, overlay]), timeline.el, controls, controls2);
   root.appendChild(shell);
   const clockEl = controls.querySelector("#play-clock");
 
@@ -174,7 +261,6 @@ export default async function play(ctx) {
   const counts = { perfect: 0, good: 0, off: 0, miss: 0 };
   let lastMetroBeat = -1;
   let soundIdx = 0;                 // next note to sound via the synth
-  const beatLen = 60 / song.bpm;
 
   // pitch detection
   const tracker = new PitchTracker();
@@ -217,14 +303,70 @@ export default async function play(ctx) {
   function restart() {
     pause();
     finished = false; banner.classList.add("hidden");
-    clock = -LEAD_IN; health = 100; failed = false; score = 0; streak = 0; maxStreak = 0; mult = 1;
+    health = 100; failed = false; score = 0; streak = 0; maxStreak = 0; mult = 1;
     counts.perfect = counts.good = counts.off = counts.miss = 0;
-    soundIdx = 0; onsetAt = -1; lastOnsetAt = -10; lastRms = 0;
-    notes.forEach((n) => { n.state = "pending"; n.best = 999; n.frames = 0; });
     killfeed.innerHTML = "";
-    player.seek(0); band.seek(0);
+    if (loopOn) { rewindTo(segStart); render(clock); }
+    else { clock = -LEAD_IN; notes.forEach((n) => { n.state = "pending"; n.best = 999; n.frames = 0; });
+      soundIdx = 0; onsetAt = -1; lastOnsetAt = -10; lastRms = 0; player.seek(0); band.seek(0); render(0); }
     playBtn.textContent = "▶ Start";
-    render(0); updateHud();
+    updateHud();
+  }
+
+  // ----- practice segment + playback-rate helpers -----
+  function fmtSeg(a, b) { return `${fmtTime(a)}–${fmtTime(b)}`; }
+  function updateSegLabel() {
+    if (learn.isActive && learn.segments) segLabel.textContent = `Segment ${learn.index + 1}/${learn.segments.length} · ${fmtSeg(segStart, segEnd)}`;
+    else if (segStart > 0 || segEnd < duration) segLabel.textContent = `Segment ${fmtSeg(segStart, segEnd)}`;
+    else segLabel.textContent = "Full song";
+  }
+  function applySegment(start, end) {
+    segStart = Math.max(0, start); segEnd = Math.min(duration, end);
+    timeline.setSelection(segStart > 0 || segEnd < duration ? segStart : null, segStart > 0 || segEnd < duration ? segEnd : null);
+    updateSegLabel();
+  }
+  // Jump playback (audio, synth band, note states, the note-sound cursor and the
+  // metronome beat) to `target` — the shared rewind used by strict-mode retries,
+  // manual segment looping and Learn mode's segment jumps.
+  function rewindTo(target) {
+    clock = Math.max(0, target);
+    for (const n of notes) if (n.time >= clock - 0.001) { n.state = "pending"; n.best = 999; n.frames = 0; }
+    soundIdx = notes.findIndex((n) => n.time >= clock);
+    if (soundIdx < 0) soundIdx = notes.length;
+    onsetAt = -1; lastOnsetAt = -10; lastRms = 0;
+    lastMetroBeat = Math.floor(clock / beatLen);
+    player.seek(clock);
+    band.seek(clock);
+  }
+  // The rate actually applied to audio right now (see `effRate` above).
+  function setEffRate(v) { effRate = v; player.setSpeed(v); }
+  // A deliberate speed change (slider, or Learn mode's ramp): cancels any
+  // in-progress tempo ramp and becomes the new "home" rate to return to.
+  function applyRate(v) { rate = v; retryPhase = null; setEffRate(v); }
+  // Strict mode: once a frozen retry note (see `waitingFor` below) is finally
+  // hit, don't snap straight back to full tempo — ease into it over a beat so
+  // the resume doesn't feel like a jump cut. Real time, not song time.
+  const RETRY_SLOW_FACTOR = 0.55;
+  const RETRY_RAMP_MS = 600;
+  function beginTempoRamp() {
+    const now = performance.now();
+    const slow = Math.max(0.2, rate * RETRY_SLOW_FACTOR);
+    retryPhase = { from: slow, until: now, rampUntil: now + RETRY_RAMP_MS };
+    setEffRate(slow);
+  }
+
+  // read pitch (and, for percussion, hit transients) — shared by the normal
+  // loop and the frozen "waiting for this note" branch below.
+  function readPitch() {
+    if (!Audio.readTimeDomain(buf)) return;
+    const { freq, rms } = detectPitch(buf, Audio.ctx().sampleRate, s.micGate);
+    if (percussion) {
+      // ponytail: RMS-spike onset detector; upgrade to spectral flux if false triggers annoy
+      if (rms > s.micGate * 3 && rms > lastRms * 2 && clock - lastOnsetAt > 0.09) { onsetAt = clock; lastOnsetAt = clock; }
+      lastRms = rms;
+    }
+    const f = tracker.push(freq, a4);
+    detectedMidi = f > 0 ? freqToMidiFloat(f, a4) : -1;
   }
 
   // ----- main loop -----
@@ -233,16 +375,35 @@ export default async function play(ctx) {
     const dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
 
+    // strict mode: frozen on a fumbled note. The transport doesn't move, the
+    // backing audio/band are paused, and nothing already played gets replayed
+    // — we just keep listening until this one note is hit right.
+    if (waitingFor) {
+      readPitch();
+      checkWaitingPitch();
+      timeline.setPlayhead(Math.max(0, clock));
+      render(clock);
+      updateHud();
+      requestAnimationFrame(loop);
+      return;
+    }
+
+    // ease back up to speed after a strict-mode wait resolves, if in progress
+    if (retryPhase) {
+      if (ts >= retryPhase.rampUntil) { retryPhase = null; setEffRate(rate); }
+      else setEffRate(retryPhase.from + (rate - retryPhase.from) * ((ts - retryPhase.until) / RETRY_RAMP_MS));
+    }
+
     // advance clock; sync to audio when available and past lead-in
     if (player.hasAudio() && clock >= 0 && player.backing && !player.backing.paused) {
-      clock = player.backing.currentTime;
+      clock = player.backing.currentTime;   // already reflects `effRate` via playbackRate
     } else {
-      clock += dt;
+      clock += dt * effRate;
       if (clock >= 0 && player.hasAudio() && (player.backing?.paused)) player.play(clock);
     }
 
     // synth band (schedules ahead of the clock, so it stays in time regardless of frame rate)
-    if (bandOn) band.schedule(clock);
+    if (bandOn) band.schedule(clock, effRate);
 
     // metronome
     if (metro) {
@@ -258,19 +419,17 @@ export default async function play(ctx) {
       }
     }
 
-    // read pitch (and, for percussion, hit transients)
-    if (Audio.readTimeDomain(buf)) {
-      const { freq, rms } = detectPitch(buf, Audio.ctx().sampleRate, s.micGate);
-      if (percussion) {
-        // ponytail: RMS-spike onset detector; upgrade to spectral flux if false triggers annoy
-        if (rms > s.micGate * 3 && rms > lastRms * 2 && clock - lastOnsetAt > 0.09) { onsetAt = clock; lastOnsetAt = clock; }
-        lastRms = rms;
-      }
-      const f = tracker.push(freq, a4);
-      detectedMidi = f > 0 ? freqToMidiFloat(f, a4) : -1;
+    readPitch();
+    grade();
+
+    // segment loop: rewind to the segment start once it plays through the end
+    // (Learn mode also grades that pass and may bump the speed before rewinding)
+    if (loopOn && clock > segEnd) {
+      if (learn.isActive) learn.evaluatePass();
+      rewindTo(segStart);
     }
 
-    grade();
+    timeline.setPlayhead(Math.max(0, clock));
     render(clock);
     updateHud();
 
@@ -331,11 +490,49 @@ export default async function play(ctx) {
     else if (n.frames >= 1 && n.best <= GOOD_CENTS) q = "good";
     else if (n.frames >= 1) q = "off";
     else q = "miss";
+    if (strict && (q === "off" || q === "miss")) { retry(n); return; }
     n.state = q;
     applyJudgment(q, n);
   }
+  // Strict mode: a fumbled note doesn't count. Rewind exactly to it (not before
+  // it — nothing already played gets replayed) and freeze the transport there:
+  // audio and the band pause, the clock stops, and we just keep listening.
+  // No health/score/killfeed hit for the failed attempt; only a clean pass
+  // (once `waitingFor` resolves, see checkWaitingPitch/resolveWait) finalizes.
+  function retry(n) {
+    rewindTo(n.time);
+    player.pause(); band.silence();
+    waitingFor = n;
+    toast("Get this note, then we'll continue", "bad");
+  }
+  // Called every frame while frozen on `waitingFor`. Any in-tune match (or, for
+  // percussion, any hit at all) resolves it — there's no time window to miss
+  // since the transport isn't moving, so grading is simpler than finalize()'s.
+  function checkWaitingPitch() {
+    const n = waitingFor;
+    if (percussion) {
+      if (onsetAt >= 0) { onsetAt = -1; resolveWait(n, "good"); }
+      return;
+    }
+    if (detectedMidi <= 0) return;
+    let bestCents = 999;
+    for (const target of n.midi) {
+      const diff = detectedMidi - target;
+      const cents = Math.abs((diff - Math.round(diff / 12) * 12) * 100);
+      if (cents < bestCents) bestCents = cents;
+    }
+    if (bestCents < GOOD_CENTS) resolveWait(n, bestCents <= PERFECT_CENTS ? "perfect" : "good");
+  }
+  function resolveWait(n, q) {
+    waitingFor = null;
+    n.state = q;
+    applyJudgment(q, n);
+    beginTempoRamp();
+    if (clock >= 0) player.play(clock);
+  }
   function applyJudgment(q, n) {
     counts[q]++;
+    learn.record(q, n.time);
     if (q === "perfect") { health = Math.min(100, health + 6); streak++; score += Math.round(100 * mult); }
     else if (q === "good") { health = Math.min(100, health + 3); streak++; score += Math.round(60 * mult); }
     else if (q === "off") { health = Math.max(0, health - 7); streak = 0; score += 10; }
@@ -427,47 +624,84 @@ export default async function play(ctx) {
     if (lbl && w > 22) c.fillText(lbl, x + 5, y + 4);
   }
   // fretboard strip: dots for the current (or next) note's fingering
+  const FRET_SCALE = { S: 0.78, M: 1, L: 1.3 };
+  // Standard fretboard inlay positions (single dots, 12th doubled) — used
+  // both for the numeric labels below the diagram's neck and the actual
+  // inlay dots drawn on it. No 24: real necks mark up to 21 (sometimes a
+  // double dot at 24 on extended-range instruments, but that's the
+  // exception, not the convention this list should default to).
+  const FRET_MARKERS = [3, 5, 7, 9, 12, 15, 17, 19, 21];
   function drawFretboard(t) {
     const cur = notes.find((n) => n.frets && t <= n.time + n.dur);
     if (!cur) return;
+    const sc = FRET_SCALE[fretSize] || 1;
     const now = t >= cur.time - 0.05;
     const nStr = inst.strings.length;
-    const FRETS = 12;
-    const fbW = Math.min(340, W * 0.42), fbH = 6 + nStr * 13;
-    const x0 = 22, y0 = H - fbH - 44;
-    const nutX = x0 + 22, cell = (fbW - 30) / FRETS;
+    // Was a flat 12 (bug: a chord up the neck drew its dot off the edge of
+    // the panel). Briefly sized to whatever the *current* chord needed —
+    // by request ("хочу полностью видеть" — I want to see it in full), now
+    // always the instrument's own full fret count instead, so the whole
+    // neck is there regardless of which chord happens to be showing at the
+    // moment, not just the frets a low-fret song ever touches. `fbW` grows
+    // to match, roughly keeping each fret the same width rather than
+    // cramming more of them into the old fixed panel — still bounded by
+    // `W * 0.42`, so a genuinely long neck compresses gracefully instead of
+    // overflowing.
+    const FRETS = inst.frets || 12;
+    const fbW = Math.min(340 * (FRETS / 12), W * 0.42) * sc, fbH = (6 + nStr * 13) * sc;
+    const x0 = 22, y0 = H - fbH - 44 * sc;
+    const nutX = x0 + 22 * sc, cell = (fbW - 30 * sc) / FRETS;
     c.fillStyle = "rgba(0,0,0,0.55)";
-    roundRect(x0 - 10, y0 - 24, fbW + 20, fbH + 44, 10); c.fill();
+    roundRect(x0 - 10 * sc, y0 - 24 * sc, fbW + 20 * sc, fbH + 44 * sc, 10); c.fill();
     c.fillStyle = now ? getVar("--accent") : getVar("--muted");
-    c.font = "bold 12px var(--font)";
-    c.fillText((now ? "Now: " : "Next: ") + describeMidiSet(cur.midi) + (capo ? ` · capo ${capo}` : ""), x0, y0 - 8);
-    const sy = (si) => y0 + fbH - 6 - si * 13;   // string 0 (lowest pitch) at bottom
+    c.font = `bold ${Math.round(12 * sc)}px var(--font)`;
+    c.fillText((now ? "Now: " : "Next: ") + describeMidiSet(cur.midi) + (capo ? ` · capo ${capo}` : ""), x0, y0 - 8 * sc);
+    const sy = (si) => y0 + fbH - 6 * sc - si * 13 * sc;   // string 0 (lowest pitch) at bottom
     c.lineWidth = 1;
     c.strokeStyle = "rgba(255,255,255,0.4)";
     for (let si = 0; si < nStr; si++) { const y = sy(si); c.beginPath(); c.moveTo(nutX, y); c.lineTo(nutX + cell * FRETS, y); c.stroke(); }
-    c.fillStyle = getVar("--muted"); c.font = "10px var(--mono)";
-    for (let si = 0; si < nStr; si++) c.fillText(midiToName(inst.strings[si]).name, x0 - 2, sy(si) + 3);
+    c.fillStyle = getVar("--muted"); c.font = `${Math.round(10 * sc)}px var(--mono)`;
+    for (let si = 0; si < nStr; si++) c.fillText(stringLabel(playInst, inst.strings, si, s.stringLabels), x0 - 2, sy(si) + 3 * sc);
     for (let f = 0; f <= FRETS; f++) {
       const x = nutX + f * cell;
       c.strokeStyle = f === 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.22)";
       c.lineWidth = f === 0 ? 3 : 1;
-      c.beginPath(); c.moveTo(x, sy(nStr - 1) - 5); c.lineTo(x, sy(0) + 5); c.stroke();
+      c.beginPath(); c.moveTo(x, sy(nStr - 1) - 5 * sc); c.lineTo(x, sy(0) + 5 * sc); c.stroke();
     }
-    c.fillStyle = getVar("--muted"); c.font = "9px var(--mono)";
-    for (const f of [3, 5, 7, 9, 12]) c.fillText(String(f + capo), nutX + (f - 0.5) * cell - 3, sy(0) + 14);
+    // Real fretboard inlay dots, drawn on the neck itself (between the
+    // strings) — separate from the numeric labels below and from the
+    // played-note dots. Standard positions and the 12th's double dot.
+    const inlayY = (sy(0) + sy(nStr - 1)) / 2;
+    c.fillStyle = "rgba(255,255,255,0.28)";
+    for (const f of FRET_MARKERS) {
+      if (f > FRETS) break;
+      const x = nutX + (f - 0.5) * cell;
+      const r = 2.2 * sc;
+      if (f === 12) {
+        c.beginPath(); c.arc(x, inlayY - 5 * sc, r, 0, 7); c.fill();
+        c.beginPath(); c.arc(x, inlayY + 5 * sc, r, 0, 7); c.fill();
+      } else {
+        c.beginPath(); c.arc(x, inlayY, r, 0, 7); c.fill();
+      }
+    }
+    c.fillStyle = getVar("--muted"); c.font = `${Math.round(9 * sc)}px var(--mono)`;
+    for (const f of FRET_MARKERS) {
+      if (f > FRETS) break;
+      c.fillText(String(f + capo), nutX + (f - 0.5) * cell - 3, sy(0) + 14 * sc);
+    }
     const col = now ? getVar("--accent") : "rgba(255,255,255,0.75)";
     for (const pos of cur.frets) {
       if (!pos) continue;                        // note unreachable on this instrument
       const y = sy(pos.string);
       if (pos.fret === 0) {                      // open string: ring left of the nut
         c.strokeStyle = col; c.lineWidth = 2;
-        c.beginPath(); c.arc(nutX - 9, y, 4, 0, 7); c.stroke();
+        c.beginPath(); c.arc(nutX - 9 * sc, y, 4 * sc, 0, 7); c.stroke();
       } else {
         const x = nutX + (pos.fret - 0.5) * cell;
-        c.fillStyle = col; c.beginPath(); c.arc(x, y, 6.5, 0, 7); c.fill();
+        c.fillStyle = col; c.beginPath(); c.arc(x, y, 6.5 * sc, 0, 7); c.fill();
         const lbl = String(pos.fret + capo);
-        c.fillStyle = "rgba(0,0,0,0.85)"; c.font = "bold 9px var(--mono)";
-        c.fillText(lbl, x - lbl.length * 2.5, y + 3);
+        c.fillStyle = "rgba(0,0,0,0.85)"; c.font = `bold ${Math.round(9 * sc)}px var(--mono)`;
+        c.fillText(lbl, x - lbl.length * 2.5, y + 3 * sc);
       }
     }
   }
@@ -476,32 +710,33 @@ export default async function play(ctx) {
   function drawHoles(t) {
     const cur = notes.find((n) => n.holes && t <= n.time + n.dur);
     if (!cur) return;
+    const sc = FRET_SCALE[fretSize] || 1;
     const now = t >= cur.time - 0.05;
-    const cell = 28, x0 = 22, fbW = 10 * cell + 4, fbH = 56;
-    const y0 = H - fbH - 44;
+    const cell = 28 * sc, x0 = 22, fbW = 10 * cell + 4 * sc, fbH = 56 * sc;
+    const y0 = H - fbH - 44 * sc;
     c.fillStyle = "rgba(0,0,0,0.55)";
-    roundRect(x0 - 10, y0 - 24, fbW + 20, fbH + 34, 10); c.fill();
+    roundRect(x0 - 10 * sc, y0 - 24 * sc, fbW + 20 * sc, fbH + 34 * sc, 10); c.fill();
     const played = cur.holes.filter(Boolean);
     const label = played.length
       ? played.map((p) => `hole ${p.hole} ${p.draw ? "draw ↓" : "blow ↑"}`).join(" · ")
       : "not on a C harp";
     c.fillStyle = now ? getVar("--accent") : getVar("--muted");
-    c.font = "bold 12px var(--font)";
-    c.fillText((now ? "Now: " : "Next: ") + describeMidiSet(cur.midi) + " — " + label, x0, y0 - 8);
+    c.font = `bold ${Math.round(12 * sc)}px var(--font)`;
+    c.fillText((now ? "Now: " : "Next: ") + describeMidiSet(cur.midi) + " — " + label, x0, y0 - 8 * sc);
     const col = now ? getVar("--accent") : "rgba(255,255,255,0.75)";
     for (let i = 0; i < 10; i++) {
       const x = x0 + i * cell;
       const p = played.find((h) => h.hole === i + 1);
-      roundRect(x, y0, cell - 5, 34, 5);
+      roundRect(x, y0, cell - 5 * sc, 34 * sc, 5);
       if (p) { c.fillStyle = col; c.fill(); }
       c.strokeStyle = "rgba(255,255,255,0.35)"; c.lineWidth = 1; c.stroke();
       c.fillStyle = p ? "rgba(0,0,0,0.85)" : getVar("--muted");
-      c.font = "bold 11px var(--mono)";
+      c.font = `bold ${Math.round(11 * sc)}px var(--mono)`;
       const num = String(i + 1);
-      c.fillText(num, x + (cell - 5) / 2 - num.length * 3, y0 + 21);
+      c.fillText(num, x + (cell - 5 * sc) / 2 - num.length * 3, y0 + 21 * sc);
       if (p) {
-        c.fillStyle = col; c.font = "bold 14px var(--font)";
-        c.fillText(p.draw ? "↓" : "↑", x + (cell - 5) / 2 - 4, y0 + 52);
+        c.fillStyle = col; c.font = `bold ${Math.round(14 * sc)}px var(--font)`;
+        c.fillText(p.draw ? "↓" : "↑", x + (cell - 5 * sc) / 2 - 4, y0 + 52 * sc);
       }
     }
   }
@@ -597,7 +832,7 @@ export default async function play(ctx) {
 
   // cleanup
   return () => {
-    playing = false; ro.disconnect(); player.stop(); band.stop(); Audio.stopMic();
+    playing = false; ro.disconnect(); timeline.destroy(); player.stop(); band.stop(); Audio.stopMic();
     window.removeEventListener("keydown", onKey);
     document.getElementById("health-mini")?.classList.add("hidden");
   };

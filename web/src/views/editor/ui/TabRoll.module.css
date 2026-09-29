@@ -1,0 +1,159 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.muted {
+  color: #8892a4;
+  font-size: 12px;
+}
+.hint {
+  color: #8892a4;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 10px;
+}
+.hint code {
+  background: #161b28;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.quickEntry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.quickInput {
+  flex: 1;
+  background: #161b28;
+  color: #d7dce6;
+  border: 1px solid #2a3142;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 13px;
+}
+.speedField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8892a4;
+}
+.speedRange {
+  accent-color: #6ea8fe;
+  width: 110px;
+}
+.speedValue {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 12px;
+  color: #d7dce6;
+  width: 3.5em;
+  text-align: right;
+}
+.pillRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pill {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #1b2440;
+  border: 1px solid #2a3142;
+  color: #8892a4;
+  cursor: pointer;
+  user-select: none;
+}
+.pill.active {
+  font-weight: 600;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: #8892a4;
+  margin-bottom: 12px;
+}
+.field input,
+.field select {
+  background: #161b28;
+  color: #d7dce6;
+  border: 1px solid #2a3142;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.stageRow {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.stage {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #232a3a;
+  border-radius: 10px;
+  overflow: hidden;
+  outline: none;
+}
+.stage:focus-visible {
+  outline: 2px solid #6ea8fe;
+  outline-offset: -2px;
+}
+.scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.canvasWrap {
+  position: relative;
+}
+.canvas {
+  display: block;
+  cursor: pointer;
+  touch-action: none;
+}
+.playhead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: #ff5d6c;
+  pointer-events: none;
+  will-change: transform;
+}
+.inspector {
+  width: 220px;
+  flex: none;
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 10px;
+  padding: 14px;
+}
+.inspectorTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #d7dce6;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 720px) {
+  .stageRow {
+    flex-direction: column;
+  }
+  .inspector {
+    width: 100%;
+  }
+}

@@ -69,6 +69,9 @@ function stage(ctx, song) {
   const { el: root, navigate } = ctx;
   const s = Store.settings();
   const a4 = s.a4;
+  // Practice tempo: slows/speeds audio, synth band, note/lyric timing and
+  // grading windows together (pitch held constant).
+  let rate = s.playbackSpeed || 1;
   const timeline = buildLyricTimeline(song);
   if (!timeline.lines.length) {
     root.appendChild(el("div.panel", { style: { margin: "22px" } }, [
@@ -124,6 +127,7 @@ function stage(ctx, song) {
 
   const player = new TrackPlayer();
   player.load(song);
+  player.setSpeed(rate);
   let guide = !!player.vocal;     // guide vocal on when the song has one
 
   // You sing, so the whole arrangement is synthesized — every part plus a
@@ -142,6 +146,9 @@ function stage(ctx, song) {
 
   const volB = slider({ label: "Music", value: s.backingVolume, fmt: (v) => Math.round(v * 100) + "%",
     oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); band.setVolume(v); } });
+  const speedSlider = slider({ label: "Speed", min: 0.25, max: 1.25, step: 0.05, value: rate,
+    fmt: (v) => Math.round(v * 100) + "%",
+    oninput: (v) => { rate = v; Store.setSetting("playbackSpeed", v); player.setSpeed(v); } });
   const guideBtn = el("button.btn", { class: guide ? "primary" : "", onclick: () => {
     guide = !guide; guideBtn.classList.toggle("primary", guide);
     player.setVocalVolume(guide ? (Store.settings().vocalVolume || 0.7) : 0);
@@ -158,6 +165,7 @@ function stage(ctx, song) {
     el("div.muted", { style: { minWidth: "92px" }, id: "kara-clock", text: "0:00" }),
     el("div", { style: { flex: "1" } }),
     (!player.hasAudio() && band.empty) ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
+    wrapNarrow(speedSlider),
     (player.backing || !band.empty) ? wrapNarrow(volB) : null,
     player.vocal ? guideBtn : null,
     bandBtn, scoreBtn, backBtn,
@@ -230,12 +238,12 @@ function stage(ctx, song) {
     if (!playing) return;
     const dt = Math.min(0.05, (ts - lastTs) / 1000); lastTs = ts;
     if (player.hasAudio() && clock >= 0 && player.backing && !player.backing.paused) {
-      clock = player.backing.currentTime;
+      clock = player.backing.currentTime;   // already reflects `rate` via playbackRate
     } else {
-      clock += dt;
+      clock += dt * rate;
       if (clock >= 0 && player.hasAudio() && player.backing?.paused) player.play(clock);
     }
-    if (bandOn) band.schedule(clock);
+    if (bandOn) band.schedule(clock, rate);
     if (scoring && Audio.readTimeDomain(buf)) {
       const { freq } = detectPitch(buf, Audio.ctx().sampleRate, s.micGate);
       const f = tracker.push(freq, a4);

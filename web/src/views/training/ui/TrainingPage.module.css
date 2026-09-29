@@ -1,0 +1,158 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  color: #d7dce6;
+}
+.title {
+  font-size: 26px;
+  margin: 0 0 4px;
+}
+.subtitle {
+  color: #8892a4;
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+.muted {
+  color: #8892a4;
+  font-size: 12px;
+}
+.sectionTitle {
+  font-size: 18px;
+  margin: 24px 0 12px;
+}
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.stat {
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.statNum {
+  font-size: 20px;
+  font-weight: 700;
+}
+.statLbl {
+  font-size: 11px;
+  color: #8892a4;
+  margin-top: 2px;
+}
+.panel {
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.spread {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.courseTitle {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+.tag {
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #1b2440;
+  border: 1px solid #2a3142;
+  color: #8892a4;
+  white-space: nowrap;
+}
+.barTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: #1b2130;
+  margin: 12px 0 6px;
+  overflow: hidden;
+}
+.barFill {
+  height: 100%;
+  background: #6ea8fe;
+  border-radius: 999px;
+}
+.stepsCaption {
+  font-size: 12px;
+  color: #8892a4;
+  margin-bottom: 10px;
+}
+.stepList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #232a3a;
+  border-radius: 9px;
+  background: #161b28;
+}
+.stepDone {
+  background: #142418;
+  border-color: #1e3a26;
+}
+.stepLocked {
+  opacity: 0.55;
+}
+.stepInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.stepBest {
+  font-size: 11px;
+  color: #8892a4;
+  margin-top: 2px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+}
+.cardTitle {
+  font-weight: 600;
+  font-size: 14px;
+}
+.cardSub {
+  font-size: 12px;
+  color: #8892a4;
+}
+.tempo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #8892a4;
+}
+.tempo input[type="range"] {
+  flex: 1;
+  accent-color: #6ea8fe;
+}
+.tempoVal {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

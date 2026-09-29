@@ -1,0 +1,28 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.chip {
+  min-width: 44px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #2a3142;
+  background: #161b28;
+  color: #d7dce6;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chip:hover {
+  border-color: #6ea8fe;
+}
+.active {
+  border-color: #6ea8fe;
+  background: #1c2740;
+}
+.inTune {
+  border-color: #58d68d;
+  color: #58d68d;
+}

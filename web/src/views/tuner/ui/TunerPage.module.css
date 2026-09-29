@@ -1,0 +1,124 @@
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  color: #d7dce6;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.title {
+  font-size: 26px;
+  margin: 0;
+}
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #8892a4;
+}
+.panel {
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.startBtn {
+  background: #6ea8fe;
+  color: #0b0f1a;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.startBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.labelStyleToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #8892a4;
+}
+.labelStyleToggle select {
+  background: #161b28;
+  color: #d7dce6;
+  border: 1px solid #2a3142;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.error {
+  color: #ff6b6b;
+  font-size: 13px;
+}
+.display {
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  padding: 28px 18px;
+  text-align: center;
+}
+.note {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+}
+.note small {
+  font-size: 24px;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+.freq {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #8892a4;
+}
+.meter {
+  position: relative;
+  height: 70px;
+  margin: 24px auto 0;
+  max-width: 260px;
+}
+.center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #2a3142;
+  transform: translateX(-1px);
+}
+.needle {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 3px;
+  height: 60px;
+  border-radius: 2px;
+  transform-origin: bottom center;
+  transition: transform 80ms linear, background 150ms;
+}
+.verdict {
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8b339;
+}
+.verdictGood {
+  color: #58d68d;
+}

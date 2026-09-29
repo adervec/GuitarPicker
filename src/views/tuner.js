@@ -3,7 +3,7 @@ import { Store } from "../state.js";
 import { Audio } from "../audio/engine.js";
 import { detectPitch, PitchTracker } from "../audio/pitch.js";
 import { Synth } from "../audio/synth.js";
-import { INSTRUMENTS, instrumentOptions, ALT_TUNINGS, STRING_LABELS, midiToFreq, midiToName, centsTo, freqToMidi } from "../music/notes.js";
+import { INSTRUMENTS, instrumentOptions, ALT_TUNINGS, stringLabel, midiToFreq, midiToName, centsTo, freqToMidi } from "../music/notes.js";
 
 export default async function tuner(ctx) {
   const { el: root } = ctx;
@@ -62,9 +62,8 @@ export default async function tuner(ctx) {
   }
   function rebuildStrings() {
     strings.innerHTML = "";
-    const labels = STRING_LABELS[instrument] || tuning.map((m) => midiToName(m).name);
     strings.appendChild(stringChip("Auto", null));
-    tuning.forEach((m, i) => strings.appendChild(stringChip(labels[i] ?? midiToName(m).name, i)));
+    tuning.forEach((m, i) => strings.appendChild(stringChip(stringLabel(instrument, tuning, i, s.stringLabels), i)));
   }
   function stringChip(label, idx) {
     const b = el("button.string-btn", { text: label, onclick: () => {

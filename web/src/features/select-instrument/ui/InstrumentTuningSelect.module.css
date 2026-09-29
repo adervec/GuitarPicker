@@ -1,0 +1,21 @@
+.row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #8892a4;
+}
+.field select {
+  background: #161b28;
+  color: #d7dce6;
+  border: 1px solid #2a3142;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+  min-width: 200px;
+}

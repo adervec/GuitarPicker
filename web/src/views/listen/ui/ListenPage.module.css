@@ -1,0 +1,84 @@
+.page {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  color: #d7dce6;
+}
+.title {
+  font-size: 26px;
+  margin: 0 0 4px;
+}
+.subtitle {
+  color: #8892a4;
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+.muted {
+  color: #8892a4;
+  font-size: 13px;
+}
+.panel {
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.panel h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+.center {
+  text-align: center;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tempo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 220px;
+  font-size: 12px;
+  color: #8892a4;
+}
+.tempo input[type="range"] {
+  flex: 1;
+  accent-color: #6ea8fe;
+}
+.tempoVal {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.liveNote {
+  font-size: 54px;
+  font-weight: 700;
+  line-height: 1;
+}
+.liveNote small {
+  font-size: 22px;
+  color: #8892a4;
+  margin-left: 4px;
+}
+.meterTrack {
+  width: 200px;
+  height: 8px;
+  border-radius: 999px;
+  background: #1b2130;
+  margin: 14px auto;
+  overflow: hidden;
+}
+.meterFill {
+  height: 100%;
+  background: #6ea8fe;
+  transition: width 80ms linear;
+}
+.recordBtn {
+  min-width: 130px;
+  font-size: 15px;
+  padding: 10px 18px;
+}

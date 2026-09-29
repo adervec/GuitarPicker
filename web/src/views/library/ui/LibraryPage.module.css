@@ -1,0 +1,115 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  color: #d7dce6;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.title {
+  font-size: 26px;
+  margin: 0 0 4px;
+}
+.subtitle {
+  color: #8892a4;
+  font-size: 13px;
+  margin: 0;
+}
+.sectionTitle {
+  font-size: 16px;
+  margin: 0 0 12px;
+  color: #8892a4;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.ownerRow {
+  display: flex;
+  border-top: 1px solid #232a3a;
+}
+.ownerLink,
+.ownerDelete {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  font-size: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+.ownerLink {
+  color: #6ea8fe;
+  border-right: 1px solid #232a3a;
+}
+.ownerLink:hover {
+  color: #d7dce6;
+}
+.ownerDelete {
+  color: #ff5d6c;
+}
+.ownerDelete:hover {
+  color: #ff8891;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  transition: border-color 120ms, transform 120ms;
+}
+.card:hover {
+  border-color: #6ea8fe;
+  transform: translateY(-2px);
+}
+.cardMain {
+  display: block;
+  padding: 16px;
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+}
+.karaokeLink {
+  display: block;
+  padding: 8px 16px;
+  border-top: 1px solid #232a3a;
+  font-size: 12px;
+  color: #b388ff;
+  text-decoration: none;
+}
+.karaokeLink:hover {
+  color: #d7dce6;
+}
+.cardTitle {
+  font-weight: 600;
+  font-size: 15px;
+}
+.cardSub {
+  font-size: 12px;
+  color: #8892a4;
+  margin-top: 4px;
+}
+.tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.tag {
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #1b2440;
+  border: 1px solid #2a3142;
+  color: #8892a4;
+}

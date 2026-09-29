@@ -1,0 +1,64 @@
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.muted {
+  color: #8892a4;
+  font-size: 12px;
+}
+.pillRow {
+  display: flex;
+  gap: 6px;
+}
+.pill {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #1b2440;
+  border: 1px solid #2a3142;
+  color: #8892a4;
+  cursor: pointer;
+  user-select: none;
+}
+.pill.active {
+  background: #274073;
+  border-color: #6ea8fe;
+  color: #d7dce6;
+}
+.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8892a4;
+}
+.field select {
+  background: #161b28;
+  color: #d7dce6;
+  border: 1px solid #2a3142;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.hint {
+  color: #8892a4;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 10px;
+}
+.rollWrap {
+  border: 1px solid #232a3a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.canvas {
+  display: block;
+  cursor: crosshair;
+}

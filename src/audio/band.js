@@ -52,26 +52,28 @@ export class Band {
     this.silence();
   }
 
-  /** Call once per frame with the transport clock (seconds, may be negative). */
-  schedule(clock) {
+  /** Call once per frame with the transport clock (seconds, may be negative) and
+   *  the current practice-speed rate (1 = normal; <1 slows the whole song down). */
+  schedule(clock, rate = 1) {
     if (this.empty) return;
     const ctx = this._ctx();
     const dest = this._dest();
-    const base = ctx.currentTime - clock;   // context time of transport zero
-    const horizon = clock + LOOKAHEAD;
+    const now = ctx.currentTime;
+    // horizon/at both convert song-time deltas to real seconds via /rate, so a
+    // slowed transport still gets exactly LOOKAHEAD real seconds of run-up.
+    const horizon = clock + LOOKAHEAD * rate;
     for (const p of this.parts) {
       while (p.i < p.notes.length && p.notes[p.i].time < horizon) {
         const n = p.notes[p.i++];
-        const at = base + n.time;
-        if (at < ctx.currentTime) continue;   // late (clock jumped) — skip, don't pile up
+        const at = now + (n.time - clock) / rate;
+        if (at < now) continue;   // late (clock jumped) — skip, don't pile up
         const dur = n.dur || 0.4;
         for (const m of n.midi) {
           this._live.push({ kill: playVoice(ctx, dest, p.voice, m, { at, dur, gain: (n.gain ?? 1) * p.gain * 0.34, a4: this.a4 }), end: at + dur + 1.5 });
         }
       }
     }
-    const now = ctx.currentTime;
-    if (this._live.length > 64) this._live = this._live.filter((l) => l.end > now);
+    if (this._live.length > 64) this._live = this._live.filter((l) => l.end > ctx.currentTime);
   }
 
   /** Cut everything currently sounding (pause / seek / toggle off). */

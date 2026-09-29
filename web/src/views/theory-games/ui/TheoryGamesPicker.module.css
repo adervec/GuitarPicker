@@ -1,0 +1,51 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  color: #d7dce6;
+}
+.title {
+  font-size: 26px;
+  margin: 0 0 4px;
+}
+.subtitle {
+  color: #8892a4;
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: #10141f;
+  border: 1px solid #232a3a;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms, transform 120ms;
+  min-height: 120px;
+}
+.card:hover {
+  border-color: #6ea8fe;
+  transform: translateY(-2px);
+}
+.cardTitle {
+  font-weight: 600;
+  font-size: 15px;
+}
+.cardSub {
+  font-size: 12px;
+  color: #8892a4;
+  margin-top: 6px;
+  flex: 1;
+}
+.score {
+  font-size: 12px;
+  color: #8892a4;
+  margin-top: 10px;
+}

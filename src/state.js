@@ -15,7 +15,11 @@ const DEFAULTS = {
     backingVolume: 0.6,
     vocalVolume: 0.7,
     micGate: 0.012,          // RMS noise gate for pitch detection
-    noteSpeed: 1.0,          // highway scroll multiplier
+    noteSpeed: 1.0,          // highway scroll multiplier (visual only)
+    playbackSpeed: 1.0,      // practice tempo multiplier (audio + timing + grading), pitch held constant
+    strictMode: false,       // Play view: rewind + repeat a missed/off note until it's hit right
+    stringLabels: "notes",   // fretboard string labels: "notes" (E A D G B e) or "numbers" (1-6)
+    fretboardSize: "M",      // fretboard/holes strip display size: S | M | L
     metronome: false,
     karaokeScoring: true,    // grade the singer's voice in karaoke mode (sing-and-score)
     karaokeLyrics: true,     // word-by-word karaoke highlight in the play-view lyric overlay

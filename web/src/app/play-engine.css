@@ -1,0 +1,173 @@
+/* Global (non-Module) CSS for the ported Play and Karaoke engines
+ * (features/play-song, features/karaoke-song) and the practice timeline Play
+ * mounts — all three build their own DOM with literal class name strings (via
+ * shared/lib/dom's `el()`), the same way a canvas game library would, so they
+ * can't use CSS Modules' scoped hashed names. Selectors + theme variables
+ * ported from the vanilla app's styles/main.css and styles/themes.css
+ * ("midnight", its default theme — no theme switcher in this pilot).
+ */
+
+:root {
+  --radius: 14px;
+  --radius-sm: 9px;
+  --gap: 16px;
+  --speed: 160ms;
+
+  --j-perfect: #21d07a;
+  --j-good: #5ec8ff;
+  --j-off: #ffb454;
+  --j-miss: #ff5d6c;
+
+  --bg: #0b0f1a;
+  --bg-2: #111726;
+  --panel: #151d30;
+  --panel-2: #1b2440;
+  --line: #26324f;
+  --text: #e8eefc;
+  --muted: #9aa9c7;
+  --accent: #6ea8fe;
+  --accent-2: #b388ff;
+  --accent-ink: #07101f;
+  --good: #21d07a;
+  --warn: #ffb454;
+  --bad: #ff5d6c;
+  --highway: #0a0e18;
+  --highway-line: #1c2740;
+}
+
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: var(--gap); flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: var(--gap); }
+.grid { display: grid; gap: var(--gap); }
+.grid.cards { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 18px; margin: 0 0 10px; }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px;
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 9px 15px; cursor: pointer; font-size: 14px;
+  transition: var(--speed);
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Joins two (or more) .btn's into one seamless control, no gap between
+   them — the negative margin overlaps their 1px borders into a single
+   shared line instead of a double-thick one. */
+.btn-group { display: flex; }
+.btn-group .btn { border-radius: 0; }
+.btn-group .btn:first-child { border-top-left-radius: var(--radius-sm); border-bottom-left-radius: var(--radius-sm); }
+.btn-group .btn:last-child { border-top-right-radius: var(--radius-sm); border-bottom-right-radius: var(--radius-sm); margin-left: -1px; }
+
+label.field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); }
+
+.slider { display: flex; align-items: center; gap: 10px; }
+.slider input[type=range] { flex: 1; accent-color: var(--accent); }
+.slider .val { width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+
+.stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.stat .num { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+
+.capo-note { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px;
+  background: var(--panel-2); border: 1px solid var(--line); }
+
+/* ---------- Toasts ---------- */
+#toast-host { position: fixed; bottom: 18px; right: 18px; display: flex; flex-direction: column; gap: 10px; z-index: 50; }
+.toast { background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm); padding: 11px 15px; min-width: 220px; max-width: 360px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.35); animation: toast-in 180ms ease; font-size: 14px; color: var(--text); }
+.toast.good { border-left-color: var(--good); }
+.toast.bad { border-left-color: var(--bad); }
+@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Highway / Play ---------- */
+.play-shell { position: relative; height: 100%; display: flex; flex-direction: column; }
+.play-stage { position: relative; flex: 1; min-height: 0; }
+#highway-canvas { display: block; width: 100%; height: 100%; background: var(--highway); }
+.play-overlay { position: absolute; inset: 0; pointer-events: none; }
+.play-hud { position: absolute; top: 14px; left: 14px; right: 14px; display: flex;
+  justify-content: space-between; align-items: flex-start; pointer-events: none; }
+.hud-box { background: rgba(0,0,0,.42); backdrop-filter: blur(4px); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 8px 12px; pointer-events: auto; color: var(--text); }
+.killfeed { position: absolute; right: 16px; top: 70px; display: flex; flex-direction: column;
+  gap: 6px; align-items: flex-end; pointer-events: none; }
+.kill { padding: 5px 11px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  background: rgba(0,0,0,.5); border: 1px solid var(--line); animation: toast-in 140ms; }
+.kill.perfect { color: var(--j-perfect); border-color: var(--j-perfect); }
+.kill.good { color: var(--j-good); border-color: var(--j-good); }
+.kill.off { color: var(--j-off); border-color: var(--j-off); }
+.kill.miss { color: var(--j-miss); border-color: var(--j-miss); }
+.healthbar-big { height: 16px; border-radius: 10px; background: rgba(0,0,0,.4);
+  border: 1px solid var(--line); overflow: hidden; width: 260px; }
+.healthbar-big > i { display: block; height: 100%; transition: width 160ms;
+  background: linear-gradient(90deg, var(--bad), var(--warn) 50%, var(--good)); }
+.play-controls { display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+  border-top: 1px solid var(--line); background: var(--bg-2); flex-wrap: wrap; }
+.timeline-wrap { width: 100%; padding: 6px 16px; background: var(--bg-2); border-top: 1px solid var(--line); }
+.timeline-canvas { display: block; width: 100%; height: 40px; border-radius: 6px; cursor: pointer; }
+.timeline-wrap.readonly .timeline-canvas { cursor: default; }
+.play-bottom-fade { position:absolute; left:0; right:0; bottom:0; height:90px; pointer-events:none;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.25)); }
+.lyric-line { position:absolute; left:0; right:0; bottom:18px; text-align:center; font-size:22px;
+  font-weight:700; text-shadow: 0 2px 10px rgba(0,0,0,.8); pointer-events:none; --kw-future: var(--muted);
+  color: var(--text); }
+.lyric-line .kw { color: var(--kw-future); transition: color 90ms; }
+.lyric-line .kw.done { color: var(--accent); }
+.lyric-line .kw.cur { -webkit-background-clip: text; background-clip: text; color: transparent; }
+.banner { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.banner .panel { text-align:center; max-width: 480px; }
+.big-grade { font-size: 64px; font-weight: 800; }
+
+/* ---------- Performance Mode (createPerformanceEngine.ts) ---------- */
+.perf-canvas { display: block; width: 100%; height: 100%; background: var(--highway); }
+.perf-legend-trigger {
+  position: fixed; right: 18px; bottom: 18px; z-index: 45;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; padding: 4px;
+}
+.perf-legend-trigger:hover { border-color: var(--accent); }
+.perf-legend-backdrop {
+  position: fixed; inset: 0; background: rgba(5,8,14,.7);
+  display: flex; align-items: center; justify-content: center; z-index: 60;
+}
+.perf-legend-panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 24px; width: min(340px, 90vw);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.perf-legend-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.perf-legend-head h2 { font-size: 16px; margin: 0; color: var(--text); }
+.perf-legend-close { background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 2px 6px; }
+.perf-legend-close:hover { color: var(--text); }
+.perf-legend-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.perf-legend-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text); }
+.perf-legend-swatch { width: 18px; height: 18px; border-radius: 5px; border: 1px solid var(--line); flex: none; }
+.perf-legend-hint { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0; text-align: center; }
+
+/* ---------- Karaoke ---------- */
+#kara-canvas { display: block; width: 100%; height: 100%; background: var(--highway); }
+.kara-stage { position:absolute; left:0; right:0; top:46%; transform: translateY(-50%);
+  text-align:center; pointer-events:none; padding: 0 6%; --kw-future: var(--muted); color: var(--text); }
+.kara-stage > div { text-shadow: 0 2px 14px rgba(0,0,0,.85); line-height: 1.18; }
+.kara-countin { height: 26px; letter-spacing: 8px; color: var(--accent); font-size: 18px; opacity: .85; }
+.kara-prev { font-size: 20px; opacity: .4; min-height: 24px; }
+.kara-cur { font-size: clamp(28px, 5vw, 54px); font-weight: 800; margin: 6px 0 10px; min-height: 60px; }
+.kara-next { font-size: 24px; opacity: .62; min-height: 28px; }
+.kara-next2 { font-size: 19px; opacity: .34; min-height: 22px; }
+.kara-cur .kw { color: var(--kw-future); transition: color 90ms; }
+.kara-cur .kw.done { color: var(--accent); }
+.kara-cur .kw.cur { -webkit-background-clip: text; background-clip: text; color: transparent; }

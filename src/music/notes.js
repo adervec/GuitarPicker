@@ -229,6 +229,16 @@ export const STRING_LABELS = {
   erhu: ["D", "A"],
 };
 
+/** String display label: note name (from STRING_LABELS, falling back to the string's
+ *  own pitch name) or its player-facing number. Numbers follow long-standing guitar/bass
+ *  convention — 1 is the highest-pitched (thinnest) string, counting up to the lowest —
+ *  i.e. the reverse of `strings`, which is stored low-to-high. `strings` is the
+ *  instrument's own tuning array (so it still works under an alternate tuning). */
+export function stringLabel(instrument, strings, index, style = "notes") {
+  if (style === "numbers") return String(strings.length - index);
+  return STRING_LABELS[instrument]?.[index] ?? midiToName(strings[index]).name;
+}
+
 /** Best (string, fret) for a midi on a fretted instrument, preferring low frets. */
 export function midiToFret(midi, instrumentId = "acoustic-guitar", tuning) {
   const strings = tuning || (INSTRUMENTS[instrumentId] || {}).strings || [];

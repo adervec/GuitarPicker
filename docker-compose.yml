@@ -1,0 +1,16 @@
+services:
+  guitarpicker:
+    build: .
+    image: guitarpicker:local
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # FSD + Next.js + TanStack Query + TypeScript pilot (see web/README.md) —
+  # a separate app on a separate port, not the deployed one.
+  guitarpicker-web:
+    build: ./web
+    image: guitarpicker-web:local
+    ports:
+      - "3000:3000"
+    restart: unless-stopped

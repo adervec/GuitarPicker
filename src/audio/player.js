@@ -9,6 +9,7 @@ export class TrackPlayer {
     this.vocal = null;
     this._gainB = null;
     this._gainV = null;
+    this._speed = 1;
   }
 
   _make(dataUrl, volume) {
@@ -16,6 +17,7 @@ export class TrackPlayer {
     const audioEl = new window.Audio();
     audioEl.src = dataUrl;
     audioEl.crossOrigin = "anonymous";
+    applySpeed(audioEl, this._speed);
     Audio.applySink(audioEl);
     const ctx = Audio.ctx();
     const src = ctx.createMediaElementSource(audioEl);
@@ -36,6 +38,13 @@ export class TrackPlayer {
   setBackingVolume(v) { if (this._gainB) this._gainB.gain.value = v; }
   setVocalVolume(v) { if (this._gainV) this._gainV.gain.value = v; }
 
+  /** Practice tempo: 1 = normal, <1 slows the track down. Pitch stays put
+   *  (`preservesPitch`) so a slowed-down song still sounds in the right key. */
+  setSpeed(rate) {
+    this._speed = rate;
+    for (const el of [this.backing, this.vocal]) if (el) applySpeed(el, rate);
+  }
+
   async play(fromSec = 0) {
     await Audio.resume();
     for (const el of [this.backing, this.vocal]) {
@@ -49,4 +58,13 @@ export class TrackPlayer {
     this.backing = this.vocal = this._gainB = this._gainV = null;
   }
   hasAudio() { return !!(this.backing || this.vocal); }
+}
+
+function applySpeed(audioEl, rate) {
+  audioEl.playbackRate = rate;
+  // Cross-browser: keep pitch constant while changing speed (Firefox/older Safari
+  // use vendor-prefixed names; unsupported ones just no-op).
+  audioEl.preservesPitch = true;
+  audioEl.mozPreservesPitch = true;
+  audioEl.webkitPreservesPitch = true;
 }
