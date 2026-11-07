@@ -3,12 +3,26 @@ import { Store } from "../state.js";
 import { Synth } from "../audio/synth.js";
 import { INTERVALS, CHORD_TYPES, chordMidis } from "../music/theory.js";
 import { NOTE_SHARP, KEY_SIGNATURES, scaleNotes, nameToMidi } from "../music/notes.js";
+import { CLEFS, LETTERS, staffSVG, stepToMidi } from "../music/staff.js";
 
 const QUESTIONS = 8;
 const rand = (a) => a[Math.floor(Math.random() * a.length)];
 const shuffle = (a) => a.map((v) => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map((p) => p[1]);
 
-// each generator returns { prompt, choices:[str], answer:str, audio?:fn }
+function readGame(clef, title, icon, desc) {
+  return { title, icon, desc, gen() {
+    const { lo, hi } = CLEFS[clef];
+    const d = lo + Math.floor(Math.random() * (hi - lo + 1));
+    const answer = LETTERS[d % 7];
+    return {
+      prompt: "What note is this?", svg: staffSVG(clef, d),
+      choices: shuffle([answer, ...shuffle(LETTERS.filter((l) => l !== answer)).slice(0, 3)]), answer,
+      reveal: () => Synth.playMidi(stepToMidi(d), { dur: 0.7 }),   // hear it after answering
+    };
+  } };
+}
+
+// each generator returns { prompt, choices:[str], answer:str, audio?:fn, svg?:str, reveal?:fn }
 const GAMES = {
   interval_ear: {
     title: "Interval Ear Training", icon: "👂", desc: "Hear two notes — name the interval.",
@@ -67,6 +81,8 @@ const GAMES = {
       return { prompt: `How many sharps/flats in ${key} major?`, choices: shuffle([...opts]), answer: desc };
     },
   },
+  treble_read: readGame("treble", "Sight-Reading: Treble", "🎼", "Name the note on the treble staff."),
+  bass_read: readGame("bass", "Sight-Reading: Bass", "🎼", "Name the note on the bass staff — bassists, this one's yours."),
   scale_degree: {
     title: "Scale Degrees", icon: "🪜", desc: "Find the right note in a scale.",
     gen() {
@@ -117,6 +133,7 @@ export default function minigames(ctx) {
         el("div.muted", { text: `Score: ${correct}` }),
       ]));
       stage.appendChild(el("h2", { style: { margin: "12px 0" }, text: q.prompt }));
+      if (q.svg) stage.appendChild(el("div.center", { style: { marginBottom: "14px" }, html: q.svg }));
       if (q.audio) {
         stage.appendChild(el("div.center", { style: { marginBottom: "14px" } }, [
           el("button.btn.lg.primary", { onclick: q.audio }, ["🔊 Play again"]),
@@ -131,6 +148,7 @@ export default function minigames(ctx) {
     function answer(node, choice, q) {
       if (locked) return; locked = true;
       const right = choice === q.answer;
+      q.reveal?.();
       node.classList.add(right ? "correct" : "wrong");
       if (right) correct++;
       else {

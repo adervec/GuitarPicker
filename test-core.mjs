@@ -18,6 +18,10 @@ import { Grader, centsOff, classify, gradeLetter, vocalTargets } from "./src/kar
 import { lineFillHTML, escapeHTML } from "./src/karaoke/render.js";
 import { framesToNotes, quantizeNotes } from "./src/music/transcribe.js";
 import { mergeSyncable } from "./src/cloud/merge.js";
+import { parseMusicXML, guessInstrument } from "./src/music/musicxml.js";
+import { Midi, onMessage } from "./src/audio/midi.js";
+import { CLEFS, staffPos, staffSVG, stepToMidi, stepName } from "./src/music/staff.js";
+import { rotateSong } from "./src/music/daily.js";
 import { OAUTH_ORIGINS, originAllowed, syncConfigured, driveClientId, BUILTIN_CLIENT_ID } from "./src/cloud/config.js";
 
 let pass = 0;
@@ -343,6 +347,80 @@ function fakeCtx() {
   fwd.seek(5); fwd.schedule(5);
   ok("seeking forward starts from the right note", fwd._live.length === 1);
   ok("an empty band is inert", new Band([]).empty && new Band([{ instrument: "piano", notes: [] }]).empty);
+  // practice speed: at half speed the lookahead covers half as much song time
+  const slow = new Band([{ instrument: "piano", notes: [{ time: 0.3, dur: 0.5, midi: [60] }] }], { ctx: fakeCtx() });
+  slow.schedule(0.05, 0.5);
+  ok("half speed: a note 0.25s of song away is beyond the halved lookahead", slow._live.length === 0);
+  slow.schedule(0.15, 0.5);
+  ok("half speed: it queues once inside the shrunken lookahead", slow._live.length === 1);
+}
+
+// ---- MusicXML import ----
+{
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "x">
+<score-partwise version="3.1">
+  <work><work-title>Test &amp; Tune</work-title></work>
+  <identification><creator type="composer">Trad.</creator></identification>
+  <part-list>
+    <score-part id="P1"><part-name>Acoustic Guitar</part-name></score-part>
+    <score-part id="P2"><part-name>Bass</part-name></score-part>
+  </part-list>
+  <part id="P1"><measure number="1">
+    <attributes><divisions>2</divisions><key><fifths>1</fifths></key></attributes>
+    <direction><sound tempo="60"/></direction>
+    <note><pitch><step>C</step><octave>4</octave></pitch><duration>2</duration><lyric><syllabic>begin</syllabic><text>Hel</text></lyric></note>
+    <note><chord/><pitch><step>E</step><octave>4</octave></pitch><duration>2</duration></note>
+    <note><rest/><duration>2</duration></note>
+    <note><pitch><step>F</step><alter>1</alter><octave>4</octave></pitch><duration>2</duration><tie type="start"/><lyric><syllabic>end</syllabic><text>lo</text></lyric></note>
+    <note><pitch><step>F</step><alter>1</alter><octave>4</octave></pitch><duration>2</duration><tie type="stop"/></note>
+    <note><grace/><pitch><step>G</step><octave>4</octave></pitch></note>
+  </measure></part>
+  <part id="P2"><measure number="1">
+    <attributes><divisions>1</divisions></attributes>
+    <note><pitch><step>C</step><octave>2</octave></pitch><duration>4</duration></note>
+  </measure></part>
+</score-partwise>`;
+  const sx = parseMusicXML(xml);
+  ok("musicxml: title (entity decoded), composer, tempo, key", sx.title === "Test & Tune" && sx.artist === "Trad." && sx.bpm === 60 && sx.key === "G");
+  ok("musicxml: <chord/> stacks onto the previous note", JSON.stringify(sx.notes[0].midi) === "[60,64]" && sx.notes[0].time === 0);
+  ok("musicxml: rests advance time, alters sharpen", sx.notes[1].midi[0] === 66 && sx.notes[1].time === 2);
+  ok("musicxml: ties merge, grace notes drop", sx.notes.length === 2 && Math.abs(sx.notes[1].dur - 2 * 0.92) < 1e-6);
+  ok("musicxml: the second part becomes a bass part", sx.parts.length === 1 && sx.parts[0].instrument === "bass" && sx.parts[0].notes[0].midi[0] === 36);
+  ok("musicxml: lyric syllables join into a line", sx.lyrics.length === 1 && sx.lyrics[0].text === "Hello");
+  ok("musicxml: result validates", validateSong(sx).ok && sx.instrument === "acoustic-guitar");
+  ok("musicxml: part names map to instruments", guessInstrument("Electric Guitar (distortion)") === "electric-guitar" && guessInstrument("Violin I") === "violin" && guessInstrument("Drum Kit") === "e-drums");
+  let threw = false; try { parseMusicXML("<html></html>"); } catch { threw = true; }
+  ok("musicxml: non-scores are rejected", threw);
+}
+
+// ---- MIDI input ----
+{
+  onMessage([0x90, 60, 100]); onMessage([0x91, 64, 90]);
+  ok("midi: latest held note wins", Midi.latest() === 64 && Midi.held().length === 2);
+  onMessage([0x80, 64, 0]); onMessage([0x90, 60, 0]);
+  ok("midi: note-off and velocity-0 note-on both release", Midi.latest() === -1);
+}
+
+// ---- sight-reading staff ----
+{
+  ok("staff: E4 sits on the treble bottom line, F4 in the first space", staffPos("treble", 30) === 0 && staffPos("treble", 31) === 1);
+  ok("staff: G2 is the bass bottom line", staffPos("bass", 18) === 0 && stepName(18) === "G2");
+  ok("staff: steps map to midi", stepToMidi(28) === 60 && stepToMidi(30) === 64 && stepToMidi(40) === 81);
+  ok("staff: middle C gets a ledger line", (staffSVG("treble", 28).match(/<line/g) || []).length === 6);
+  ok("staff: drill ranges span exactly ledger-to-ledger", ["treble", "bass"].every((c) => staffPos(c, CLEFS[c].lo) === -2 && staffPos(c, CLEFS[c].hi) === 10));
+}
+
+// ---- daily set-list rotation ----
+{
+  const pool = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  const day = Date.parse("2026-11-07");
+  const hist = [{ songId: "a", ts: day - 1000 }, { songId: "b", ts: day - 5000 }, { songId: "c", ts: day - 9000 }];
+  ok("rotation: the song you've gone longest without wins", rotateSong(pool, hist, 0, "2026-11-07").id === "c");
+  ok("rotation: never-played beats played", rotateSong(pool, hist.slice(0, 2), 0, "2026-11-07").id === "c");
+  ok("rotation: today's plays don't swap the pick mid-day",
+    rotateSong(pool, [...hist, { songId: "c", ts: day + 3600e3 }], 0, "2026-11-07").id === "c");
+  ok("rotation: plain seed rotation with no history", new Set([0, 1, 2].map((sd) => rotateSong(pool, [], sd).id)).size === 3);
 }
 
 // ---- auto-accompaniment ----

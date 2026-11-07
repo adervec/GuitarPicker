@@ -5,6 +5,7 @@ import { INSTRUMENTS, instrumentOptions } from "../music/notes.js";
 import { fmtTime } from "../ui/components.js";
 import { dailyActivities, todayKey, streakStatus } from "../music/daily.js";
 import { composeAvatar, composeGuitar, avatarLoadout, guitarLoadout } from "../cosmetics/index.js";
+import { Synth } from "../audio/synth.js";
 
 export default function home(ctx) {
   const { el: root, navigate } = ctx;
@@ -58,6 +59,7 @@ export default function home(ctx) {
 
   // today's recommended practice
   root.appendChild(buildDailyPanel(navigate, inst));
+  root.appendChild(buildTimerPanel());
 
   // your setup (avatar + guitar + app skin)
   root.appendChild(el("div.panel", { style: { marginBottom: "16px" } }, [
@@ -112,6 +114,62 @@ export default function home(ctx) {
   ]));
 }
 
+// Workout-style practice timer: a routine of timed blocks, a chime between
+// them, and today's practice minutes kept in settings.practiceLog[YYYY-MM-DD].
+// ponytail: one fixed routine; make the blocks editable if anyone asks.
+const ROUTINE = [
+  { name: "Warm-up", min: 5 }, { name: "Technique / drills", min: 10 },
+  { name: "Songs", min: 10 }, { name: "Free play", min: 5 },
+];
+function buildTimerPanel() {
+  const today = todayKey();
+  const logged = () => Math.round((Store.settings().practiceLog || {})[today] || 0);
+  const status = el("div", { style: { fontSize: "18px", fontWeight: "700" } });
+  const sub = el("div.muted", { style: { fontSize: "12px" } });
+  const btn = el("button.btn.primary", { onclick: toggle }, ["▶ Start routine"]);
+  let timer = null, block = 0, left = 0, lock = null, lastTick = 0;
+
+  function paint() {
+    status.textContent = timer ? `${ROUTINE[block].name} — ${fmtTime(left)}` : `${ROUTINE.map((b) => `${b.name} ${b.min}′`).join(" · ")}`;
+    sub.textContent = `Practiced today: ${Math.round(logged() + pending / 60)} min` + (timer ? ` · block ${block + 1} of ${ROUTINE.length}` : "");
+  }
+  let pending = 0;   // seconds not yet saved — persisting rewrites all state, so batch it
+  function flush() {
+    if (pending < 1) return;
+    const pl = { ...(Store.settings().practiceLog || {}) }; pl[today] = (pl[today] || 0) + pending / 60;
+    pending = 0; Store.setSetting("practiceLog", pl);
+  }
+  function stop(msg) {
+    clearInterval(timer); timer = null; lock?.release?.(); lock = null; flush();
+    btn.textContent = "▶ Start routine"; if (msg) toast(msg, "good"); paint();
+  }
+  async function toggle() {
+    if (timer) return stop();
+    block = 0; left = ROUTINE[0].min * 60; lastTick = Date.now();
+    try { lock = await navigator.wakeLock?.request("screen"); } catch { /* no wake lock — fine */ }
+    btn.textContent = "■ Stop";
+    timer = setInterval(() => {
+      if (!btn.isConnected) return stop();          // left the page
+      const now = Date.now(), dt = (now - lastTick) / 1000; lastTick = now;
+      left -= dt; pending += dt;
+      if (pending >= 30) flush();
+      if (left <= 0) {
+        Synth.click({ accent: true });
+        if (++block >= ROUTINE.length) return stop("Routine complete 💪");
+        left = ROUTINE[block].min * 60; toast(`Next: ${ROUTINE[block].name}`, "");
+      }
+      paint();
+    }, 1000);
+    paint();
+  }
+  paint();
+  return el("div.panel", { style: { marginBottom: "16px" } }, [
+    el("div.spread", {}, [
+      el("div", {}, [el("h2", { text: "⏱️ Practice timer", style: { margin: "0 0 4px" } }), status, sub]), btn,
+    ]),
+  ]);
+}
+
 // Date-seeded daily practice checklist with per-day completion tracking.
 // Each activity pays a few coins the first time it's checked off today, with a
 // bonus when the whole list is finished. `reward` records what's been paid so
@@ -119,7 +177,7 @@ export default function home(ctx) {
 const DAILY_COIN = 12, DAILY_BONUS = 40;
 function buildDailyPanel(navigate, instrument) {
   const today = todayKey();
-  const acts = dailyActivities(today, instrument);
+  const acts = dailyActivities(today, instrument, Store.historyFor());
   const saved = Store.settings().daily;
   const fresh = saved && saved.date === today;
   const done = new Set(fresh ? (saved.done || []) : []);

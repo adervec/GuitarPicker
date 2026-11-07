@@ -33,6 +33,20 @@ export function streakStatus(streak, today = todayKey()) {
   };
 }
 
+/**
+ * Set-list rotation: today's song is the one you've gone longest without
+ * playing (never-played first), with the date seed breaking ties. Only history
+ * from before today counts, so playing the pick doesn't swap it mid-day.
+ */
+export function rotateSong(songs, history, seed, key = todayKey()) {
+  const dayStart = Date.parse(key);
+  const last = new Map();
+  for (const h of history) if (h.ts < dayStart) last.set(h.songId, Math.max(last.get(h.songId) || 0, h.ts));
+  const order = songs.map((s, i) => ({ s, at: last.get(s.id) || 0, tie: (i + seed) % songs.length }));
+  order.sort((a, b) => a.at - b.at || a.tie - b.tie);
+  return order[0].s;
+}
+
 function hashStr(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
@@ -44,13 +58,13 @@ function hashStr(s) {
  * the song is one written for it, and "Tune up" only appears for instruments the
  * tuner can actually handle — a harmonica or a drum kit has no strings to check.
  */
-export function dailyActivities(key = todayKey(), instrument = "acoustic-guitar") {
+export function dailyActivities(key = todayKey(), instrument = "acoustic-guitar", history = []) {
   const seed = hashStr(key);
   const all = builtinSongs();
   const mine = all.filter((s) => (s.instrument || "acoustic-guitar") === instrument);
   const songs = mine.length ? mine : all;
   const drill = DRILLS[seed % DRILLS.length];
-  const song = songs[seed % songs.length];
+  const song = rotateSong(songs, history, seed, key);
   const game = GAMES[seed % GAMES.length];
   const tunable = (INSTRUMENTS[instrument]?.strings.length || 0) > 0;
   // Every drill is a pitch exercise, so an unpitched kit gets a shorter, honest

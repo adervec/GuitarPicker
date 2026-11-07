@@ -14,6 +14,7 @@ import { drawBackground } from "../ui/backgrounds.js";
 import { renderAvatar } from "../cosmetics/index.js";
 import { buildLyricTimeline, activeAt } from "../karaoke/timeline.js";
 import { lineFillHTML, escapeHTML as esc } from "../karaoke/render.js";
+import { Midi } from "../audio/midi.js";
 
 const LEAD_IN = 3.0;          // count-in seconds before notes start
 const HIT_PAD = 0.16;         // detection window pad around a note
@@ -114,6 +115,38 @@ export default async function play(ctx) {
     oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); band.setVolume(v); } });
   const volV = slider({ label: "Vocal", value: s.vocalVolume, fmt: (v) => Math.round(v * 100) + "%",
     oninput: (v) => { Store.setSetting("vocalVolume", v); player.setVocalVolume(v); } });
+  // ----- practice mode: speed, A–B loop, speed trainer. Any of it = run isn't recorded. -----
+  let rate = 1, loopA = null, loopB = null, trainer = false;
+  const practicing = () => rate !== 1 || loopB != null;
+  const rateSl = slider({ label: "Speed", min: 0.3, max: 2, step: 0.05, value: 1, fmt: (v) => Math.round(v * 100) + "%",
+    oninput: (v) => setRate(v) });
+  function setRate(v) { rate = v; rateSl.setValue(v); player.setRate(v); band.silence(); band.seek(Math.max(0, clock)); }
+  const loopBtn = el("button.btn", { title: "Press at the start of the hard bit, again at its end; a third press clears the loop", onclick: () => {
+    const t = Math.max(0, clock);
+    if (loopA == null) { loopA = t; loopBtn.textContent = "🔁 Set end"; loopBtn.classList.add("primary"); }
+    else if (loopB == null) {
+      if (t <= loopA + 0.5) { toast("Let it play past the start first, then set the end", "bad"); return; }
+      loopB = t; loopBtn.textContent = `🔁 ${fmtTime(loopA)}–${fmtTime(loopB)} ✕`;
+      toast("Looping — practice runs aren't recorded", "good");
+    } else { loopA = loopB = null; loopBtn.textContent = "🔁 Loop"; loopBtn.classList.remove("primary"); }
+    if (!playing) render(clock);
+  } }, ["🔁 Loop"]);
+  const trainerBtn = el("button.btn", { title: "Speed trainer: each clean pass of the loop speeds it up 5%, up to full speed", onclick: () => {
+    trainer = !trainer; trainerBtn.classList.toggle("primary", trainer);
+    if (trainer && rate >= 1) setRate(0.6);
+    if (trainer && loopB == null) toast("Set a loop (🔁) — the trainer speeds up after each clean pass", "");
+  } }, ["📈 Trainer"]);
+  // highway cursor: plain, bar lines, or bar lines + the current bar lit up
+  const BAR_MODES = ["off", "lines", "bar"];
+  let barMode = BAR_MODES.includes(s.barMode) ? s.barMode : "off";
+  const barBtn = el("button.btn", { title: "Bar lines on the highway: off → lines → highlight the current bar", onclick: () => {
+    barMode = BAR_MODES[(BAR_MODES.indexOf(barMode) + 1) % 3]; Store.setSetting("barMode", barMode);
+    barBtn.textContent = barLabel(); barBtn.classList.toggle("primary", barMode !== "off");
+    if (!playing) render(clock);
+  } });
+  const barLabel = () => ({ off: "📏 Bars", lines: "📏 Bar lines", bar: "📏 Bar focus" })[barMode];
+  barBtn.textContent = barLabel(); barBtn.classList.toggle("primary", barMode !== "off");
+
   const metroBtn = el("button.btn", { onclick: () => { metro = !metro; metroBtn.classList.toggle("primary", metro); } }, ["🥁 Metronome"]);
   let metro = false;
   let noteSounds = s.noteSounds ?? true;
@@ -142,8 +175,10 @@ export default async function play(ctx) {
     player.vocal ? wrapNarrow(volV) : null,
     karaokeBtn, bandBtn, soundBtn, fretBtn, metroBtn, backBtn,
   ]);
+  const practiceRow = el("div.play-controls", {}, [wrapNarrow(rateSl), loopBtn, trainerBtn, barBtn,
+    el("span.muted", { style: { fontSize: "12px" }, text: "Practice: slow down or loop a section (those runs aren't recorded)." })]);
 
-  shell.append(el("div.play-stage", {}, [canvas, overlay]), controls);
+  shell.append(el("div.play-stage", {}, [canvas, overlay]), controls, practiceRow);
   root.appendChild(shell);
   const clockEl = controls.querySelector("#play-clock");
 
@@ -181,6 +216,7 @@ export default async function play(ctx) {
   const buf = new Float32Array(2048);
   let detectedMidi = -1;
   let lastRms = 0, onsetAt = -1, lastOnsetAt = -10;  // percussion hit detection
+  let midiSeen = Midi.lastHit;                        // last MIDI note-on already consumed
 
   // Pixels per second on the highway. Scaled so a narrow screen still shows ~4s of
   // notes coming — at a fixed 240 a phone gives barely a second of warning. Capped
@@ -203,9 +239,14 @@ export default async function play(ctx) {
     if (finished) { restart(); return; }
     if (playing) { pause(); return; }
     await ensureMic();
+    if (s.midiInput) {
+      try { if (!(await Midi.start())) toast("This browser has no Web MIDI — using the mic", ""); }
+      catch (e) { toast("MIDI unavailable: " + e.message, "bad"); }
+    }
     await Audio.resume();
     playing = true; started = true;
     playBtn.textContent = "⏸ Pause";
+    player.setRate(rate);
     if (clock >= 0) player.play(clock);
     lastTs = performance.now();
     requestAnimationFrame(loop);
@@ -227,6 +268,20 @@ export default async function play(ctx) {
     render(0); updateHud();
   }
 
+  function wrapLoop() {
+    const inLoop = notes.filter((n) => n.time >= loopA && n.time < loopB);
+    for (const n of inLoop) if (n.state === "pending") finalize(n);   // the last note may still be ringing past B
+    const clean = inLoop.length && inLoop.every((n) => n.state === "perfect" || n.state === "good");
+    if (trainer && clean && rate < 1) {
+      setRate(Math.min(1, Math.round((rate + 0.05) * 100) / 100));
+      toast(rate >= 1 ? "🎉 Clean at full speed!" : `Clean pass — speed up to ${Math.round(rate * 100)}%`, "good");
+    }
+    clock = Math.max(0, loopA - beatLen);
+    for (const n of notes) if (n.time + n.dur + HIT_PAD >= clock && n.time < loopB) { n.state = "pending"; n.best = 999; n.frames = 0; }
+    soundIdx = notes.findIndex((n) => n.time >= clock); if (soundIdx < 0) soundIdx = notes.length;
+    player.seek(clock); band.seek(clock); lastMetroBeat = -1;
+  }
+
   // ----- main loop -----
   function loop(ts) {
     if (!playing) return;
@@ -237,12 +292,15 @@ export default async function play(ctx) {
     if (player.hasAudio() && clock >= 0 && player.backing && !player.backing.paused) {
       clock = player.backing.currentTime;
     } else {
-      clock += dt;
+      clock += clock < 0 ? dt : dt * rate;   // count-in stays real-time at any speed
       if (clock >= 0 && player.hasAudio() && (player.backing?.paused)) player.play(clock);
     }
 
+    // A–B loop: jump back a beat before A; a clean pass bumps the speed trainer
+    if (loopB != null && clock >= loopB) wrapLoop();
+
     // synth band (schedules ahead of the clock, so it stays in time regardless of frame rate)
-    if (bandOn) band.schedule(clock);
+    if (bandOn) band.schedule(clock, rate);
 
     // metronome
     if (metro) {
@@ -254,9 +312,13 @@ export default async function play(ctx) {
     while (soundIdx < notes.length && notes[soundIdx].time <= clock) {
       const n = notes[soundIdx++];
       if (noteSounds && clock - n.time < 0.3) {
-        for (const m of n.midi) Synth.playMidi(m, { dur: Math.max(0.4, Math.min(n.dur, 2)), a4, gain: 0.18, instrument: playInst });
+        for (const m of n.midi) Synth.playMidi(m, { dur: Math.max(0.4, Math.min(n.dur / rate, 2)), a4, gain: 0.18, instrument: playInst });
       }
     }
+
+    // MIDI wins over the mic while a note is held — it's exact
+    const midiNote = s.midiInput ? Midi.latest() : -1;
+    if (percussion && Midi.lastHit > midiSeen) { midiSeen = Midi.lastHit; onsetAt = clock; lastOnsetAt = clock; }
 
     // read pitch (and, for percussion, hit transients)
     if (Audio.readTimeDomain(buf)) {
@@ -269,6 +331,7 @@ export default async function play(ctx) {
       const f = tracker.push(freq, a4);
       detectedMidi = f > 0 ? freqToMidiFloat(f, a4) : -1;
     }
+    if (s.midiInput && (midiNote >= 0 || !Audio.micLive())) detectedMidi = midiNote;
 
     grade();
     render(clock);
@@ -367,6 +430,25 @@ export default async function play(ctx) {
     for (let m = Math.ceil(loM / 12) * 12; m <= hiM; m += 12) {
       const y = yFor(m); c.globalAlpha = 0.5; c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
       c.globalAlpha = 1; c.fillText(midiToName(m).full, 4, y - 3);
+    }
+
+    // bar lines (4 beats a bar — ponytail: songs carry no time signature yet) and loop region
+    if (barMode !== "off") {
+      const barLen = beatLen * 4;
+      const first = Math.floor((t - hitX / pps) / barLen), last = Math.ceil((t + (W - hitX) / pps) / barLen);
+      if (barMode === "bar" && t >= 0) {
+        const b = Math.floor(t / barLen), x = hitX + (b * barLen - t) * pps;
+        c.fillStyle = getVar("--accent"); c.globalAlpha = 0.12; c.fillRect(x, 0, barLen * pps, H); c.globalAlpha = 1;
+      }
+      c.strokeStyle = "rgba(255,255,255,0.28)"; c.lineWidth = 1; c.fillStyle = getVar("--muted"); c.font = "10px var(--mono)";
+      for (let b = Math.max(0, first); b <= last; b++) {
+        const x = hitX + (b * barLen - t) * pps;
+        c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); c.fillText(String(b + 1), x + 3, 12);
+      }
+    }
+    if (loopA != null) {
+      const xa = hitX + (loopA - t) * pps, xb = loopB != null ? hitX + (loopB - t) * pps : W;
+      c.fillStyle = getVar("--accent-2"); c.globalAlpha = 0.1; c.fillRect(xa, 0, xb - xa, H); c.globalAlpha = 1;
     }
 
     // hit line
@@ -554,6 +636,19 @@ export default async function play(ctx) {
     finished = true; playing = false; player.pause(); band.silence();
     playBtn.textContent = "⟲ Play again";
     const acc = accuracy();
+    if (practicing()) {   // a slowed-down run isn't comparable to a real one, so it isn't logged
+      banner.innerHTML = "";
+      banner.appendChild(el("div.panel", {}, [
+        el("h2", { text: `Practice run at ${Math.round(rate * 100)}% — ${acc}% accuracy` }),
+        el("p.muted", { text: "Practice runs aren't recorded. Set the speed back to 100% and clear the loop for a scored run." }),
+        el("div.row", { style: { justifyContent: "center" } }, [
+          el("button.btn.primary", { onclick: restart }, ["⟲ Again"]),
+          el("button.btn", { onclick: () => { setRate(1); restart(); } }, ["Full speed"]),
+        ]),
+      ]));
+      banner.classList.remove("hidden");
+      return;
+    }
     const passed = !failed && acc >= 60;
     const grade = gradeLetter(acc, failed);
     const entry = {

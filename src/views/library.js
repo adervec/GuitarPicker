@@ -2,6 +2,7 @@ import { el, pageHead, tag, toast, download, pickFile, fmtTime, clear } from "..
 import { Store } from "../state.js";
 import { allSongs, isBuiltin } from "../music/catalog.js";
 import { parse, newSong, songDuration, serialize, uid } from "../music/song-format.js";
+import { parseMusicXML } from "../music/musicxml.js";
 import { INSTRUMENTS, midiToName } from "../music/notes.js";
 import { suggestCapo, transposeSong, keyName } from "../music/theory.js";
 import { Synth } from "../audio/synth.js";
@@ -11,7 +12,7 @@ export default function library(ctx) {
   let filter = { q: "", instrument: "all", difficulty: "all", genre: "all", karaoke: false };
 
   const actions = [
-    el("button.btn", { onclick: importSong }, ["⬇ Import"]),
+    el("button.btn", { onclick: importSong, title: "A GuitarPicker song (.json) or a MusicXML score (.musicxml / .xml — MuseScore, TuxGuitar and Guitar Pro all export it)" }, ["⬇ Import"]),
     el("button.btn.primary", { onclick: () => navigate("#/editor") }, ["+ New song"]),
   ];
   root.appendChild(pageHead("Songs", "Public-domain library plus your own creations. Import, export, transpose, and play.", actions));
@@ -172,10 +173,10 @@ export default function library(ctx) {
   }
 
   async function importSong() {
-    const picked = await pickFile(".json,.gpsong.json,application/json");
+    const picked = await pickFile(".json,.gpsong.json,application/json,.musicxml,.xml");
     if (!picked) return;
     try {
-      const song = parse(picked.text);
+      const song = /\.(musicxml|xml)$/i.test(picked.name) ? parseMusicXML(picked.text) : parse(picked.text);
       song.id = uid(); song.source = "import";
       Store.saveSong(song);
       toast(`Imported "${song.title}" (from ${picked.name})`, "good");

@@ -47,10 +47,20 @@ Claude Cowork folder and ask for coaching — the file starts with a suggested p
 
 - **Note highway** — streaming notes, per-note killfeed (Perfect / Good / Off / Miss), a
   healthbar that dips on mistakes but lets you finish (a failed run just won't count as a pass).
-- **Tuner** — live pitch + cents needle, out-of-tune detection, multiple instruments & tunings.
+- **Practice mode** — slow a song down (30–200%), **loop** a hard section (🔁 at the start,
+  again at the end), and let the **📈 speed trainer** add 5% after every clean pass until you're
+  at full speed. **📏 Bars** draws bar lines or lights up the current bar. Practice runs aren't
+  recorded, so they never drag your stats down.
+- **MIDI input** — plug in a keyboard, e-kit or MIDI guitar and turn it on in Settings for exact
+  grading with no mic.
+- **Tuner** — live pitch + cents needle, out-of-tune detection, multiple instruments & tunings,
+  a **live fretboard** that lights up every spot for the note you play, and a **🎯 Find the note**
+  game.
 - **Songs** — a 45+ song **public-domain** library (folk, spirituals, nursery rhymes, carols,
   classical themes, plus chord-progression trainers) tagged by **genre**, with singalong
-  **lyrics**, plus import / export / transpose / capo suggestions.
+  **lyrics**, plus import / export / transpose / capo suggestions. **Import MusicXML** scores
+  (`.musicxml` / `.xml` from MuseScore, TuxGuitar or Guitar Pro); for `.gp` files, open them in
+  the free TuxGuitar and export MusicXML. Every part comes in, and the band plays the ones you don't.
 - **Synthesized backing band** — every song gets one, with no audio files to download. The app
   works out the chords and plays bass, chord comp and (where it suits the song) drums underneath
   you, each in its own instrument voice. Songs can also carry **parts for other instruments**:
@@ -66,7 +76,7 @@ Claude Cowork folder and ask for coaching — the file starts with a suggested p
 - **Listen & Make** — record yourself, auto-transcribe to a song at three difficulty levels,
   with animated/solid/screen-capture-slideshow backgrounds.
 - **Training** — courses with progression + tempo-adjustable skill drills.
-- **Theory Games** — ear training and theory quizzes.
+- **Theory Games** — ear training and theory quizzes, plus treble- and bass-clef **sight-reading**.
 - **Glossary** — a music dictionary with interactive chord/scale/interval players.
 - **Instruments** — a detailed guide to every supported instrument (specs, playing guides,
   playable reference pitches), also readable standalone as [docs/INSTRUMENTS.md](docs/INSTRUMENTS.md).
@@ -78,7 +88,10 @@ Claude Cowork folder and ask for coaching — the file starts with a suggested p
   daily activities; spend them in the Locker. Balance shows in the top bar, and your avatar
   rides along in the play HUD.
 - **Daily practice** — a home-dashboard checklist of recommended activities that refreshes
-  each day, tracks what you've completed, and pays coins.
+  each day, tracks what you've completed, and pays coins. Today's song **rotates** through your
+  set list: it's the one you've gone longest without playing. A **⏱️ practice timer** runs a
+  warm-up / technique / songs / free-play routine with a chime between blocks, keeps the screen
+  awake, and logs today's minutes.
 - **Themes**, clear input/output device display, customizable backing & vocal volumes.
 - **Cloud sync (optional, opt-in)** — sync your songs, history, and progress to a private folder
   in your *own* Google Drive. Off until you sign in; the app is fully local/offline until then.

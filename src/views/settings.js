@@ -66,6 +66,9 @@ export default async function settings(ctx) {
         oninput: (v) => Store.setSetting("a4", v) }),
       slider({ label: "Note highway speed", min: 0.5, max: 2, step: 0.1, value: s.noteSpeed, fmt: (v) => v.toFixed(1) + "×",
         oninput: (v) => Store.setSetting("noteSpeed", v) }),
+      select({ label: "MIDI input (keyboard / e-kit)", value: s.midiInput ? "on" : "off",
+        options: [{ value: "off", label: "Off — listen with the mic" }, { value: "on", label: "On — grade MIDI notes when a device is plugged in" }],
+        onchange: (v) => Store.setSetting("midiInput", v === "on") }),
     ]),
   );
 

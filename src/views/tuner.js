@@ -48,7 +48,41 @@ export default async function tuner(ctx) {
     strings,
   ]));
 
-  rebuildStrings();
+  // live fretboard: every place the note you're playing lives on the neck, plus a
+  // "find the note" game — a random string+fret lights up, play it to score.
+  const fbWrap = el("div", { style: { overflowX: "auto" } });
+  const gameInfo = el("span.muted");
+  let game = null;   // { target:{string,fret,midi}, score, heldSince }
+  const gameBtn = el("button.btn", { onclick: () => {
+    game = game ? null : { score: 0, target: null, heldSince: 0 };
+    if (game) nextTarget();
+    gameBtn.textContent = game ? "Stop game" : "🎯 Find the note";
+    gameBtn.classList.toggle("primary", !!game);
+    if (game && !running) toggle();
+    paintFretboard(-1);
+  } }, ["🎯 Find the note"]);
+  const fbPanel = el("div.panel", { style: { marginTop: "16px" } }, [
+    el("div.spread", {}, [el("h3", { text: "Fretboard", style: { margin: 0 } }), el("div.row", { style: { alignItems: "center", gap: "10px" } }, [gameInfo, gameBtn])]),
+    el("p.muted", { style: { fontSize: "12px" }, text: "Lights up every spot on the neck for the note you're playing. The game shows a random fret — play that exact note." }),
+    fbWrap,
+  ]);
+  root.appendChild(fbPanel);
+  let lastPainted = null;
+  function nextTarget() {
+    const string = Math.floor(Math.random() * tuning.length), fret = Math.floor(Math.random() * 13);
+    game.target = { string, fret, midi: tuning[string] + fret };
+    game.heldSince = 0;
+    gameInfo.textContent = `Score ${game.score} · play ${midiToName(game.target.midi).full} (string ${tuning.length - string}, fret ${fret})`;
+  }
+  function paintFretboard(midi) {
+    const fretted = INSTRUMENTS[instrument]?.kind === "fretted";
+    fbPanel.classList.toggle("hidden", !fretted);
+    const key = midi + "|" + (game?.target ? game.target.string + "," + game.target.fret : "") + "|" + tuning.join();
+    if (!fretted || key === lastPainted) return;
+    lastPainted = key;
+    fbWrap.innerHTML = fretboardSVG(tuning, midi, game?.target);
+  }
+  paintFretboard(-1);
 
   function tuningOptions() {
     return Object.keys(ALT_TUNINGS[instrument] || { standard: 1 }).map((k) => ({ value: k, label: k }));
@@ -59,6 +93,8 @@ export default async function tuner(ctx) {
     for (const o of tuningOptions()) { const opt = el("option", { value: o.value, text: o.label }); if (o.value === tuningName) opt.selected = true; tuningSel.selectEl.appendChild(opt); }
     targetIdx = null;
     rebuildStrings();
+    if (game) nextTarget();
+    paintFretboard(-1);
   }
   function rebuildStrings() {
     strings.innerHTML = "";
@@ -98,6 +134,15 @@ export default async function tuner(ctx) {
       const f = tracker.push(freq, s.a4);
       if (f > 0) render(f);
       else idle();
+      const m = f > 0 ? freqToMidi(f, s.a4) : -1;
+      paintFretboard(m);
+      if (game?.target) {
+        // exact pitch, held ~¼ s, so a passing slide doesn't count
+        if (m === game.target.midi) {
+          if (!game.heldSince) game.heldSince = performance.now();
+          else if (performance.now() - game.heldSince > 250) { game.score++; toast(`✓ ${midiToName(m).full}`, "good"); nextTarget(); }
+        } else game.heldSince = 0;
+      }
     }
     requestAnimationFrame(loop);
   }
@@ -155,4 +200,26 @@ export default async function tuner(ctx) {
   }
 
   return () => { stop(); Audio.stopMic(); };
+}
+
+/** SVG neck (frets 0–12): dots for every position of `midi`, a ring on the game target. */
+export function fretboardSVG(tuning, midi, target) {
+  const FRETS = 12, cw = 46, rh = 22, x0 = 34, y0 = 14, n = tuning.length;
+  const w = x0 + cw * (FRETS + 0.5), h = y0 * 2 + rh * (n - 1) + 14;
+  const sy = (si) => y0 + (n - 1 - si) * rh;   // highest string on top, like tab
+  const fx = (f) => (f === 0 ? x0 - 14 : x0 + (f - 0.5) * cw);
+  let out = `<svg viewBox="0 0 ${w} ${h}" width="${w}" style="max-width:100%;display:block" role="img" aria-label="Fretboard">`;
+  for (const f of [3, 5, 7, 9]) out += `<circle cx="${fx(f)}" cy="${h - 7}" r="3" fill="var(--muted)"/>`;
+  out += `<circle cx="${fx(12) - 5}" cy="${h - 7}" r="3" fill="var(--muted)"/><circle cx="${fx(12) + 5}" cy="${h - 7}" r="3" fill="var(--muted)"/>`;
+  for (let f = 0; f <= FRETS; f++) out += `<line x1="${x0 + f * cw}" y1="${sy(n - 1)}" x2="${x0 + f * cw}" y2="${sy(0)}" stroke="var(--line)" stroke-width="${f ? 1 : 4}"/>`;
+  tuning.forEach((open, si) => {
+    out += `<line x1="${x0}" y1="${sy(si)}" x2="${x0 + FRETS * cw}" y2="${sy(si)}" stroke="var(--muted)" stroke-width="${1 + (n - si) * 0.25}"/>`;
+    out += `<text x="2" y="${sy(si) + 4}" font-size="11" fill="var(--muted)">${midiToName(open).name}</text>`;
+    for (let f = 0; f <= FRETS; f++) {
+      const m = open + f, hit = m === midi, tgt = target && target.string === si && target.fret === f;
+      if (tgt) out += `<circle cx="${fx(f)}" cy="${sy(si)}" r="10" fill="none" stroke="var(--warn)" stroke-width="3"/>`;
+      if (hit) out += `<circle cx="${fx(f)}" cy="${sy(si)}" r="8" fill="var(--accent)"/><text x="${fx(f)}" y="${sy(si) + 4}" font-size="9" text-anchor="middle" fill="#000">${midiToName(m).name}</text>`;
+    }
+  });
+  return out + "</svg>";
 }

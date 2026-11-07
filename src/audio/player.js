@@ -43,6 +43,8 @@ export class TrackPlayer {
     }
   }
   pause() { for (const el of [this.backing, this.vocal]) el && el.pause(); }
+  /** Practice speed; the browser keeps pitch (preservesPitch defaults on). */
+  setRate(r) { for (const el of [this.backing, this.vocal]) el && (el.playbackRate = r); }
   seek(sec) { for (const el of [this.backing, this.vocal]) el && (el.currentTime = sec); }
   stop() {
     for (const el of [this.backing, this.vocal]) { if (el) { el.pause(); el.src = ""; } }
