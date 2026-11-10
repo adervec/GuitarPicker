@@ -458,6 +458,36 @@ function fakeCtx() {
   ok("local day: a streak chains across the DST change", ny === "3,2026-03-09");
 }
 
+// ---- default theme follows the device until the player picks one ----
+{
+  const theme = (light, saved) => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const mem = new Map(${JSON.stringify(saved ? [["guitarpicker.v1", JSON.stringify({ settings: saved })]] : [])});
+      globalThis.localStorage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
+      globalThis.matchMedia = (q) => ({ matches: q.includes("light") ? ${light} : !${light} });
+      const { Store } = await import("${pathToFileURL(process.cwd() + "/").href}src/state.js");
+      const start = Store.settings().theme;
+      Store.setSetting("a4", 441);
+      const storedAfterOther = JSON.parse(mem.get("guitarpicker.v1")).settings.theme ?? "none";
+      Store.setSetting("theme", "neon");
+      console.log([start, storedAfterOther, JSON.parse(mem.get("guitarpicker.v1")).settings.theme].join(","));`], { encoding: "utf8" });
+    return r.stdout.trim() || r.stderr.split("\n").slice(0, 3).join(" ");
+  };
+  ok("theme: light device, nothing saved -> light skin, and the default isn't stored", theme(true) === "light,none,neon");
+  ok("theme: dark device, nothing saved -> the dark default", theme(false) === "midnight,none,neon");
+  ok("theme: a saved choice wins over the device", theme(true, { theme: "sunset" }).startsWith("sunset,sunset,"));
+}
+
+// ---- what's new ----
+{
+  const wn = JSON.parse(readFileSync("whatsnew.json", "utf8"));
+  ok("whatsnew: entries are {date: local YYYY-MM-DD, items: [non-empty strings]}",
+    wn.length && wn.every((e) => /^\d{4}-\d\d-\d\d$/.test(e.date) && e.items.length && e.items.every((s) => typeof s === "string" && s.trim())));
+  ok("whatsnew: newest first", wn.every((e, i) => !i || wn[i - 1].date > e.date));
+  ok("whatsnew: declared in index.html", readFileSync("index.html", "utf8").includes('<meta name="app-whatsnew" content="whatsnew.json"'));
+  ok("whatsnew: published by the deploy", /cp [^\n]*whatsnew\.json/.test(readFileSync(".github/workflows/deploy.yml", "utf8")));
+}
+
 // ---- daily set-list rotation ----
 {
   const pool = [{ id: "a" }, { id: "b" }, { id: "c" }];

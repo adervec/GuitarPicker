@@ -49,7 +49,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html manifest.json sw.js _site/
+          cp index.html manifest.json sw.js whatsnew.json _site/
           cp -r src styles icons docs _site/
           cp LICENSE CREDITS.md _site/
 
