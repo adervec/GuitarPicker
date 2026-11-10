@@ -156,5 +156,19 @@ for (const must of ["# GuitarPicker practice report", "Sessions: 2", "Average ac
   else { console.log(`  ✗ report missing "${must}"`); fail++; }
 }
 
+// connected Google account shows its profile picture beside the name
+{
+  const { accountChip } = await import("./src/views/settings.js");
+  const pic = "https://lh3.googleusercontent.com/a/test-avatar";
+  const find = (n, tag) => n.tagName?.toLowerCase() === tag ? n : (n.children || []).map((c) => find(c, tag)).find(Boolean);
+  const img = find(accountChip({ name: "Ada", email: "ada@example.com", picture: pic }), "img");
+  const src = img && (img.getAttribute("src") ?? img.src);
+  const rp = img && (img.getAttribute("referrerpolicy") ?? img.referrerPolicy);
+  if (src === pic && rp === "no-referrer") { console.log("  ✓ account chip renders the profile picture"); pass++; }
+  else { console.log(`  ✗ account chip picture missing (src=${src}, referrerpolicy=${rp})`); fail++; }
+  if (!find(accountChip({ name: "Ada", email: "", picture: "" }), "img")) { console.log("  ✓ no picture, no img"); pass++; }
+  else { console.log("  ✗ empty picture still rendered an img"); fail++; }
+}
+
 console.log(`\n${pass} views OK, ${fail} failed.`);
 process.exit(fail ? 1 : 0);

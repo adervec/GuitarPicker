@@ -144,11 +144,11 @@ export default async function settings(ctx) {
       signinBtn.classList.toggle("hidden", on);
       syncBtn.classList.toggle("hidden", !on);
       signoutBtn.classList.toggle("hidden", !on);
-      const who = account();
-      status.textContent = on
-        ? (who ? `${who.name}${who.email && who.email !== who.name ? ` (${who.email})` : ""}` : "Connected to Google Drive") +
-          (lastSync() ? ` — synced ${new Date(lastSync()).toLocaleTimeString()}` : "")
-        : "Not signed in — your data stays on this device.";
+      // signOut() clears the profile, so the picture goes with it
+      status.innerHTML = "";
+      status.appendChild(on
+        ? accountChip(account(), lastSync() ? ` — synced ${new Date(lastSync()).toLocaleTimeString()}` : "")
+        : el("span", { text: "Not signed in — your data stays on this device." }));
     }
     async function doSignIn() {
       signinBtn.textContent = "Signing in…";
@@ -186,4 +186,14 @@ export default async function settings(ctx) {
       el("a.btn", { href: "https://adervec.github.io", target: "_blank", rel: "noopener" }, ["More apps by this maker"]),
     ]),
   );
+}
+
+/** The connected Google account: round profile picture (when there is one) + name/email. */
+export function accountChip(who, suffix = "") {
+  const label = (who ? `${who.name}${who.email && who.email !== who.name ? ` (${who.email})` : ""}` : "Connected to Google Drive") + suffix;
+  return el("span", { style: { display: "inline-flex", alignItems: "center", gap: "8px" } }, [
+    who?.picture ? el("img", { src: who.picture, alt: "", referrerpolicy: "no-referrer", width: 24, height: 24,
+      style: { width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover", flex: "none" } }) : null,
+    el("span", { text: label }),
+  ]);
 }
