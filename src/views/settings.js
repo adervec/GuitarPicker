@@ -4,6 +4,7 @@ import { Audio } from "../audio/engine.js";
 import { INSTRUMENTS, instrumentOptions } from "../music/notes.js";
 import { SKINS } from "../cosmetics/skins.js";
 import { syncConfigured, isSignedIn, signIn, signOut, syncNow, lastSync, account } from "../cloud/sync.js";
+import { eraseLocalData, CACHE_NAME } from "../erase.js";
 
 export default async function settings(ctx) {
   const { el: root } = ctx;
@@ -98,12 +99,18 @@ export default async function settings(ctx) {
   root.appendChild(data);
   data.append(el("div.row", {}, [
     el("button.btn", { onclick: () => download("guitarpicker-data.json", Store.exportAll()) }, ["Export all data"]),
-    el("button.btn.danger", { onclick: () => {
-      if (confirm("Clear all local data (songs, history, progress, settings)?")) {
-        localStorage.removeItem("guitarpicker.v1"); location.reload();
-      }
-    }}, ["Reset everything"]),
+    el("button.btn.danger", { onclick: async () => {
+      if (!confirm("Erase everything GuitarPicker keeps on this device — songs, history, progress, coins, unlocks and settings? " +
+        "This can't be undone (use Export all data first if you want a copy). Cloud sync will be disconnected; " +
+        "the copy in your Google Drive is not touched.")) return;
+      signOut();
+      eraseLocalData(localStorage);
+      try { await caches?.delete(CACHE_NAME); } catch { /* no Cache API */ }
+      location.reload();
+    }}, ["Erase everything"]),
   ]));
+  data.append(el("p.muted", { style: { fontSize: "12px", marginTop: "8px" },
+    text: "Erase removes only GuitarPicker's data from this browser (other apps on this site keep theirs) and signs out of sync. Your Google Drive copy stays until you delete it there." }));
 
   // --- Cloud sync (Google Drive, opt-in) ---
   const cloud = el("div.panel", {}, [el("h2", { text: "Account & Sync (cloud)" })]);

@@ -22,6 +22,7 @@ import { parseMusicXML, guessInstrument } from "./src/music/musicxml.js";
 import { Midi, onMessage } from "./src/audio/midi.js";
 import { CLEFS, staffPos, staffSVG, stepToMidi, stepName } from "./src/music/staff.js";
 import { rotateSong } from "./src/music/daily.js";
+import { eraseLocalData, CACHE_NAME, OWN_KEYS } from "./src/erase.js";
 import { OAUTH_ORIGINS, originAllowed, syncConfigured, driveClientId, BUILTIN_CLIENT_ID } from "./src/cloud/config.js";
 
 let pass = 0;
@@ -409,6 +410,25 @@ function fakeCtx() {
   ok("staff: steps map to midi", stepToMidi(28) === 60 && stepToMidi(30) === 64 && stepToMidi(40) === 81);
   ok("staff: middle C gets a ledger line", (staffSVG("treble", 28).match(/<line/g) || []).length === 6);
   ok("staff: drill ranges span exactly ledger-to-ledger", ["treble", "bass"].every((c) => staffPos(c, CLEFS[c].lo) === -2 && staffPos(c, CLEFS[c].hi) === 10));
+}
+
+// ---- erase everything (shared origin: only our data goes) ----
+{
+  const mem = new Map(Object.entries({
+    "guitarpicker.v1": "{}", "gp-coach-reply": "hi",
+    "gymtracker.v1": "{\"keep\":1}", "tachyread-prefs": "x", "app-font": "atkinson",
+    "portal-activity": JSON.stringify([[1, "GuitarPicker", "practice", 1], [2, "GymTracker", "workout", 1]]),
+    "portal-installed": JSON.stringify({ GuitarPicker: 1, Tachyread: 2 }),
+  }));
+  const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k),
+    clear: () => { throw new Error("erase must never clear the shared origin"); } };
+  eraseLocalData(storage);
+  ok("erase: our keys are gone", OWN_KEYS.every((k) => !mem.has(k)));
+  ok("erase: other apps' keys survive", mem.get("gymtracker.v1") === "{\"keep\":1}" && mem.has("tachyread-prefs") && mem.has("app-font"));
+  ok("erase: only our portal-activity rows go", JSON.parse(mem.get("portal-activity")).map((r) => r[1]).join() === "GymTracker");
+  ok("erase: only our portal-installed entry goes", JSON.stringify(JSON.parse(mem.get("portal-installed"))) === "{\"Tachyread\":2}");
+  ok("erase: the cache name matches the service worker's", readFileSync("sw.js", "utf8").includes(`"${CACHE_NAME}"`));
+  ok("erase: state.js still stores under a key erase knows", OWN_KEYS.includes(readFileSync("src/state.js", "utf8").match(/const KEY = "([^"]+)"/)[1]));
 }
 
 // ---- daily set-list rotation ----
