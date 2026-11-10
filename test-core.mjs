@@ -1,6 +1,8 @@
 // Functional smoke test of the DOM-free core (music + audio math).
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { midiToFreq, freqToMidi, nameToMidi, midiToName, scaleNotes, midiToFret, midiToHole, INSTRUMENTS } from "./src/music/notes.js";
 import { GUIDE, instrumentFacts, buildInstrumentsMarkdown } from "./src/music/instrument-guide.js";
 import { chordMidis, identifyChord, suggestCapo, transposeSong } from "./src/music/theory.js";
@@ -431,10 +433,35 @@ function fakeCtx() {
   ok("erase: state.js still stores under a key erase knows", OWN_KEYS.includes(readFileSync("src/state.js", "utf8").match(/const KEY = "([^"]+)"/)[1]));
 }
 
+// ---- calendar days are LOCAL days (run in child processes with a fixed TZ) ----
+{
+  const run = (tz, code) => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", code], { env: { ...process.env, TZ: tz }, encoding: "utf8" });
+    return (r.stdout || "").trim() + (r.status ? " ERR " + r.stderr.split("\n").slice(0, 3).join(" ") : "");
+  };
+  const base = pathToFileURL(process.cwd() + "/").href;
+  // 22:30 local in São Paulo (UTC-3) is 01:30 UTC the next day
+  const sp = run("America/Sao_Paulo", `
+    const { localDay, dayBefore } = await import("${base}src/day.js");
+    const { todayKey } = await import("${base}src/music/daily.js");
+    const { Store } = await import("${base}src/state.js");
+    const ts = new Date(2026, 10, 7, 22, 30).getTime();
+    Store.addHistory({ ts, songId: "x", instrument: "acoustic-guitar", score: 0, accuracy: 50, passed: false });
+    console.log([new Date(ts).toISOString().slice(0, 10), localDay(ts), todayKey(new Date(ts)), Store.settings().streak.lastDay, dayBefore("2026-11-07")].join(","));`);
+  ok("local day: São Paulo 22:30 is UTC tomorrow (sanity)", sp.startsWith("2026-11-08,"));
+  ok("local day: practice day, daily key and streak use the local date", sp === "2026-11-08,2026-11-07,2026-11-07,2026-11-07,2026-11-06");
+  // DST: the 23-hour spring-forward day must still chain the streak
+  const ny = run("America/New_York", `
+    const { Store } = await import("${base}src/state.js");
+    for (const d of [7, 8, 9]) Store.addHistory({ ts: new Date(2026, 2, d, 21).getTime(), songId: "x", instrument: "acoustic-guitar", score: 0, accuracy: 50, passed: false });
+    console.log(Store.settings().streak.count + "," + Store.settings().streak.lastDay);`);
+  ok("local day: a streak chains across the DST change", ny === "3,2026-03-09");
+}
+
 // ---- daily set-list rotation ----
 {
   const pool = [{ id: "a" }, { id: "b" }, { id: "c" }];
-  const day = Date.parse("2026-11-07");
+  const day = new Date("2026-11-07T00:00:00").getTime();   // local midnight, like rotateSong
   const hist = [{ songId: "a", ts: day - 1000 }, { songId: "b", ts: day - 5000 }, { songId: "c", ts: day - 9000 }];
   ok("rotation: the song you've gone longest without wins", rotateSong(pool, hist, 0, "2026-11-07").id === "c");
   ok("rotation: never-played beats played", rotateSong(pool, hist.slice(0, 2), 0, "2026-11-07").id === "c");

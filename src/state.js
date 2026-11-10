@@ -2,6 +2,7 @@
 import { DEFAULT_AVATAR } from "./cosmetics/avatars.js";
 import { DEFAULT_GUITAR } from "./cosmetics/guitars.js";
 import { mergeSyncable } from "./cloud/merge.js";
+import { localDay, dayBefore } from "./day.js";
 
 const KEY = "guitarpicker.v1";
 
@@ -103,7 +104,7 @@ export const Store = {
     // a completed run — pass OR fail — counts toward today's practice streak
     // (a noble failed attempt still counts; the streak can only be earned by
     //  actually playing, never by ticking daily-activity boxes)
-    this.recordPracticeDay(new Date(entry.ts || Date.now()).toISOString().slice(0, 10));
+    this.recordPracticeDay(localDay(entry.ts || Date.now()));
     persist();
     this.emit({ type: "history", entry });
   },
@@ -133,7 +134,7 @@ export const Store = {
   recordPracticeDay(day) {
     const cur = state.settings.streak || { count: 0, best: 0, lastDay: "" };
     if (!day || cur.lastDay === day) return cur;        // already counted today
-    const consecutive = cur.lastDay && (new Date(day) - new Date(cur.lastDay) === 86400000);
+    const consecutive = cur.lastDay && dayBefore(day) === cur.lastDay;   // by date, so DST's 23h/25h days still chain
     const count = consecutive ? (cur.count || 0) + 1 : 1;
     const st = { count, best: Math.max(cur.best || 0, count), lastDay: day };
     state.settings.streak = st;

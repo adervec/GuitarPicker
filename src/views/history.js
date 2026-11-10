@@ -2,6 +2,7 @@ import { el, pageHead, stat, select, lineChart, getVar, fmtTime, clear, progress
 import { Store } from "../state.js";
 import { INSTRUMENTS } from "../music/notes.js";
 import { collectionStats, RARITIES } from "../cosmetics/index.js";
+import { localDay } from "../day.js";
 
 export default function history(ctx) {
   const { el: root, navigate } = ctx;
@@ -30,7 +31,7 @@ export default function history(ctx) {
   const aiBtn = el("button.btn", {
     title: "Download a Markdown practice report — drop it into Claude (claude.ai, Claude Desktop, or Cowork) for coaching and trend analysis",
     onclick: () => {
-      const d = new Date().toISOString().slice(0, 10);
+      const d = localDay();
       download(`guitarpicker-progress-${d}.md`, buildProgressReport(all), "text/markdown");
       toast("Report saved — open it with Claude for analysis", "good");
     },
@@ -190,7 +191,7 @@ sessions, accuracy, per-song bests, streaks). Write \`coach/reply.json\`:
 // tables, newest first — no app knowledge needed to read it.
 export function buildProgressReport(all) {
   const rows = all.slice().sort((a, b) => b.ts - a.ts);
-  const day = (ts) => new Date(ts).toISOString().slice(0, 10);
+  const day = (ts) => localDay(ts);
   const avgAcc = Math.round(rows.reduce((a, h) => a + h.accuracy, 0) / rows.length);
   const totalTime = rows.reduce((a, h) => a + (h.durationSec || 0), 0);
   const streak = Store.settings().streak || { count: 0, best: 0 };

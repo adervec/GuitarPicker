@@ -7,16 +7,11 @@ import { INSTRUMENTS } from "./notes.js";
 
 const GAMES = ["Interval ear training", "Chord identification", "Note naming", "Scale spelling"];
 
-export function todayKey(date = new Date()) {
-  return date.toISOString().slice(0, 10); // YYYY-MM-DD
-}
+import { localDay, dayBefore, dayStart } from "../day.js";
+export { dayBefore };
 
-/** The calendar day before a "YYYY-MM-DD" key. */
-export function dayBefore(key) {
-  const d = new Date(key);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
+/** Today's local "YYYY-MM-DD". */
+export function todayKey(date = new Date()) { return localDay(date); }
 
 /**
  * Interpret a stored streak ({count,best,lastDay}) relative to `today`.
@@ -39,9 +34,9 @@ export function streakStatus(streak, today = todayKey()) {
  * from before today counts, so playing the pick doesn't swap it mid-day.
  */
 export function rotateSong(songs, history, seed, key = todayKey()) {
-  const dayStart = Date.parse(key);
+  const start = dayStart(key).getTime();
   const last = new Map();
-  for (const h of history) if (h.ts < dayStart) last.set(h.songId, Math.max(last.get(h.songId) || 0, h.ts));
+  for (const h of history) if (h.ts < start) last.set(h.songId, Math.max(last.get(h.songId) || 0, h.ts));
   const order = songs.map((s, i) => ({ s, at: last.get(s.id) || 0, tie: (i + seed) % songs.length }));
   order.sort((a, b) => a.at - b.at || a.tie - b.tie);
   return order[0].s;
