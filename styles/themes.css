@@ -3,7 +3,7 @@
   --radius: 14px;
   --radius-sm: 9px;
   --gap: 16px;
-  --font: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  --font: var(--app-font, "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif);
   --mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
   --speed: 160ms;
 

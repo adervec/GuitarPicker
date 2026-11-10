@@ -84,6 +84,8 @@ export default async function settings(ctx) {
         options: instrumentOptions(),
         onchange: (v) => Store.setSetting("instrument", v) }),
     ]),
+    // shared picker from https://adervec.github.io/font.js (el() cannot make hyphenated tags)
+    el("div", { style: { marginTop: "12px" } }, [document.createElement("app-font-picker")]),
     el("p.muted", { style: { margin: "12px 0 0", fontSize: "13px" },
       html: "Customise your <b>player avatar</b>, <b>guitar</b>, and more app skins in the Locker." }),
     el("div.row", { style: { marginTop: "8px" } }, [
