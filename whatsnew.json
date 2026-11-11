@@ -2,6 +2,7 @@
   {
     "date": "2026-11-10",
     "items": [
+      "Practice coach replies (Progress → cowork) now wait for you to review them before they replace your current advice, and you can undo them.",
       "GuitarPicker starts in a light or dark skin to match your device, until you pick one yourself.",
       "Practising late in the evening now counts toward today's streak, wherever you live.",
       "Settings → Data has an Erase everything button. It removes GuitarPicker's data from this device and signs you out of sync. Your Google Drive copy stays.",

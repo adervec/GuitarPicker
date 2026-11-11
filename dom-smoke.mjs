@@ -156,6 +156,27 @@ for (const must of ["# GuitarPicker practice report", "Sessions: 2", "Average ac
   else { console.log(`  ✗ report missing "${must}"`); fail++; }
 }
 
+// cowork v2 coach channel: preview, apply returns JSON undo, undo restores
+{
+  const { coachChannel, coachBrief } = await import("./src/views/history.js");
+  const mem = new Map([["gp-coach-reply", "old advice"]]);
+  let shown = null;
+  const ch = coachChannel({ getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) }, (t) => { shown = t; });
+  const reply = { requestHash: "abc", reply: "Drill the G–C change." + "x".repeat(500) };
+  const rows = ch.preview(reply);
+  const r = ch.apply(reply, ["reply"]);
+  const applied = mem.get("gp-coach-reply") === reply.reply && shown === reply.reply;
+  const jsonUndo = JSON.parse(JSON.stringify(r.undo));
+  ch.undo(jsonUndo);
+  const checks = [
+    ["coach preview is one labelled row with the advice (≤400 chars)", rows.length === 1 && rows[0].id === "reply" && rows[0].detail.startsWith("Drill") && rows[0].detail.length === 400],
+    ["coach apply shows the advice and returns a summary", applied && r.summary === "new advice shown"],
+    ["coach undo (after a JSON round-trip) restores the old advice", mem.get("gp-coach-reply") === "old advice" && shown === "old advice"],
+    ["coach brief has markdown and data", /# GuitarPicker brief/.test(coachBrief(Store.historyFor()).markdown) && coachBrief([]).data.sessions === 0],
+  ];
+  for (const [name, cond] of checks) { if (cond) { console.log("  ✓ " + name); pass++; } else { console.log("  ✗ " + name); fail++; } }
+}
+
 // connected Google account shows its profile picture beside the name
 {
   const { accountChip } = await import("./src/views/settings.js");

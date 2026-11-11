@@ -62,11 +62,11 @@ export default function history(ctx) {
           "coach/INSTRUCTIONS.md": COWORK_INSTRUCTIONS,
         };
       },
-      apply: (_ch, reply) => {
-        const text = typeof reply === "string" ? reply : (reply?.reply ?? reply?.payload?.reply ?? JSON.stringify(reply, null, 2));
-        try { localStorage.setItem("gp-coach-reply", text); } catch { /* quota */ }
-        showReply(text);
-      },
+      apply: (_ch, reply) => coachChannel(localStorage, showReply).apply(reply),   // pre-v2 engines
+      // cowork v2 (house standard): review the advice before it replaces the current one; undo from the history
+      channels: { coach: coachChannel(localStorage, showReply) },
+      // the brief an agent can read without being asked anything
+      brief: () => coachBrief(Store.historyFor()),
     });
   });
 
@@ -174,6 +174,32 @@ function loadCowork() {
       head.appendChild(s);
     } catch { res(null); }
   });
+}
+const COACH_KEY = "gp-coach-reply";
+export function coachReplyText(reply) {
+  return typeof reply === "string" ? reply : (reply?.reply ?? reply?.payload?.reply ?? JSON.stringify(reply, null, 2));
+}
+/** The cowork v2 "coach" channel: preview the advice, show it, undo back to the previous advice. */
+export function coachChannel(storage, show) {
+  const read = () => { try { return storage.getItem(COACH_KEY) || ""; } catch { return ""; } };
+  const write = (text) => { try { storage.setItem(COACH_KEY, text); } catch { /* quota / private mode */ } show(text); };
+  return {
+    label: "Practice coach",
+    preview: (reply) => [{ id: "reply", label: "Show this advice (replaces the current one)", detail: coachReplyText(reply).slice(0, 400) }],
+    apply: (reply) => { const prev = read(); write(coachReplyText(reply)); return { summary: "new advice shown", undo: { prev } }; },
+    undo: (data) => write(data?.prev || ""),
+  };
+}
+/** BRIEF.md for agents: where practice stands, without being asked. */
+export function coachBrief(hist) {
+  const recent = hist.slice(0, 20);
+  const avg = recent.length ? Math.round(recent.reduce((a, h) => a + (h.accuracy || 0), 0) / recent.length) : 0;
+  const songs = [...new Set(recent.map((h) => h.songTitle).filter(Boolean))].slice(0, 5);
+  return {
+    markdown: `# GuitarPicker brief\n\n${hist.length} sessions logged. Last ${recent.length}: ${avg}% average accuracy.\n\n` +
+      `## Recently played\n\n${songs.map((s) => `- ${s}`).join("\n") || "- (nothing yet)"}\n`,
+    data: { app: "guitarpicker", generatedAt: new Date().toISOString(), sessions: hist.length, recentAccuracy: avg, recentSongs: songs },
+  };
 }
 function djb2(text) { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0; return h.toString(16); }
 const COWORK_INSTRUCTIONS = `# GuitarPicker — coach channel
