@@ -3,6 +3,7 @@ import { Store } from "../state.js";
 import { INSTRUMENTS } from "../music/notes.js";
 import { collectionStats, RARITIES } from "../cosmetics/index.js";
 import { localDay } from "../day.js";
+import { showCoworkIn, onCoachReply } from "../cowork.js";
 
 export default function history(ctx) {
   const { el: root, navigate } = ctx;
@@ -40,35 +41,16 @@ export default function history(ctx) {
     el("div.row", {}, [instSel, viewSel, el("div", { style: { flex: "1" } }), aiBtn]),
   ]));
 
-  // Folder cowork through the maker's shared panel (https://adervec.github.io/cowork.js, fs mode):
-  // the same Markdown report goes to coach/request.json in a folder you pick; an agent
-  // (CoworkSyncHub, Claude Desktop, a person) answers in coach/reply.json and it shows here.
+  // Folder cowork (src/cowork.js): the coach channel's advice shows here, and the practice-review
+  // channel's AI grades show on each session below. The one shared panel moves in while this view is open.
   const cwHost = el("div", { style: { marginBottom: "16px" } });
   const cwReply = el("pre.panel.tight", { style: { whiteSpace: "pre-wrap", display: "none" } });
   root.appendChild(cwHost); root.appendChild(cwReply);
   const showReply = (text) => { cwReply.textContent = text; cwReply.style.display = text ? "" : "none"; };
-  showReply(localStorage.getItem("gp-coach-reply") || "");
-  loadCowork().then((cw) => {
-    if (!cw || !cwHost.isConnected) return;
-    cw.mount(cwHost, {
-      app: "guitarpicker",
-      manifest: { protocol: "cowork-manifest", protocolVersion: 1, app: "guitarpicker",
-        channels: [{ name: "coach", request: ["coach/request.json"], instructions: "coach/INSTRUCTIONS.md", replyPath: "coach/reply.json" }] },
-      files: () => {
-        const payload = { report: buildProgressReport(Store.historyFor()) };
-        return {
-          "coach/request.json": { protocol: "guitarpicker-coach", protocolVersion: 1, kind: "coach-request",
-            generatedAt: new Date().toISOString(), requestHash: djb2(JSON.stringify(payload)), payload },
-          "coach/INSTRUCTIONS.md": COWORK_INSTRUCTIONS,
-        };
-      },
-      apply: (_ch, reply) => coachChannel(localStorage, showReply).apply(reply),   // pre-v2 engines
-      // cowork v2 (house standard): review the advice before it replaces the current one; undo from the history
-      channels: { coach: coachChannel(localStorage, showReply) },
-      // the brief an agent can read without being asked anything
-      brief: () => coachBrief(Store.historyFor()),
-    });
-  });
+  try { showReply(localStorage.getItem("gp-coach-reply") || ""); } catch { /* private mode */ }
+  onCoachReply(showReply);
+  const parkCowork = showCoworkIn(cwHost);
+  const offStore = Store.on((e) => { if (e.type === "history" && table.isConnected) renderAll(); });
 
   // cosmetics collection progress (independent of the session filters)
   root.appendChild(buildCollectionPanel(navigate));
@@ -152,7 +134,10 @@ export default function history(ctx) {
         el("td", { text: h.accuracy + "%" }),
         el("td", { text: h.maxStreak }),
         el("td", { html: h.passed ? `<span style="color:${getVar("--good")}">Pass</span>` : `<span style="color:${getVar("--bad")}">—</span>` }),
-      ])),
+      ])).flatMap((tr, i) => {
+        const r = display[i].aiReview;   // AI review sits BESIDE the app's score, never replacing it
+        return r ? [tr, el("tr.ai-review", {}, [el("td", { colSpan: 7 }, [aiReviewBlock(r)])])] : [tr];
+      }),
     ]);
     table.appendChild(t);
   }
@@ -160,58 +145,17 @@ export default function history(ctx) {
   // re-draw charts on resize
   const onResize = () => renderAll();
   window.addEventListener("resize", onResize);
-  return () => window.removeEventListener("resize", onResize);
+  return () => { window.removeEventListener("resize", onResize); offStore(); onCoachReply(null); parkCowork(); };
 }
 
-function loadCowork() {
-  if (window.cowork) return Promise.resolve(window.cowork);
-  const head = document.head || document.documentElement;   // the DOM smoke test has no <head>
-  if (!head || typeof head.appendChild !== "function") return Promise.resolve(null);
-  return new Promise((res) => {
-    try {
-      const s = document.createElement("script"); s.src = "https://adervec.github.io/cowork.js"; s.async = true;
-      s.onload = () => res(window.cowork || null); s.onerror = () => res(null);
-      head.appendChild(s);
-    } catch { res(null); }
-  });
+/** One AI practice review, shown under its session row. */
+function aiReviewBlock(r) {
+  const items = (label, xs) => (xs?.length ? el("div", { style: { marginTop: "4px" } }, [el("b", { text: label + ": " }), el("span", { text: xs.join(" · ") })]) : null);
+  return el("div.muted", { style: { fontSize: "13px", lineHeight: "1.45", padding: "2px 0 6px" } }, [
+    el("div", {}, [el("b", { text: `🤖 AI review: ${r.grade || "?"}` }), el("span", { text: r.summary ? " — " + r.summary : "" })]),
+    items("Strengths", r.strengths), items("Fix", r.fixes), r.next ? items("Next", [r.next]) : null,
+  ]);
 }
-const COACH_KEY = "gp-coach-reply";
-export function coachReplyText(reply) {
-  return typeof reply === "string" ? reply : (reply?.reply ?? reply?.payload?.reply ?? JSON.stringify(reply, null, 2));
-}
-/** The cowork v2 "coach" channel: preview the advice, show it, undo back to the previous advice. */
-export function coachChannel(storage, show) {
-  const read = () => { try { return storage.getItem(COACH_KEY) || ""; } catch { return ""; } };
-  const write = (text) => { try { storage.setItem(COACH_KEY, text); } catch { /* quota / private mode */ } show(text); };
-  return {
-    label: "Practice coach",
-    preview: (reply) => [{ id: "reply", label: "Show this advice (replaces the current one)", detail: coachReplyText(reply).slice(0, 400) }],
-    apply: (reply) => { const prev = read(); write(coachReplyText(reply)); return { summary: "new advice shown", undo: { prev } }; },
-    undo: (data) => write(data?.prev || ""),
-  };
-}
-/** BRIEF.md for agents: where practice stands, without being asked. */
-export function coachBrief(hist) {
-  const recent = hist.slice(0, 20);
-  const avg = recent.length ? Math.round(recent.reduce((a, h) => a + (h.accuracy || 0), 0) / recent.length) : 0;
-  const songs = [...new Set(recent.map((h) => h.songTitle).filter(Boolean))].slice(0, 5);
-  return {
-    markdown: `# GuitarPicker brief\n\n${hist.length} sessions logged. Last ${recent.length}: ${avg}% average accuracy.\n\n` +
-      `## Recently played\n\n${songs.map((s) => `- ${s}`).join("\n") || "- (nothing yet)"}\n`,
-    data: { app: "guitarpicker", generatedAt: new Date().toISOString(), sessions: hist.length, recentAccuracy: avg, recentSongs: songs },
-  };
-}
-function djb2(text) { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0; return h.toString(16); }
-const COWORK_INSTRUCTIONS = `# GuitarPicker — coach channel
-
-Read \`coach/request.json\`: \`payload.report\` is the player's practice report (Markdown:
-sessions, accuracy, per-song bests, streaks). Write \`coach/reply.json\`:
-
-\`\`\`json
-{ "requestHash": "<copy the request's requestHash verbatim>",
-  "reply": "<coaching in markdown — what's improving, what to drill next (name songs / drills / instruments from the report), one concrete plan for the week. Encouraging, specific, short.>" }
-\`\`\`
-`;
 
 // Markdown practice report for AI analysis (Claude / Claude Cowork). Plain
 // tables, newest first — no app knowledge needed to read it.

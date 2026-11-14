@@ -15,6 +15,7 @@ import { renderAvatar } from "../cosmetics/index.js";
 import { buildLyricTimeline, activeAt } from "../karaoke/timeline.js";
 import { lineFillHTML, escapeHTML as esc } from "../karaoke/render.js";
 import { Midi } from "../audio/midi.js";
+import { sendPracticeReview } from "../cowork.js";
 
 const LEAD_IN = 3.0;          // count-in seconds before notes start
 const HIT_PAD = 0.16;         // detection window pad around a note
@@ -655,8 +656,13 @@ export default async function play(ctx) {
       ts: Date.now(), songId: song.id, songTitle: song.title, instrument: playInst,
       score, accuracy: acc, maxStreak, passed, durationSec: Math.round(duration),
       notes: { ...counts },
+      grade,
+      // detail for the AI practice review: one letter per note (p/g/o/m) and the notes that went wrong most
+      judgments: notes.map((n) => (n.state === "pending" ? "m" : n.state[0])).join(""),
+      trouble: troubleNotes(notes),
     };
     Store.addHistory(entry);
+    sendPracticeReview();   // the session just ended: offer it for AI review (no-op without a cowork folder)
     showBanner(grade, acc, passed, entry.coins || 0);
   }
 
@@ -699,6 +705,14 @@ export default async function play(ctx) {
 }
 
 // ---------- helpers ----------
+/** Note names that were played off or missed most, most first, at most 8: "E4 ×3". */
+function troubleNotes(notes) {
+  const n = new Map();
+  for (const x of notes) if (x.state === "off" || x.state === "miss" || x.state === "pending") {
+    const k = describeMidiSet(x.midi); n.set(k, (n.get(k) || 0) + 1);
+  }
+  return [...n].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, c]) => `${k} ×${c}`);
+}
 function wrapNarrow(node) { node.style.minWidth = "150px"; return node; }
 function miniStat(num, label) {
   return el("div.stat", {}, [el("div.num", { text: String(num) }), el("div.lbl", { text: label })]);

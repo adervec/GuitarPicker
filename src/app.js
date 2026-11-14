@@ -3,6 +3,7 @@ import { Store } from "./state.js";
 import { el, clear } from "./ui/components.js";
 import { Audio } from "./audio/engine.js";
 import { SKINS } from "./cosmetics/skins.js";
+import { startCowork } from "./cowork.js";
 
 const NAV = [
   { sep: "Play" },
@@ -166,6 +167,7 @@ function init() {
   if (!location.hash) location.hash = "#/home";
   refreshCrumb();
   router();
+  startCowork();   // hidden cowork panel: reconnects the folder, runs schedules, sends finished runs for review
 }
 
 init();

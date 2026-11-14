@@ -158,7 +158,7 @@ for (const must of ["# GuitarPicker practice report", "Sessions: 2", "Average ac
 
 // cowork v2 coach channel: preview, apply returns JSON undo, undo restores
 {
-  const { coachChannel, coachBrief } = await import("./src/views/history.js");
+  const { coachChannel, coachBrief } = await import("./src/cowork.js");
   const mem = new Map([["gp-coach-reply", "old advice"]]);
   let shown = null;
   const ch = coachChannel({ getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) }, (t) => { shown = t; });
@@ -173,6 +173,45 @@ for (const must of ["# GuitarPicker practice report", "Sessions: 2", "Average ac
     ["coach apply shows the advice and returns a summary", applied && r.summary === "new advice shown"],
     ["coach undo (after a JSON round-trip) restores the old advice", mem.get("gp-coach-reply") === "old advice" && shown === "old advice"],
     ["coach brief has markdown and data", /# GuitarPicker brief/.test(coachBrief(Store.historyFor()).markdown) && coachBrief([]).data.sessions === 0],
+  ];
+  for (const [name, cond] of checks) { if (cond) { console.log("  ✓ " + name); pass++; } else { console.log("  ✗ " + name); fail++; } }
+}
+
+// house standard 18: practice-review channel grades finished runs with AI, beside the app's score
+{
+  const { practiceReviewRequest, reviewChannel, sessionsToReview, REVIEW_INSTRUCTIONS } = await import("./src/cowork.js");
+  const t0 = Date.now() + 1000;
+  Store.addHistory({ ts: t0, songId, songTitle: "Review me", instrument: "acoustic-guitar", score: 5000, accuracy: 74, maxStreak: 9, passed: true,
+    durationSec: 40, notes: { perfect: 5, good: 2, off: 1, miss: 2 }, grade: "C", judgments: "ppgpmpopmg", trouble: ["E4 ×2"] });
+  const req = practiceReviewRequest(Store.historyFor());
+  const s0 = req.payload.sessions.find((s) => s.sessionId === String(t0));
+  const ch = reviewChannel(Store);
+  const reply = { requestHash: req.requestHash, reviews: [
+    { sessionId: String(t0), grade: "B-", summary: "Solid start, the ending slipped.", strengths: ["clean opening"], fixes: ["E4 on the D string"], next: "Loop bars 3–4 at 70%" },
+    { sessionId: "999", grade: "A", summary: "not a real session" },
+  ] };
+  const rows = ch.preview(reply);
+  const r = ch.apply(reply, [String(t0)]);
+  const saved = Store.historyFor().find((h) => h.ts === t0);
+  const kept = saved.aiReview?.grade === "B-" && saved.accuracy === 74 && saved.grade === "C";
+  const pendingAfter = sessionsToReview(Store.historyFor()).some((h) => h.ts === t0);
+  // the review shows on that session in Progress
+  const hv = await import("./src/views/history.js");
+  const root = new El("div");
+  const cleanup = hv.default({ el: root, params: [], navigate: () => {}, store: Store });
+  const text = (n) => (n.textContent || "") + (n.children || []).map(text).join(" ");
+  const shown = text(root).includes("AI review: B-") && text(root).includes("Loop bars 3–4 at 70%");
+  if (typeof cleanup === "function") cleanup();
+  ch.undo(JSON.parse(JSON.stringify(r.undo)));
+  const checks = [
+    ["review request carries the run, its per-note detail and the app's own score",
+      s0 && s0.judgments === "ppgpmpopmg" && s0.appScore.accuracy === 74 && s0.appScore.grade === "C" && s0.trouble[0] === "E4 ×2" && req.payload.recent.length > 0 && /^[0-9a-f]+$/.test(req.requestHash)],
+    ["review instructions spell out the rubric and reply shape", /Rubric/.test(REVIEW_INSTRUCTIONS) && /"reviews"/.test(REVIEW_INSTRUCTIONS) && /error\.json/.test(REVIEW_INSTRUCTIONS)],
+    ["review preview: one row per real session, unknown ids dropped", rows.length === 1 && rows[0].id === String(t0) && /B-/.test(rows[0].label) && /74%/.test(rows[0].label)],
+    ["review apply stores the AI grade beside (not over) the app's score", kept && r.summary === "1 practice review(s) added"],
+    ["a reviewed run isn't sent again", !pendingAfter],
+    ["the AI review shows on its session in Progress", shown],
+    ["review undo removes it", !Store.historyFor().find((h) => h.ts === t0).aiReview],
   ];
   for (const [name, cond] of checks) { if (cond) { console.log("  ✓ " + name); pass++; } else { console.log("  ✗ " + name); fail++; } }
 }

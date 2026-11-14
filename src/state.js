@@ -105,6 +105,8 @@ export const Store = {
     // maker-portal character sheet (same-origin localStorage; stays in this browser)
     try { const k = "portal-activity", a = JSON.parse(localStorage.getItem(k) || "[]"); a.push([Math.round(Date.now() / 1000), "GuitarPicker", "practice", Math.max(1, Math.round((entry.durationSec || 120) / 600))]); localStorage.setItem(k, JSON.stringify(a.slice(-2000))); } catch (_) { /* quota — ignore */ }
     if (state.history.length > 1000) state.history.length = 1000;
+    // per-note detail is for AI review of recent runs; the origin's storage is shared, so only the newest 50 keep it
+    for (let i = 50; i < state.history.length; i++) delete state.history[i].judgments;
     // award xp on the instrument
     const inst = entry.instrument || "acoustic-guitar";
     const p = (state.progress[inst] ||= { xp: 0, drills: {}, courses: {} });
@@ -119,6 +121,15 @@ export const Store = {
     this.recordPracticeDay(localDay(entry.ts || Date.now()));
     persist();
     this.emit({ type: "history", entry });
+  },
+  /** Store (or with null, remove) an AI review on a session, beside the app's own score. */
+  setAiReview(ts, review) {
+    const h = state.history.find((x) => x.ts === ts);
+    if (!h) return false;
+    if (review) h.aiReview = review; else delete h.aiReview;
+    persist();
+    this.emit({ type: "history" });
+    return true;
   },
   historyFor(instrument) {
     return instrument ? state.history.filter((h) => h.instrument === instrument) : state.history;
