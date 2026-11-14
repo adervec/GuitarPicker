@@ -39,6 +39,7 @@
           <div id="health-mini" class="health-mini hidden" title="Health"></div>
           <a id="coin-chip" class="coin-chip" href="#/locker" title="Coins — earn by playing, spend in the Locker">🪙 <b>0</b></a>
           <select id="theme-quick" title="Theme"></select>
+          <app-account title="Google Drive sync"></app-account>
         </div>
       </header>
       <section id="view"><!-- active view renders here --></section>
@@ -48,6 +49,7 @@
   <div id="toast-host"></div>
 
   <script type="module" src="src/app.js"></script>
+  <script>document.addEventListener('app-account-click', () => { location.hash = '#/settings'; });</script>
   <script>
     // PWA: enables install + offline; skipped on file:// where SW is unavailable
     if ("serviceWorker" in navigator && location.protocol.startsWith("http"))

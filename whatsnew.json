@@ -1,30 +1,36 @@
 [
-  {
-    "date": "2026-11-10",
-    "items": [
-      "Practice coach replies (Progress → cowork) now wait for you to review them before they replace your current advice, and you can undo them.",
-      "GuitarPicker starts in a light or dark skin to match your device, until you pick one yourself.",
-      "Practising late in the evening now counts toward today's streak, wherever you live.",
-      "Settings → Data has an Erase everything button. It removes GuitarPicker's data from this device and signs you out of sync. Your Google Drive copy stays.",
-      "When sync is on, your Google profile picture shows next to your name."
-    ]
-  },
-  {
-    "date": "2026-11-09",
-    "items": [
-      "A new, easier-to-read font (Atkinson Hyperlegible), with a font choice under Settings."
-    ]
-  },
-  {
-    "date": "2026-11-07",
-    "items": [
-      "Practice mode: slow a song down, loop a hard section, and let the speed trainer bring it back up to full speed.",
-      "Bar lines on the note highway, with an option to light up the current bar.",
-      "Play with a MIDI keyboard, e-kit or MIDI guitar (turn it on in Settings).",
-      "Import MusicXML scores from MuseScore, TuxGuitar or Guitar Pro.",
-      "The tuner shows every spot on the neck for the note you play, plus a Find the note game.",
-      "New sight-reading games for treble and bass clef.",
-      "Today's song now rotates to the one you've gone longest without playing, and a practice timer runs a warm-up-to-free-play routine."
-    ]
-  }
+ {
+  "date": "2026-11-13",
+  "items": [
+   "While Google Drive sync is on, your Google picture now sits at the top of the app on every screen, so you can always see which account is syncing. Tap it to open the sync settings."
+  ]
+ },
+ {
+  "date": "2026-11-10",
+  "items": [
+   "Practice coach replies (Progress → cowork) now wait for you to review them before they replace your current advice, and you can undo them.",
+   "GuitarPicker starts in a light or dark skin to match your device, until you pick one yourself.",
+   "Practising late in the evening now counts toward today's streak, wherever you live.",
+   "Settings → Data has an Erase everything button. It removes GuitarPicker's data from this device and signs you out of sync. Your Google Drive copy stays.",
+   "When sync is on, your Google profile picture shows next to your name."
+  ]
+ },
+ {
+  "date": "2026-11-09",
+  "items": [
+   "A new, easier-to-read font (Atkinson Hyperlegible), with a font choice under Settings."
+  ]
+ },
+ {
+  "date": "2026-11-07",
+  "items": [
+   "Practice mode: slow a song down, loop a hard section, and let the speed trainer bring it back up to full speed.",
+   "Bar lines on the note highway, with an option to light up the current bar.",
+   "Play with a MIDI keyboard, e-kit or MIDI guitar (turn it on in Settings).",
+   "Import MusicXML scores from MuseScore, TuxGuitar or Guitar Pro.",
+   "The tuner shows every spot on the neck for the note you play, plus a Find the note game.",
+   "New sight-reading games for treble and bass clef.",
+   "Today's song now rotates to the one you've gone longest without playing, and a practice timer runs a warm-up-to-free-play routine."
+  ]
+ }
 ]
