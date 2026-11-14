@@ -69,10 +69,10 @@ export default async function play(ctx) {
   const overlay = el("div.play-overlay");
   const scoreBox = el("div.hud-box", { html: scoreHTML(0, 100, 0, 1) });
   const songBox = el("div.hud-box", {}, [
-    el("div", { html: `<b>${song.title}</b>` }),
+    el("div", {}, [el("b", { text: song.title })]),   // song fields can come from an imported file: never markup
     el("div.muted", { style: { fontSize: "12px" }, html:
-      t("{artist} · key {key} · {bpm} BPM", { artist: song.artist, key: song.key, bpm: song.bpm }) +
-      (capo ? ` · <span class="capo-note" style="padding:2px 8px">🔼 ${t("Capo {capo}", { capo })}</span>` : "") }),
+      t("{artist} · key {key} · {bpm} BPM", { artist: esc(song.artist), key: esc(song.key), bpm: esc(song.bpm) }) +
+      (capo ? ` · <span class="capo-note" style="padding:2px 8px">🔼 ${t("Capo {capo}", { capo: esc(capo) })}</span>` : "") }),
     parts.length > 1 ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" },
       text: "🎯 " + t("Your part: {part}", { part: inst.name }) }) : null,
     (song.lyrics && song.lyrics.length)

@@ -216,6 +216,23 @@ for (const must of ["# GuitarPicker practice report", "Sessions: 2", "Average ac
   for (const [name, cond] of checks) { if (cond) { console.log("  ✓ " + name); pass++; } else { console.log("  ✗ " + name); fail++; } }
 }
 
+// house standard 22: an imported song's fields never become markup
+{
+  const evil = { ...Store.allUserSongs()[0], id: "evil-song", title: "<img src=x id=pwn-title>", artist: "<b id=pwn-artist>x</b>", key: "<i id=pwn-key>" };
+  Store.saveSong(evil);
+  const mod = await import("./src/views/play.js");
+  const root = new El("div");
+  const cleanup = await mod.default({ el: root, params: ["evil-song"], navigate: () => {}, store: Store, audio: (await import("./src/audio/engine.js")).Audio });
+  const html = (n) => (n.innerHTML || "") + (n.children || []).map(html).join("");
+  const text = (n) => (n.textContent || "") + (n.children || []).map(text).join("");
+  const out = html(root);
+  if (typeof cleanup === "function") cleanup();
+  Store.deleteSong("evil-song");
+  const ok1 = !/<img src=x|<b id=pwn|<i id=pwn/.test(out) && text(root).includes("<img src=x id=pwn-title>");
+  if (ok1) { console.log("  ✓ imported song title/artist/key render as text, not markup"); pass++; }
+  else { console.log("  ✗ imported song fields reached innerHTML unescaped"); fail++; }
+}
+
 // connected Google account shows its profile picture beside the name
 {
   const { accountChip } = await import("./src/views/settings.js");

@@ -1,5 +1,12 @@
 [
  {
+  "date": "2026-11-14",
+  "items": [
+   "GuitarPicker now speaks 16 more languages: French, Spanish, Portuguese, Italian, Croatian, German, Chinese, Ukrainian, Esperanto, Swahili, Hindi, Bengali, Indonesian, Urdu, Farsi and Arabic. Pick one under the font settings in Settings. These are machine translations that no person has checked yet, so some wording may be off. Song names, the glossary and the instrument guide are still in English.",
+   "Dates and numbers now follow your language and region."
+  ]
+ },
+ {
   "date": "2026-11-13",
   "items": [
    "AI practice reviews: with a cowork folder connected, each finished run can get a deeper grade from an AI, with strengths, fixes and what to practise next. You review it before it's added, it shows under that run in Progress next to GuitarPicker's own score, and you can undo it.",
