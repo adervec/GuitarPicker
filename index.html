@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- house standard 22: every app shares adervec.github.io, so nothing runs that we did not ship -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://adervec.github.io https://accounts.google.com; style-src 'self' 'unsafe-inline' https://adervec.github.io https://accounts.google.com; img-src 'self' blob: data: https://*.googleusercontent.com; media-src 'self' blob: data:; font-src 'self' data: https://adervec.github.io; connect-src 'self' https://adervec.github.io https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; manifest-src 'self'; worker-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'" />
   <title>GuitarPicker</title>
   <meta name="theme-color" content="#0b0f1a" />
   <meta name="app-whatsnew" content="whatsnew.json" />
@@ -50,11 +52,6 @@
   <div id="toast-host"></div>
 
   <script type="module" src="src/app.js"></script>
-  <script>document.addEventListener('app-account-click', () => { location.hash = '#/settings'; });</script>
-  <script>
-    // PWA: enables install + offline; skipped on file:// where SW is unavailable
-    if ("serviceWorker" in navigator && location.protocol.startsWith("http"))
-      navigator.serviceWorker.register("sw.js");
-  </script>
+  <script src="src/boot.js"></script>
 </body>
 </html>

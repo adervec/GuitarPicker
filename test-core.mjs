@@ -498,6 +498,15 @@ function fakeCtx() {
   }
   ok(`i18n: all 16 languages cover every one of ${Object.keys(en).length} strings with placeholders intact` + (bad.length ? ` (first gaps: ${bad.slice(0, 3).join("; ")})` : ""), !bad.length);
   ok("i18n: index.html declares the locales", readFileSync("index.html", "utf8").includes('<meta name="app-locales" content="locales/"'));
+  const html = readFileSync("index.html", "utf8");
+  const csp = (html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1] || "";
+  const scriptSrc = (csp.match(/script-src ([^;]+)/) || [])[1] || "";
+  ok("security: a CSP with default-src 'none', no inline or eval scripts, no plugins, no base or form targets",
+    /default-src 'none'/.test(csp) && scriptSrc && !/unsafe-(inline|eval)/.test(scriptSrc) &&
+    /object-src 'none'/.test(csp) && /base-uri 'none'/.test(csp) && /form-action 'none'/.test(csp));
+  ok("security: index.html has no inline <script> (the CSP would block it)", !/<script(?![^>]*\bsrc=)[^>]*>/.test(html));
+  ok("security: every script index.html loads is allowed by the CSP",
+    [...html.matchAll(/<script[^>]*\bsrc="([^"]+)"/g)].every(([, src]) => !/^https?:/.test(src) || scriptSrc.split(/\s+/).some((s) => s.startsWith("https://") && src.startsWith(s))));
   ok("i18n: the deploy publishes locales/", /cp -r [^\n]*\blocales\b/.test(readFileSync(".github/workflows/deploy.yml", "utf8")));
 }
 

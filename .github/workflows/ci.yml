@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+# Least privilege: the checks only read the repo.
+permissions:
+  contents: read
+
 # A newer commit on the same branch/PR supersedes an in-flight run.
 concurrency:
   group: ci-${{ github.ref }}
