@@ -4,6 +4,7 @@ import { Audio } from "../audio/engine.js";
 import { detectPitch, PitchTracker } from "../audio/pitch.js";
 import { Synth } from "../audio/synth.js";
 import { INSTRUMENTS, instrumentOptions, ALT_TUNINGS, STRING_LABELS, midiToFreq, midiToName, centsTo, freqToMidi } from "../music/notes.js";
+import { t, fmt } from "../i18n.js";
 
 export default async function tuner(ctx) {
   const { el: root } = ctx;
@@ -17,16 +18,16 @@ export default async function tuner(ctx) {
   const tracker = new PitchTracker();
   const buf = new Float32Array(2048);
 
-  root.appendChild(pageHead("Tuner", "Play one string at a time. GuitarPicker detects pitch and tells you when you're out of tune."));
+  root.appendChild(pageHead(t("Tuner"), t("Play one string at a time. GuitarPicker detects pitch and tells you when you're out of tune.")));
 
   // controls
-  const instSel = select({ label: "Instrument", value: instrument,
+  const instSel = select({ label: t("Instrument"), value: instrument,
     options: instrumentOptions((i) => i.strings.length),
     onchange: (v) => { instrument = v; tuningName = "standard"; rebuildTuning(); } });
-  const tuningSel = select({ label: "Tuning", value: tuningName, options: tuningOptions(),
+  const tuningSel = select({ label: t("Tuning"), value: tuningName, options: tuningOptions(),
     onchange: (v) => { tuningName = v; rebuildTuning(); } });
 
-  const startBtn = el("button.btn.primary", { onclick: toggle }, ["Start tuning"]);
+  const startBtn = el("button.btn.primary", { onclick: toggle }, [t("Start tuning")]);
   root.appendChild(el("div.panel", {}, [
     el("div.grid", { style: { gridTemplateColumns: "1fr 1fr auto" } }, [instSel, tuningSel,
       el("div.col", { style: { justifyContent: "flex-end" } }, [startBtn])]),
@@ -34,7 +35,7 @@ export default async function tuner(ctx) {
 
   // display
   const noteEl = el("div.tuner-note", { html: "—" });
-  const freqEl = el("div.tuner-freq", { text: "Play a note…" });
+  const freqEl = el("div.tuner-freq", { text: t("Play a note…") });
   const needle = el("div.tuner-needle");
   const verdict = el("div.tuner-verdict", { text: "" });
   const meter = el("div.tuner-meter", {}, [
@@ -44,7 +45,7 @@ export default async function tuner(ctx) {
   const strings = el("div.string-row");
 
   root.appendChild(el("div.panel.tuner-display", {}, [noteEl, freqEl, meter, verdict,
-    el("p.muted", { style: { marginTop: "14px" }, text: "Select a string to lock the target, or leave on Auto." }),
+    el("p.muted", { style: { marginTop: "14px" }, text: t("Select a string to lock the target, or leave on Auto.") }),
     strings,
   ]));
 
@@ -56,14 +57,14 @@ export default async function tuner(ctx) {
   const gameBtn = el("button.btn", { onclick: () => {
     game = game ? null : { score: 0, target: null, heldSince: 0 };
     if (game) nextTarget();
-    gameBtn.textContent = game ? "Stop game" : "🎯 Find the note";
+    gameBtn.textContent = game ? t("Stop game") : "🎯 " + t("Find the note");
     gameBtn.classList.toggle("primary", !!game);
     if (game && !running) toggle();
     paintFretboard(-1);
-  } }, ["🎯 Find the note"]);
+  } }, ["🎯 " + t("Find the note")]);
   const fbPanel = el("div.panel", { style: { marginTop: "16px" } }, [
-    el("div.spread", {}, [el("h3", { text: "Fretboard", style: { margin: 0 } }), el("div.row", { style: { alignItems: "center", gap: "10px" } }, [gameInfo, gameBtn])]),
-    el("p.muted", { style: { fontSize: "12px" }, text: "Lights up every spot on the neck for the note you're playing. The game shows a random fret — play that exact note." }),
+    el("div.spread", {}, [el("h3", { text: t("Fretboard"), style: { margin: 0 } }), el("div.row", { style: { alignItems: "center", gap: "10px" } }, [gameInfo, gameBtn])]),
+    el("p.muted", { style: { fontSize: "12px" }, text: t("Lights up every spot on the neck for the note you're playing. The game shows a random fret — play that exact note.") }),
     fbWrap,
   ]);
   root.appendChild(fbPanel);
@@ -72,7 +73,8 @@ export default async function tuner(ctx) {
     const string = Math.floor(Math.random() * tuning.length), fret = Math.floor(Math.random() * 13);
     game.target = { string, fret, midi: tuning[string] + fret };
     game.heldSince = 0;
-    gameInfo.textContent = `Score ${game.score} · play ${midiToName(game.target.midi).full} (string ${tuning.length - string}, fret ${fret})`;
+    gameInfo.textContent = t("Score {score} · play {note} (string {string}, fret {fret})",
+      { score: game.score, note: midiToName(game.target.midi).full, string: tuning.length - string, fret });
   }
   function paintFretboard(midi) {
     const fretted = INSTRUMENTS[instrument]?.kind === "fretted";
@@ -99,7 +101,7 @@ export default async function tuner(ctx) {
   function rebuildStrings() {
     strings.innerHTML = "";
     const labels = STRING_LABELS[instrument] || tuning.map((m) => midiToName(m).name);
-    strings.appendChild(stringChip("Auto", null));
+    strings.appendChild(stringChip(t("Auto"), null));
     tuning.forEach((m, i) => strings.appendChild(stringChip(labels[i] ?? midiToName(m).name, i)));
   }
   function stringChip(label, idx) {
@@ -118,12 +120,12 @@ export default async function tuner(ctx) {
   async function toggle() {
     if (running) { stop(); return; }
     try { await Audio.startMic(s.inputDeviceId); }
-    catch (e) { toast("Mic access failed: " + e.message, "bad"); return; }
-    running = true; startBtn.textContent = "Stop"; startBtn.classList.remove("primary");
+    catch (e) { toast(t("Mic access failed: {error}", { error: e.message }), "bad"); return; }
+    running = true; startBtn.textContent = t("Stop"); startBtn.classList.remove("primary");
     loop();
   }
   function stop() {
-    running = false; startBtn.textContent = "Start tuning"; startBtn.classList.add("primary");
+    running = false; startBtn.textContent = t("Start tuning"); startBtn.classList.add("primary");
     if (refStop) { refStop(); refStop = null; }
   }
 
@@ -149,7 +151,7 @@ export default async function tuner(ctx) {
 
   function idle() {
     noteEl.style.opacity = "0.4";
-    verdict.textContent = "Listening…"; verdict.className = "tuner-verdict";
+    verdict.textContent = t("Listening…"); verdict.className = "tuner-verdict";
     needle.style.transform = "rotate(0deg)";
     needle.style.background = "var(--muted)";
   }
@@ -169,20 +171,21 @@ export default async function tuner(ctx) {
     const cents = centsTo(freq, refMidi, s.a4);
     const nm = midiToName(refMidi);
     noteEl.innerHTML = `${nm.name}<small>${nm.octave}</small>`;
-    freqEl.textContent = `${freq.toFixed(1)} Hz · target ${midiToFreq(refMidi, s.a4).toFixed(1)} Hz`;
+    freqEl.textContent = t("{freq} Hz · target {target} Hz", {
+      freq: fmt.number(freq, { max: 1, min: 1 }), target: fmt.number(midiToFreq(refMidi, s.a4), { max: 1, min: 1 }) });
 
     const clamped = Math.max(-50, Math.min(50, cents));
     needle.style.transform = `rotate(${clamped * 0.9}deg)`;
 
     if (Math.abs(cents) <= 5) {
-      verdict.textContent = "✓ In tune"; verdict.className = "tuner-verdict intune";
+      verdict.textContent = "✓ " + t("In tune"); verdict.className = "tuner-verdict intune";
       needle.style.background = "var(--good)";
       markChip(refMidi, true);
     } else if (cents < 0) {
-      verdict.textContent = `♭ ${Math.abs(cents)}¢ flat — tune up`; verdict.className = "tuner-verdict flat";
+      verdict.textContent = "♭ " + t("{cents}¢ flat — tune up", { cents: Math.abs(cents) }); verdict.className = "tuner-verdict flat";
       needle.style.background = "var(--warn)"; markChip(refMidi, false);
     } else {
-      verdict.textContent = `♯ ${cents}¢ sharp — tune down`; verdict.className = "tuner-verdict sharp";
+      verdict.textContent = "♯ " + t("{cents}¢ sharp — tune down", { cents }); verdict.className = "tuner-verdict sharp";
       needle.style.background = "var(--warn)"; markChip(refMidi, false);
     }
   }
@@ -208,7 +211,7 @@ export function fretboardSVG(tuning, midi, target) {
   const w = x0 + cw * (FRETS + 0.5), h = y0 * 2 + rh * (n - 1) + 14;
   const sy = (si) => y0 + (n - 1 - si) * rh;   // highest string on top, like tab
   const fx = (f) => (f === 0 ? x0 - 14 : x0 + (f - 0.5) * cw);
-  let out = `<svg viewBox="0 0 ${w} ${h}" width="${w}" style="max-width:100%;display:block" role="img" aria-label="Fretboard">`;
+  let out = `<svg viewBox="0 0 ${w} ${h}" width="${w}" style="max-width:100%;display:block" role="img" aria-label="${t("Fretboard")}">`;
   for (const f of [3, 5, 7, 9]) out += `<circle cx="${fx(f)}" cy="${h - 7}" r="3" fill="var(--muted)"/>`;
   out += `<circle cx="${fx(12) - 5}" cy="${h - 7}" r="3" fill="var(--muted)"/><circle cx="${fx(12) + 5}" cy="${h - 7}" r="3" fill="var(--muted)"/>`;
   for (let f = 0; f <= FRETS; f++) out += `<line x1="${x0 + f * cw}" y1="${sy(n - 1)}" x2="${x0 + f * cw}" y2="${sy(0)}" stroke="var(--line)" stroke-width="${f ? 1 : 4}"/>`;

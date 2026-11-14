@@ -6,6 +6,7 @@
   <title>GuitarPicker</title>
   <meta name="theme-color" content="#0b0f1a" />
   <meta name="app-whatsnew" content="whatsnew.json" />
+  <meta name="app-locales" content="locales/" />
   <link rel="icon" type="image/svg+xml" href="icons/logo.svg" />
   <link rel="manifest" href="manifest.json" />
   <!-- house font: Atkinson Hyperlegible by default, reader-changeable under Settings -->
@@ -20,12 +21,12 @@
         <div class="brand-mark"><img src="icons/logo.svg" alt="GuitarPicker" width="34" height="34" style="display:block;border-radius:8px" /></div>
         <div class="brand-text">
           <strong>GuitarPicker</strong>
-          <span>learn · play · grow</span>
+          <span data-t>learn · play · grow</span>
         </div>
       </div>
       <nav id="nav"></nav>
       <div class="sidebar-foot">
-        <div id="io-indicator" class="io-indicator" title="Input / output devices">
+        <div id="io-indicator" class="io-indicator" data-t-attr="title" title="Input / output devices">
           <span class="io-row"><span class="io-dot in"></span><span data-io="in">no mic</span></span>
           <span class="io-row"><span class="io-dot out"></span><span data-io="out">default out</span></span>
         </div>
@@ -36,10 +37,10 @@
       <header id="topbar">
         <div id="crumb"></div>
         <div class="topbar-right">
-          <div id="health-mini" class="health-mini hidden" title="Health"></div>
-          <a id="coin-chip" class="coin-chip" href="#/locker" title="Coins — earn by playing, spend in the Locker">🪙 <b>0</b></a>
-          <select id="theme-quick" title="Theme"></select>
-          <app-account title="Google Drive sync"></app-account>
+          <div id="health-mini" class="health-mini hidden" data-t-attr="title" title="Health"></div>
+          <a id="coin-chip" class="coin-chip" href="#/locker" data-t-attr="title" title="Coins — earn by playing, spend in the Locker">🪙 <b>0</b></a>
+          <select id="theme-quick" data-t-attr="title" title="Theme"></select>
+          <app-account data-t-attr="title" title="Google Drive sync"></app-account>
         </div>
       </header>
       <section id="view"><!-- active view renders here --></section>

@@ -6,6 +6,7 @@ import { fmtTime } from "../ui/components.js";
 import { dailyActivities, todayKey, streakStatus } from "../music/daily.js";
 import { composeAvatar, composeGuitar, avatarLoadout, guitarLoadout } from "../cosmetics/index.js";
 import { Synth } from "../audio/synth.js";
+import { t } from "../i18n.js";
 
 export default function home(ctx) {
   const { el: root, navigate } = ctx;
@@ -27,7 +28,7 @@ export default function home(ctx) {
   const tunable = (INSTRUMENTS[inst]?.strings.length || 0) > 0;
   const fretted = INSTRUMENTS[inst]?.kind === "fretted";
 
-  root.appendChild(pageHead("Welcome back 🎵", "Pick up where you left off, or explore something new."));
+  root.appendChild(pageHead(t("Welcome back") + " 🎵", t("Pick up where you left off, or explore something new.")));
 
   // hero / continue
   const recent = hist[0];
@@ -35,7 +36,7 @@ export default function home(ctx) {
   // Switching instrument here (not buried in Settings) is what keeps this page
   // about whatever you actually play; everything below keys off it.
   const instSel = select({
-    label: "Current instrument", value: inst,
+    label: t("Current instrument"), value: inst,
     options: instrumentOptions(),
     onchange: (v) => { Store.setSetting("instrument", v); clear(root); home(ctx); },
   });
@@ -43,16 +44,16 @@ export default function home(ctx) {
     el("div.spread", {}, [
       el("div", {}, [
         instSel,
-        el("div.muted", { style: { marginTop: "8px" }, text: `Level ${level} · ${prog.xp || 0} XP` }),
+        el("div.muted", { style: { marginTop: "8px" }, text: t("Level {level} · {xp} XP", { level, xp: prog.xp || 0 }) }),
         el("div", { style: { maxWidth: "320px", marginTop: "8px" } }, [progressBar(levelFrac)]),
       ]),
       el("div.row", {}, [
         recentSong && el("button.btn.primary.lg", { onclick: () => navigate(`#/play/${recentSong.id}`) },
-          [`▶ Continue: ${recentSong.title}`]),
-        el("button.btn.lg", { onclick: () => navigate("#/library") }, ["Browse songs"]),
+          ["▶ " + t("Continue: {song}", { song: recentSong.title })]),
+        el("button.btn.lg", { onclick: () => navigate("#/library") }, [t("Browse songs")]),
         tunable
-          ? el("button.btn.lg", { onclick: () => navigate("#/tuner") }, ["🎚️ Tune up"])
-          : el("button.btn.lg", { onclick: () => navigate("#/instruments") }, ["📖 Instrument guide"]),
+          ? el("button.btn.lg", { onclick: () => navigate("#/tuner") }, ["🎚️ " + t("Tune up")])
+          : el("button.btn.lg", { onclick: () => navigate("#/instruments") }, ["📖 " + t("Instrument guide")]),
       ]),
     ]),
   ]));
@@ -70,27 +71,27 @@ export default function home(ctx) {
         // a drummer and call it "your instrument".
         fretted ? el("div", { style: { width: "66px", height: "150px", flex: "none" }, html: composeGuitar(guitarLoadout(), getVar("--accent")) }) : null,
         el("div", {}, [
-          el("h3", { text: "Your setup" }),
+          el("h3", { text: t("Your setup") }),
           el("div.muted", { text: fretted
-            ? "Personalise your avatar, your guitar, and the app skin."
-            : "Personalise your avatar and the app skin." }),
+            ? t("Personalise your avatar, your guitar, and the app skin.")
+            : t("Personalise your avatar and the app skin.") }),
         ]),
       ]),
-      el("button.btn.primary", { onclick: () => navigate("#/locker") }, ["🎨 Customize"]),
+      el("button.btn.primary", { onclick: () => navigate("#/locker") }, ["🎨 " + t("Customize")]),
     ]),
   ]));
 
   // stats
   root.appendChild(el("div.grid.cards", { style: { marginBottom: "16px" } }, [
-    stat(totalSessions, "Sessions"),
-    stat(avgAcc + "%", "Avg accuracy"),
-    stat(fmtTime(totalTime), "Time played"),
-    stat(bestStreak, "Best streak"),
+    stat(totalSessions, t("Sessions")),
+    stat(avgAcc + "%", t("Avg accuracy")),
+    stat(fmtTime(totalTime), t("Time played")),
+    stat(bestStreak, t("Best streak")),
   ]));
 
   // quick start songs — yours first, topped up with the rest so the row is never
   // empty for an instrument with only a song or two.
-  root.appendChild(el("h2", { text: "Jump back in" }));
+  root.appendChild(el("h2", { text: t("Jump back in") }));
   const forInst = songs.filter((s) => (s.instrument || "acoustic-guitar") === inst);
   const featured = [...forInst, ...songs.filter((s) => !forInst.includes(s))].slice(0, 6);
   root.appendChild(el("div.grid.cards", {}, featured.map((s) =>
@@ -103,13 +104,13 @@ export default function home(ctx) {
 
   // tips
   root.appendChild(el("div.panel", { style: { marginTop: "16px" } }, [
-    el("h3", { text: "Getting set up" }),
+    el("h3", { text: t("Getting set up") }),
     el("ul.muted", {}, [
-      el("li", { html: "Open <b>Settings</b> to pick your microphone & output device, and choose a theme." }),
+      el("li", { html: t("Open <b>Settings</b> to pick your microphone & output device, and choose a theme.") }),
       el("li", { html: tunable
-        ? "Use the <b>Tuner</b> before playing — it tells you when a string is out of tune."
-        : "New to this one? The <b>Instruments</b> guide covers how to hold it, first notes, and care." }),
-      el("li", { html: "Build a character and pick an app skin in the <b>Locker</b>." }),
+        ? t("Use the <b>Tuner</b> before playing — it tells you when a string is out of tune.")
+        : t("New to this one? The <b>Instruments</b> guide covers how to hold it, first notes, and care.") }),
+      el("li", { html: t("Build a character and pick an app skin in the <b>Locker</b>.") }),
     ]),
   ]));
 }
@@ -117,6 +118,7 @@ export default function home(ctx) {
 // Workout-style practice timer: a routine of timed blocks, a chime between
 // them, and today's practice minutes kept in settings.practiceLog[YYYY-MM-DD].
 // ponytail: one fixed routine; make the blocks editable if anyone asks.
+// i18n-keys: Warm-up | Technique / drills | Songs | Free play
 const ROUTINE = [
   { name: "Warm-up", min: 5 }, { name: "Technique / drills", min: 10 },
   { name: "Songs", min: 10 }, { name: "Free play", min: 5 },
@@ -126,12 +128,14 @@ function buildTimerPanel() {
   const logged = () => Math.round((Store.settings().practiceLog || {})[today] || 0);
   const status = el("div", { style: { fontSize: "18px", fontWeight: "700" } });
   const sub = el("div.muted", { style: { fontSize: "12px" } });
-  const btn = el("button.btn.primary", { onclick: toggle }, ["▶ Start routine"]);
+  const btn = el("button.btn.primary", { onclick: toggle }, ["▶ " + t("Start routine")]);
   let timer = null, block = 0, left = 0, lock = null, lastTick = 0;
 
   function paint() {
-    status.textContent = timer ? `${ROUTINE[block].name} — ${fmtTime(left)}` : `${ROUTINE.map((b) => `${b.name} ${b.min}′`).join(" · ")}`;
-    sub.textContent = `Practiced today: ${Math.round(logged() + pending / 60)} min` + (timer ? ` · block ${block + 1} of ${ROUTINE.length}` : "");
+    status.textContent = timer ? `${t(ROUTINE[block].name)} — ${fmtTime(left)}` : `${ROUTINE.map((b) => `${t(b.name)} ${b.min}′`).join(" · ")}`;
+    const mins = Math.round(logged() + pending / 60);
+    sub.textContent = t.n("Practiced today: {n} min", "Practiced today: {n} min", mins)
+      + (timer ? " · " + t("block {n} of {total}", { n: block + 1, total: ROUTINE.length }) : "");
   }
   let pending = 0;   // seconds not yet saved — persisting rewrites all state, so batch it
   function flush() {
@@ -141,13 +145,13 @@ function buildTimerPanel() {
   }
   function stop(msg) {
     clearInterval(timer); timer = null; lock?.release?.(); lock = null; flush();
-    btn.textContent = "▶ Start routine"; if (msg) toast(msg, "good"); paint();
+    btn.textContent = "▶ " + t("Start routine"); if (msg) toast(msg, "good"); paint();
   }
   async function toggle() {
     if (timer) return stop();
     block = 0; left = ROUTINE[0].min * 60; lastTick = Date.now();
     try { lock = await navigator.wakeLock?.request("screen"); } catch { /* no wake lock — fine */ }
-    btn.textContent = "■ Stop";
+    btn.textContent = "■ " + t("Stop");
     timer = setInterval(() => {
       if (!btn.isConnected) return stop();          // left the page
       const now = Date.now(), dt = (now - lastTick) / 1000; lastTick = now;
@@ -155,8 +159,8 @@ function buildTimerPanel() {
       if (pending >= 30) flush();
       if (left <= 0) {
         Synth.click({ accent: true });
-        if (++block >= ROUTINE.length) return stop("Routine complete 💪");
-        left = ROUTINE[block].min * 60; toast(`Next: ${ROUTINE[block].name}`, "");
+        if (++block >= ROUTINE.length) return stop(t("Routine complete") + " 💪");
+        left = ROUTINE[block].min * 60; toast(t("Next: {block}", { block: t(ROUTINE[block].name) }), "");
       }
       paint();
     }, 1000);
@@ -165,7 +169,7 @@ function buildTimerPanel() {
   paint();
   return el("div.panel", { style: { marginBottom: "16px" } }, [
     el("div.spread", {}, [
-      el("div", {}, [el("h2", { text: "⏱️ Practice timer", style: { margin: "0 0 4px" } }), status, sub]), btn,
+      el("div", {}, [el("h2", { text: "⏱️ " + t("Practice timer"), style: { margin: "0 0 4px" } }), status, sub]), btn,
     ]),
   ]);
 }
@@ -191,12 +195,14 @@ function buildDailyPanel(navigate, instrument) {
 
   function paintStreak() {
     const ss = streakStatus(Store.settings().streak, today);
-    streakChip.innerHTML = ss.count > 0
-      ? `🔥 <b>${ss.count}</b>-day streak${ss.best > ss.count ? ` · best ${ss.best}` : ""}`
-      : "🔥 Start your streak today!";
+    streakChip.innerHTML = "🔥 " + (ss.count > 0
+      ? (ss.best > ss.count
+        ? t.n("<b>{n}</b>-day streak · best {best}", "<b>{n}</b>-day streak · best {best}", ss.count, { best: ss.best })
+        : t.n("<b>{n}</b>-day streak", "<b>{n}</b>-day streak", ss.count))
+      : t("Start your streak today!"));
     streakChip.title = ss.practicedToday
-      ? "Practiced today — streak secured! Come back tomorrow to extend it."
-      : "Play a song today — even a failed run counts — to keep your streak alive. Ticking activities doesn't.";
+      ? t("Practiced today — streak secured! Come back tomorrow to extend it.")
+      : t("Play a song today — even a failed run counts — to keep your streak alive. Ticking activities doesn't.");
     streakChip.classList.toggle("cold", ss.count === 0);
   }
 
@@ -205,7 +211,7 @@ function buildDailyPanel(navigate, instrument) {
     // Count only today's actual activities: switching instrument can drop "Tune up"
     // from the list while it's still ticked in storage, which would read "5 / 4".
     const n = acts.filter((a) => done.has(a.id)).length;
-    counter.textContent = `${n} / ${acts.length} done`;
+    counter.textContent = t("{n} / {total} done", { n, total: acts.length });
     if (bar.firstChild) bar.firstChild.style.width = (acts.length ? n / acts.length : 0) * 100 + "%";
     paintStreak();
   }
@@ -216,14 +222,14 @@ function buildDailyPanel(navigate, instrument) {
       // NB: ticking an activity gives coins but does NOT touch the streak — only
       // actually playing a song does (Store.addHistory). Keeps it un-gameable.
       if (!rewarded.has(a.id)) { rewarded.add(a.id); Store.addCoins(DAILY_COIN); toast(`+${DAILY_COIN} 🪙 — ${a.title}`, "good"); }
-      if (acts.every((x) => done.has(x.id)) && !bonusPaid) { bonusPaid = true; Store.addCoins(DAILY_BONUS); toast(`Daily complete! +${DAILY_BONUS} 🪙 bonus`, "good"); }
+      if (acts.every((x) => done.has(x.id)) && !bonusPaid) { bonusPaid = true; Store.addCoins(DAILY_BONUS); toast(t("Daily complete! +{n} 🪙 bonus", { n: DAILY_BONUS }), "good"); }
     }
     persist(); paint(); refresh();
   }
 
   for (const a of acts) {
     const check = el("button.btn");
-    const paint = () => { check.textContent = done.has(a.id) ? "✓ Done" : `Mark done +${DAILY_COIN}🪙`; check.classList.toggle("primary", done.has(a.id)); };
+    const paint = () => { check.textContent = done.has(a.id) ? "✓ " + t("Done") : t("Mark done +{n}🪙", { n: DAILY_COIN }); check.classList.toggle("primary", done.has(a.id)); };
     check.addEventListener("click", () => toggle(a, paint));
     paint();
     list.appendChild(el("div.row", { style: { alignItems: "center", gap: "12px" } }, [
@@ -231,7 +237,7 @@ function buildDailyPanel(navigate, instrument) {
         el("div", { html: `${a.icon} <b>${a.title}</b>` }),
         el("div.muted", { style: { fontSize: "12px" }, text: a.desc }),
       ]),
-      el("button.btn.primary", { onclick: () => navigate(a.hash) }, ["Go"]),
+      el("button.btn.primary", { onclick: () => navigate(a.hash) }, [t("Go")]),
       check,
     ]));
   }
@@ -240,9 +246,9 @@ function buildDailyPanel(navigate, instrument) {
   return el("div.panel", { style: { marginBottom: "16px" } }, [
     el("div.spread", {}, [
       el("div.row", { style: { alignItems: "center", gap: "10px" } }, [
-        el("h2", { text: "🗓️ Today's Practice", style: { margin: "0" } }), streakChip,
+        el("h2", { text: "🗓️ " + t("Today's Practice"), style: { margin: "0" } }), streakChip,
       ]),
-      el("span.muted", {}, [counter, el("span", { html: ` · complete all for +${DAILY_BONUS} 🪙` })]),
+      el("span.muted", {}, [counter, el("span", { html: " · " + t("complete all for +{n} 🪙", { n: DAILY_BONUS }) })]),
     ]),
     bar, list,
   ]);

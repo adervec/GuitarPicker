@@ -4,39 +4,41 @@ import { INSTRUMENTS } from "../music/notes.js";
 import { collectionStats, RARITIES } from "../cosmetics/index.js";
 import { localDay } from "../day.js";
 import { showCoworkIn, onCoachReply } from "../cowork.js";
+import { t, fmt } from "../i18n.js";
 
 export default function history(ctx) {
   const { el: root, navigate } = ctx;
   let instFilter = "all", viewMode = "all";
 
-  root.appendChild(pageHead("Progress", "Track your improvement across instruments and sessions."));
+  root.appendChild(pageHead(t("Progress"), t("Track your improvement across instruments and sessions.")));
 
   const all = Store.historyFor();
   if (!all.length) {
     root.appendChild(el("div.panel.center", {}, [
-      el("h2", { text: "No sessions yet" }),
-      el("p.muted", { text: "Play a song or a drill and your results will trend here." }),
-      el("button.btn.primary", { onclick: () => navigate("#/library") }, ["Browse songs"]),
+      el("h2", { text: t("No sessions yet") }),
+      el("p.muted", { text: t("Play a song or a drill and your results will trend here.") }),
+      el("button.btn.primary", { onclick: () => navigate("#/library") }, [t("Browse songs")]),
     ]));
     root.appendChild(buildCollectionPanel(navigate));
     return;
   }
 
   const usedInstruments = [...new Set(all.map((h) => h.instrument))];
-  const instSel = select({ label: "Instrument", value: instFilter,
-    options: [{ value: "all", label: "All instruments" }, ...usedInstruments.map((i) => ({ value: i, label: INSTRUMENTS[i]?.name || i }))],
+  const instSel = select({ label: t("Instrument"), value: instFilter,
+    options: [{ value: "all", label: t("All instruments") }, ...usedInstruments.map((i) => ({ value: i, label: INSTRUMENTS[i]?.name || i }))],
     onchange: (v) => { instFilter = v; renderAll(); } });
-  const viewSel = select({ label: "View", value: viewMode,
-    options: [["all", "All sessions"], ["today", "Today"], ["bysong", "By song (best)"]].map(([v, l]) => ({ value: v, label: l })),
+  // i18n-keys: All sessions | Today | By song (best)
+  const viewSel = select({ label: t("View"), value: viewMode,
+    options: [["all", "All sessions"], ["today", "Today"], ["bysong", "By song (best)"]].map(([v, l]) => ({ value: v, label: t(l) })),
     onchange: (v) => { viewMode = v; renderAll(); } });
   const aiBtn = el("button.btn", {
-    title: "Download a Markdown practice report — drop it into Claude (claude.ai, Claude Desktop, or Cowork) for coaching and trend analysis",
+    title: t("Download a Markdown practice report — drop it into Claude (claude.ai, Claude Desktop, or Cowork) for coaching and trend analysis"),
     onclick: () => {
       const d = localDay();
       download(`guitarpicker-progress-${d}.md`, buildProgressReport(all), "text/markdown");
-      toast("Report saved — open it with Claude for analysis", "good");
+      toast(t("Report saved — open it with Claude for analysis"), "good");
     },
-  }, ["🤖 Export for Claude"]);
+  }, ["🤖 " + t("Export for Claude")]);
   root.appendChild(el("div.panel.tight", { style: { marginBottom: "16px" } }, [
     el("div.row", {}, [instSel, viewSel, el("div", { style: { flex: "1" } }), aiBtn]),
   ]));
@@ -58,19 +60,19 @@ export default function history(ctx) {
   const summary = el("div.grid.cards", { style: { marginBottom: "16px" } });
   root.appendChild(summary);
 
-  const charts = el("div.panel", {}, [el("h2", { text: "Trends" })]);
+  const charts = el("div.panel", {}, [el("h2", { text: t("Trends") })]);
   const accCanvas = el("canvas.chart");
   const scoreCanvas = el("canvas.chart");
   charts.append(
     el("div.legend", {}, [
-      el("span", { html: `<i style="background:${getVar("--good")}"></i>Accuracy %` }),
-      el("span", { html: `<i style="background:${getVar("--accent")}"></i>Score (scaled)` }),
+      el("span", { html: `<i style="background:${getVar("--good")}"></i>` + t("Accuracy %") }),
+      el("span", { html: `<i style="background:${getVar("--accent")}"></i>` + t("Score (scaled)") }),
     ]),
     accCanvas, scoreCanvas,
   );
   root.appendChild(charts);
 
-  const tableWrap = el("div.panel", {}, [el("h2", { text: "Sessions" })]);
+  const tableWrap = el("div.panel", {}, [el("h2", { text: t("Sessions") })]);
   const table = el("div");
   tableWrap.appendChild(table);
   root.appendChild(tableWrap);
@@ -96,12 +98,12 @@ export default function history(ctx) {
     const passes = rows.filter((h) => h.passed).length;
     const coinsThis = rows.reduce((a, h) => a + (h.coins || 0), 0);
     summary.append(
-      stat(rows.length, "Sessions"),
-      stat(avgAcc + "%", "Avg accuracy"),
-      stat(passes, "Passes"),
-      stat(best, "Best streak"),
-      stat(fmtTime(totalTime), "Time played"),
-      stat("🪙 " + coinsThis, "Coins earned"),
+      stat(rows.length, t("Sessions")),
+      stat(avgAcc + "%", t("Avg accuracy")),
+      stat(passes, t("Passes")),
+      stat(best, t("Best streak")),
+      stat(fmtTime(totalTime), t("Time played")),
+      stat("🪙 " + coinsThis, t("Coins earned")),
     );
 
     // charts (chronological)
@@ -124,22 +126,23 @@ export default function history(ctx) {
       }
       display = [...bySong.values()].sort((a, b) => b.score - a.score);
     }
-    const t = el("table.data", {}, [
-      el("tr", {}, ["When", "Song", "Instrument", "Score", "Accuracy", "Streak", "Result"].map((h) => el("th", { text: h }))),
+    // i18n-keys: When | Song | Instrument | Score | Accuracy | Streak | Result
+    const tbl = el("table.data", {}, [
+      el("tr", {}, ["When", "Song", "Instrument", "Score", "Accuracy", "Streak", "Result"].map((h) => el("th", { text: t(h) }))),
       ...display.slice(0, 200).map((h) => el("tr", {}, [
-        el("td", { text: new Date(h.ts).toLocaleString() }),
+        el("td", { text: fmt.dateTime(h.ts) }),
         el("td", { text: h.songTitle || h.songId }),
         el("td", { text: INSTRUMENTS[h.instrument]?.name || h.instrument }),
-        el("td", { text: h.score.toLocaleString() }),
+        el("td", { text: fmt.number(h.score, { max: 0 }) }),
         el("td", { text: h.accuracy + "%" }),
         el("td", { text: h.maxStreak }),
-        el("td", { html: h.passed ? `<span style="color:${getVar("--good")}">Pass</span>` : `<span style="color:${getVar("--bad")}">—</span>` }),
+        el("td", { html: h.passed ? `<span style="color:${getVar("--good")}">${t("Pass")}</span>` : `<span style="color:${getVar("--bad")}">—</span>` }),
       ])).flatMap((tr, i) => {
         const r = display[i].aiReview;   // AI review sits BESIDE the app's score, never replacing it
         return r ? [tr, el("tr.ai-review", {}, [el("td", { colSpan: 7 }, [aiReviewBlock(r)])])] : [tr];
       }),
     ]);
-    table.appendChild(t);
+    table.appendChild(tbl);
   }
 
   // re-draw charts on resize
@@ -152,8 +155,8 @@ export default function history(ctx) {
 function aiReviewBlock(r) {
   const items = (label, xs) => (xs?.length ? el("div", { style: { marginTop: "4px" } }, [el("b", { text: label + ": " }), el("span", { text: xs.join(" · ") })]) : null);
   return el("div.muted", { style: { fontSize: "13px", lineHeight: "1.45", padding: "2px 0 6px" } }, [
-    el("div", {}, [el("b", { text: `🤖 AI review: ${r.grade || "?"}` }), el("span", { text: r.summary ? " — " + r.summary : "" })]),
-    items("Strengths", r.strengths), items("Fix", r.fixes), r.next ? items("Next", [r.next]) : null,
+    el("div", {}, [el("b", { text: "🤖 " + t("AI review: {grade}", { grade: r.grade || "?" }) }), el("span", { text: r.summary ? " — " + r.summary : "" })]),
+    items(t("Strengths"), r.strengths), items(t("Fix"), r.fixes), r.next ? items(t("Next"), [r.next]) : null,
   ]);
 }
 
@@ -228,14 +231,16 @@ function buildCollectionPanel(navigate) {
 
   return el("div.panel", { style: { marginBottom: "16px" } }, [
     el("div.spread", {}, [
-      el("h2", { text: "🎨 Collection" }),
+      el("h2", { text: "🎨 " + t("Collection") }),
       el("div.row", { style: { gap: "12px", alignItems: "center" } }, [
-        el("span.muted", { html: `🪙 <b style="color:var(--warn)">${cs.coins.toLocaleString()}</b> coins` }),
-        navigate ? el("button.btn", { onclick: () => navigate("#/locker") }, ["Open Locker"]) : null,
+        el("span.muted", { html: "🪙 " + t.n("{coins} coin", "{coins} coins", cs.coins,
+          { coins: `<b style="color:var(--warn)">${fmt.number(cs.coins, { max: 0 })}</b>` }) }),
+        navigate ? el("button.btn", { onclick: () => navigate("#/locker") }, [t("Open Locker")]) : null,
       ]),
     ]),
     el("div.muted", { style: { margin: "4px 0 8px", fontSize: "13px" },
-      text: `${cs.owned} of ${cs.total} unlockable items collected (${Math.round(frac * 100)}%)` }),
+      text: t.n("{owned} of {n} unlockable item collected ({pct})", "{owned} of {n} unlockable items collected ({pct})", cs.total,
+        { owned: cs.owned, pct: Math.round(frac * 100) + "%" }) }),
     progressBar(frac),
     chips,
   ]);

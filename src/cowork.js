@@ -10,6 +10,7 @@
 import { Store } from "./state.js";
 import { localDay } from "./day.js";
 import { buildProgressReport } from "./views/history.js";
+import { t } from "./i18n.js";
 
 const COACH_KEY = "gp-coach-reply";
 const MAX_REVIEW = 10;   // runs per review request
@@ -25,8 +26,9 @@ export function coachChannel(storage, show) {
   const read = () => { try { return storage.getItem(COACH_KEY) || ""; } catch { return ""; } };
   const write = (text) => { try { storage.setItem(COACH_KEY, text); } catch { /* quota / private mode */ } show(text); };
   return {
-    label: "Practice coach",
-    preview: (reply) => [{ id: "reply", label: "Show this advice (replaces the current one)", detail: coachReplyText(reply).slice(0, 400) }],
+    // a getter: the engine reads it when it draws, so it follows the reader's language
+    get label() { return t("Practice coach"); },
+    preview: (reply) => [{ id: "reply", label: t("Show this advice (replaces the current one)"), detail: coachReplyText(reply).slice(0, 400) }],
     apply: (reply) => { const prev = read(); write(coachReplyText(reply)); return { summary: "new advice shown", undo: { prev } }; },
     undo: (data) => write(data?.prev || ""),
   };
@@ -71,11 +73,12 @@ export function reviewChannel(store = Store) {
   const byId = (id) => store.historyFor().find((h) => String(h.ts) === String(id));
   const reviews = (reply) => (Array.isArray(reply?.reviews) ? reply.reviews : []).filter((r) => r && byId(r.sessionId));
   return {
-    label: "Practice review (AI)",
+    get label() { return t("Practice review (AI)"); },
     schedule: "daily",
     preview: (reply) => reviews(reply).map((r) => {
       const h = byId(r.sessionId);
-      return { id: String(r.sessionId), label: `${h.songTitle || h.songId}, ${localDay(h.ts)}: AI grade ${str(r.grade, 8)} (app: ${h.accuracy}%${h.grade ? ", " + h.grade : ""})`,
+      const p = { song: h.songTitle || h.songId, day: localDay(h.ts), grade: str(r.grade, 8), accuracy: h.accuracy, appGrade: h.grade };
+      return { id: String(r.sessionId), label: h.grade ? t("{song}, {day}: AI grade {grade} (app: {accuracy}%, {appGrade})", p) : t("{song}, {day}: AI grade {grade} (app: {accuracy}%)", p),
         detail: str(r.summary, 400) };
     }),
     apply: (reply, accepted) => {
@@ -153,9 +156,9 @@ function config() {
         "coach/INSTRUCTIONS.md": COACH_INSTRUCTIONS,
       };
     },
-    apply: (ch, reply) => (ch === "practice-review" ? reviewChannel() : coachChannel(storage, (t) => showCoach(t))).apply(reply),   // pre-v2 engines
+    apply: (ch, reply) => (ch === "practice-review" ? reviewChannel() : coachChannel(storage, (text) => showCoach(text))).apply(reply),   // pre-v2 engines
     // cowork v2: review before applying (default on), undo from the history
-    channels: { coach: coachChannel(storage, (t) => showCoach(t)), "practice-review": reviewChannel() },
+    channels: { coach: coachChannel(storage, (text) => showCoach(text)), "practice-review": reviewChannel() },
     brief: () => coachBrief(Store.historyFor()),
   };
 }

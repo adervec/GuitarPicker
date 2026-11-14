@@ -11,6 +11,7 @@ import { parseLRC, toLRC } from "../music/lrc.js";
 import { framesToNotes } from "../music/transcribe.js";
 import { TrackPlayer } from "../audio/player.js";
 import { escapeHTML as escHTML } from "../karaoke/render.js";
+import { t } from "../i18n.js";
 
 const CIRCLE_KEYS = ["C", "G", "D", "A", "E", "B", "F#", "Db", "Ab", "Eb", "Bb", "F", "Am", "Em", "Dm"];
 
@@ -20,13 +21,13 @@ export default function editor(ctx) {
   if (params[0]) {
     const existing = findSong(params[0]);
     song = existing ? newSong({ ...existing }) : newSong();
-    if (existing && isBuiltin(existing.id)) { song.id = uid(); song.source = "manual"; song.title = existing.title + " (my version)"; }
+    if (existing && isBuiltin(existing.id)) { song.id = uid(); song.source = "manual"; song.title = t("{title} (my version)", { title: existing.title }); }
   } else song = newSong();
 
-  root.appendChild(pageHead(params[0] ? "Edit song" : "New song", "Set details, paint notes on the roll or type them in, attach audio, and save.", [
-    el("button.btn", { onclick: play }, ["▶ Test play"]),
-    el("button.btn", { onclick: exportSong }, ["⬆ Export"]),
-    el("button.btn.primary", { onclick: save }, ["💾 Save"]),
+  root.appendChild(pageHead(params[0] ? t("Edit song") : t("New song"), t("Set details, paint notes on the roll or type them in, attach audio, and save."), [
+    el("button.btn", { onclick: play }, ["▶ " + t("Test play")]),
+    el("button.btn", { onclick: exportSong }, ["⬆ " + t("Export")]),
+    el("button.btn.primary", { onclick: save }, ["💾 " + t("Save")]),
   ]));
 
   // ---------- metadata ----------
@@ -44,84 +45,85 @@ export default function editor(ctx) {
   }
 
   const meta = el("div.panel", {}, [
-    el("h2", { text: "Details" }),
+    el("h2", { text: t("Details") }),
     el("div.grid", { style: { gridTemplateColumns: "2fr 2fr 1fr 1fr" } }, [
-      field("Title", "title"),
-      field("Artist", "artist"),
+      field(t("Title"), "title"),
+      field(t("Artist"), "artist"),
       field("BPM", "bpm", "number"),
-      field("Capo", "capo", "number"),
+      field(t("Capo"), "capo", "number"),
     ]),
     el("div.grid", { style: { gridTemplateColumns: "1fr 1fr 1fr 1fr" } }, [
-      field("Instrument", "instrument", "select", instrumentOptions()),
-      field("Key", "key", "select", CIRCLE_KEYS.map((k) => ({ value: k, label: k }))),
-      field("Difficulty", "difficulty", "select", ["beginner", "intermediate", "advanced"].map((d) => ({ value: d, label: d }))),
-      field("Genre", "genre", "select", GENRES.map((g) => ({ value: g, label: g }))),
+      field(t("Instrument"), "instrument", "select", instrumentOptions()),
+      field(t("Key"), "key", "select", CIRCLE_KEYS.map((k) => ({ value: k, label: k }))),
+      // i18n-keys: beginner | intermediate | advanced
+      field(t("Difficulty"), "difficulty", "select", ["beginner", "intermediate", "advanced"].map((d) => ({ value: d, label: t(d) }))),
+      field(t("Genre"), "genre", "select", GENRES.map((g) => ({ value: g, label: g }))),
     ]),
   ]);
   root.appendChild(meta);
 
   // ---------- background ----------
-  const bgPanel = el("div.panel", {}, [el("h2", { text: "Background" })]);
+  const bgPanel = el("div.panel", {}, [el("h2", { text: t("Background") })]);
   root.appendChild(bgPanel);
-  const bgTypeSel = select({ label: "Type", value: song.background?.type || "solid",
-    options: [{ value: "solid", label: "Solid colour" }, { value: "animated", label: "Animated" }, { value: "slideshow", label: "Slideshow (images)" }],
+  const bgTypeSel = select({ label: t("Type"), value: song.background?.type || "solid",
+    options: [{ value: "solid", label: t("Solid colour") }, { value: "animated", label: t("Animated") }, { value: "slideshow", label: t("Slideshow (images)") }],
     onchange: (v) => { song.background = { type: v, value: v === "slideshow" ? [] : (v === "animated" ? "aurora" : "") }; renderBgValue(); } });
   const bgValueWrap = el("div");
   bgPanel.append(el("div.grid", { style: { gridTemplateColumns: "1fr 2fr" } }, [bgTypeSel, bgValueWrap]));
   renderBgValue();
   function renderBgValue() {
     bgValueWrap.innerHTML = "";
-    const t = song.background?.type;
-    if (t === "animated") {
+    const bgType = song.background?.type;
+    if (bgType === "animated") {
       bgValueWrap.appendChild(el("div.pill-row", {}, ANIMATED_BACKGROUNDS.map((b) =>
         el(`span.pill${song.background.value === b ? ".active" : ""}`, { text: b, onclick: () => {
           song.background.value = b; renderBgValue(); } }))));
-    } else if (t === "solid") {
+    } else if (bgType === "solid") {
       bgValueWrap.appendChild(el("div.pill-row", {}, SOLID_SWATCHES.map((sw) =>
-        el("span.pill", { text: sw || "theme default", style: sw ? { background: sw, color: "#fff" } : {},
+        el("span.pill", { text: sw || t("theme default"), style: sw ? { background: sw, color: "#fff" } : {},
           onclick: () => { song.background.value = sw; } }))));
     } else {
       bgValueWrap.appendChild(el("label.field", {}, [
-        el("span", { text: "Add images (used as a slideshow behind the notes)" }),
+        el("span", { text: t("Add images (used as a slideshow behind the notes)") }),
         el("input", { type: "file", accept: "image/*", multiple: true, onchange: (e) => loadImages(e.target.files) }),
       ]));
-      bgValueWrap.appendChild(el("div.muted", { id: "slide-count", text: `${(song.background.value || []).length} image(s)` }));
+      bgValueWrap.appendChild(el("div.muted", { id: "slide-count", text: t.n("{n} image", "{n} images", (song.background.value || []).length) }));
     }
   }
   function loadImages(files) {
     const arr = song.background.value = song.background.value || [];
     [...files].forEach((file) => { const r = new FileReader(); r.onload = () => { arr.push(r.result);
-      bgValueWrap.querySelector("#slide-count").textContent = `${arr.length} image(s)`; }; r.readAsDataURL(file); });
+      bgValueWrap.querySelector("#slide-count").textContent = t.n("{n} image", "{n} images", arr.length); }; r.readAsDataURL(file); });
   }
 
   // ---------- audio ----------
-  const audioPanel = el("div.panel", {}, [el("h2", { text: "Audio tracks (optional)" }),
-    el("p.muted", { text: "Attach a backing track and/or a vocal track. They're stored inside the song file." })]);
+  const audioPanel = el("div.panel", {}, [el("h2", { text: t("Audio tracks (optional)") }),
+    el("p.muted", { text: t("Attach a backing track and/or a vocal track. They're stored inside the song file.") })]);
   root.appendChild(audioPanel);
   function audioRow(kind, label) {
-    const status = el("span.muted", { text: song.audio?.[kind] ? "attached ✓" : "none" });
+    const status = el("span.muted", { text: song.audio?.[kind] ? t("attached ✓") : t("none") });
     return el("div.row", { style: { alignItems: "center", marginTop: "8px" } }, [
       el("label.field", { style: { flex: "1" } }, [el("span", { text: label }),
         el("input", { type: "file", accept: "audio/*", onchange: (e) => {
           const file = e.target.files[0]; if (!file) return;
-          const r = new FileReader(); r.onload = () => { (song.audio ||= {})[kind] = r.result; status.textContent = "attached ✓"; }; r.readAsDataURL(file);
+          const r = new FileReader(); r.onload = () => { (song.audio ||= {})[kind] = r.result; status.textContent = t("attached ✓"); }; r.readAsDataURL(file);
         } })]),
       status,
-      el("button.btn.ghost", { onclick: () => { if (song.audio) song.audio[kind] = null; status.textContent = "none"; } }, ["Clear"]),
+      el("button.btn.ghost", { onclick: () => { if (song.audio) song.audio[kind] = null; status.textContent = t("none"); } }, [t("Clear")]),
     ]);
   }
-  audioPanel.append(audioRow("backing", "Backing track"), audioRow("vocal", "Vocal track"));
+  audioPanel.append(audioRow("backing", t("Backing track")), audioRow("vocal", t("Vocal track")));
 
   // ---------- quick notation ----------
   const notation = el("textarea.input", { rows: 3, style: { width: "100%", fontFamily: "var(--mono)" },
-    placeholder: "Quick entry, e.g.  C4:1 E4:1 G4:2 C4+E4+G4:2 r:1   (PITCH:beats, chords with +, rest = r)" });
+    placeholder: t("Quick entry, e.g.  C4:1 E4:1 G4:2 C4+E4+G4:2 r:1   (PITCH:beats, chords with +, rest = r)") });
   root.appendChild(el("div.panel", {}, [
-    el("h2", { text: "Notes" }),
+    el("h2", { text: t("Notes") }),
     el("div.spread", {}, [
-      el("span.muted", { text: "Type a melody, or paint on the roll below. The Instrument/Vocal toggle on the roll selects which layer this edits. Click a note to delete it." }),
+      el("span.muted", { text: t("Type a melody, or paint on the roll below. The Instrument/Vocal toggle on the roll selects which layer this edits. Click a note to delete it.") }),
       el("div.row", {}, [
-        el("button.btn", { onclick: () => { notation.value = notesToNotation(activeNotes(), song.bpm); } }, ["⇣ From roll"]),
-        el("button.btn.primary", { onclick: applyNotation }, ["Apply notation"]),
+        el("button.btn", { onclick: () => { notation.value = notesToNotation(activeNotes(), song.bpm); } }, ["⇣ " + t("From roll")]),
+        el("button.btn.primary", { onclick: applyNotation }, [t("Apply notation")]),
       ]),
     ]),
     notation,
@@ -134,26 +136,26 @@ export default function editor(ctx) {
   let noteLen = 1; // beats
   let editLayer = "notes"; // which layer the roll/notation edits: "notes" (instrument) or "voice"
   const layerPills = el("div.pill-row", {}, [
-    el("span.pill.active", { text: "Instrument", title: "Edit the instrument melody", onclick: () => setLayer("notes") }),
-    el("span.pill", { text: "Vocal", title: "Edit the karaoke vocal melody", onclick: () => setLayer("voice") }),
+    el("span.pill.active", { text: t("Instrument"), title: t("Edit the instrument melody"), onclick: () => setLayer("notes") }),
+    el("span.pill", { text: t("Vocal"), title: t("Edit the karaoke vocal melody"), onclick: () => setLayer("voice") }),
   ]);
   function setLayer(which) {
     editLayer = which === "voice" ? "voice" : "notes";
     [...layerPills.children].forEach((p) => p.classList.toggle("active",
-      p.textContent === (editLayer === "voice" ? "Vocal" : "Instrument")));
+      p.textContent === (editLayer === "voice" ? t("Vocal") : t("Instrument"))));
     refreshVoice();
   }
   function activeNotes() {
     return editLayer === "voice" ? ((song.voice ||= { notes: [] }).notes) : song.notes;
   }
   const rollControls = el("div.row", { style: { alignItems: "center", marginBottom: "8px" } }, [
-    el("span.muted", { style: { fontSize: "12px" }, text: "Editing:" }), layerPills,
-    select({ label: "Snap", value: String(snap), options: [["1", "1 beat"], ["0.5", "½"], ["0.25", "¼"]].map(([v, l]) => ({ value: v, label: l })),
+    el("span.muted", { style: { fontSize: "12px" }, text: t("Editing:") }), layerPills,
+    select({ label: t("Snap"), value: String(snap), options: [["1", t("1 beat")], ["0.5", "½"], ["0.25", "¼"]].map(([v, l]) => ({ value: v, label: l })),
       onchange: (v) => snap = +v }),
-    select({ label: "New note length", value: String(noteLen), options: [["2", "2 beats"], ["1", "1 beat"], ["0.5", "½"], ["0.25", "¼"]].map(([v, l]) => ({ value: v, label: l })),
+    select({ label: t("New note length"), value: String(noteLen), options: [["2", t("2 beats")], ["1", t("1 beat")], ["0.5", "½"], ["0.25", "¼"]].map(([v, l]) => ({ value: v, label: l })),
       onchange: (v) => noteLen = +v }),
     el("div", { style: { flex: 1 } }),
-    el("button.btn.ghost", { onclick: () => { if (editLayer === "voice") (song.voice ||= { notes: [] }).notes = []; else song.notes = []; refreshVoice(); } }, ["Clear layer"]),
+    el("button.btn.ghost", { onclick: () => { if (editLayer === "voice") (song.voice ||= { notes: [] }).notes = []; else song.notes = []; refreshVoice(); } }, [t("Clear layer")]),
   ]);
   const scroller = el("div", { style: { overflowX: "auto", overflowY: "hidden" } });
   const canvas = el("canvas#roll-canvas", { height: ROWS * ROW_H });
@@ -232,28 +234,28 @@ export default function editor(ctx) {
   function refreshVoice() {
     const n = song.voice?.notes?.length || 0;
     voiceStatus.textContent = n
-      ? `${n} vocal note(s) — graded when singing in Karaoke`
-      : "none — Karaoke scoring falls back to the instrument melody";
+      ? t.n("{n} vocal note — graded when singing in Karaoke", "{n} vocal notes — graded when singing in Karaoke", n)
+      : t("none — Karaoke scoring falls back to the instrument melody");
     redraw();
   }
   function shiftVoice(semi) {
     const ns = song.voice?.notes || [];
-    if (!ns.length) { toast("Copy from the instrument notes first", "bad"); return; }
+    if (!ns.length) { toast(t("Copy from the instrument notes first"), "bad"); return; }
     song.voice.notes = ns.map((n) => ({ ...n, midi: n.midi.map((m) => m + semi) }));
     refreshVoice();
   }
   root.appendChild(el("div.panel", {}, [
     el("div.spread", {}, [
-      el("h2", { text: "Vocal melody (Karaoke scoring)" }),
+      el("h2", { text: t("Vocal melody (Karaoke scoring)") }),
       el("div.row", { style: { gap: "6px", flexWrap: "wrap" } }, [
-        el("button.btn", { onclick: () => { (song.voice ||= { notes: [] }).notes = cloneNotes(song.notes); setLayer("voice"); toast("Copied the melody to the vocal line — now editing the Vocal layer", "good"); } }, ["⎘ Copy from notes"]),
-        el("button.btn", { onclick: startHum }, ["🎙️ Hum to capture"]),
-        el("button.btn", { title: "Singers often sit an octave above the guitar", onclick: () => shiftVoice(12) }, ["8va ▲"]),
-        el("button.btn", { title: "Shift the vocal line down an octave", onclick: () => shiftVoice(-12) }, ["8vb ▼"]),
-        el("button.btn.ghost", { onclick: () => { song.voice = { notes: [] }; refreshVoice(); } }, ["Clear"]),
+        el("button.btn", { onclick: () => { (song.voice ||= { notes: [] }).notes = cloneNotes(song.notes); setLayer("voice"); toast(t("Copied the melody to the vocal line — now editing the Vocal layer"), "good"); } }, ["⎘ " + t("Copy from notes")]),
+        el("button.btn", { onclick: startHum }, ["🎙️ " + t("Hum to capture")]),
+        el("button.btn", { title: t("Singers often sit an octave above the guitar"), onclick: () => shiftVoice(12) }, ["8va ▲"]),
+        el("button.btn", { title: t("Shift the vocal line down an octave"), onclick: () => shiftVoice(-12) }, ["8vb ▼"]),
+        el("button.btn.ghost", { onclick: () => { song.voice = { notes: [] }; refreshVoice(); } }, [t("Clear")]),
       ]),
     ]),
-    el("p.muted", { style: { fontSize: "12px" }, text: "The pitch line graded when singing in Karaoke (shown dimmed on the roll above). Leave empty to score against the instrument melody." }),
+    el("p.muted", { style: { fontSize: "12px" }, text: t("The pitch line graded when singing in Karaoke (shown dimmed on the roll above). Leave empty to score against the instrument melody.") }),
     humPanel,
     voiceStatus,
   ]));
@@ -265,7 +267,7 @@ export default function editor(ctx) {
   async function startHum() {
     if (humActive) return;
     try { await Audio.startMic(Store.settings().inputDeviceId); }
-    catch (e) { toast("Mic failed: " + e.message, "bad"); return; }
+    catch (e) { toast(t("Mic failed: {error}", { error: e.message }), "bad"); return; }
     humActive = true; humFrames = []; humStart = performance.now(); humTracker = new PitchTracker();
     renderHum("0:00", "—"); humTick();
   }
@@ -286,23 +288,23 @@ export default function editor(ctx) {
     humActive = false; if (humRaf) cancelAnimationFrame(humRaf); humRaf = 0;
     Audio.stopMic(); humPanel.classList.add("hidden");
     if (silent) return;
-    if (humFrames.length < 5) { toast("Didn't hear enough — try again, a bit louder.", "bad"); return; }
+    if (humFrames.length < 5) { toast(t("Didn't hear enough — try again, a bit louder."), "bad"); return; }
     const notes = framesToNotes(humFrames, song.bpm, Store.settings().a4);
-    if (!notes.length) { toast("Couldn't find clear notes — try a clear, single-note melody.", "bad"); return; }
+    if (!notes.length) { toast(t("Couldn't find clear notes — try a clear, single-note melody."), "bad"); return; }
     (song.voice ||= { notes: [] }).notes = notes;
     setLayer("voice");
-    toast(`Captured ${notes.length} vocal note(s)`, "good");
+    toast(t.n("Captured {n} vocal note", "Captured {n} vocal notes", notes.length), "good");
   }
   function renderHum(time, note) {
     humPanel.classList.remove("hidden");
     humPanel.innerHTML = "";
     humPanel.append(
       el("div.spread", {}, [
-        el("div", { html: `<b>🎙️ Hum to capture</b> · <span class="muted">${time}</span>` }),
-        el("button.btn.primary", { onclick: () => stopHum() }, ["■ Stop & transcribe"]),
+        el("div", { html: `<b>🎙️ ${t("Hum to capture")}</b> · <span class="muted">${time}</span>` }),
+        el("button.btn.primary", { onclick: () => stopHum() }, ["■ " + t("Stop & transcribe")]),
       ]),
       el("div", { style: { fontSize: "28px", margin: "6px 0", minHeight: "30px" }, html: `<b>${escHTML(note)}</b>` }),
-      el("p.muted", { style: { fontSize: "12px" }, text: "Sing or hum the vocal line; it transcribes to the vocal melody at the song's tempo when you stop." }),
+      el("p.muted", { style: { fontSize: "12px" }, text: t("Sing or hum the vocal line; it transcribes to the vocal melody at the song's tempo when you stop.") }),
     );
   }
 
@@ -311,18 +313,17 @@ export default function editor(ctx) {
   const tapPanel = el("div.panel.tight.hidden", { style: { background: "var(--panel-2)", margin: "8px 0" } });
   root.appendChild(el("div.panel", {}, [
     el("div.spread", {}, [
-      el("h2", { text: "Lyrics & Karaoke (optional)" }),
+      el("h2", { text: t("Lyrics & Karaoke (optional)") }),
       el("div.row", { style: { gap: "6px", flexWrap: "wrap" } }, [
-        el("button.btn", { onclick: addLine }, ["+ Line"]),
-        el("button.btn", { onclick: importLRC }, ["⬆ Import .lrc"]),
-        el("button.btn", { onclick: pasteLRC }, ["📋 Paste LRC"]),
-        el("button.btn", { onclick: exportLRC }, ["⬇ Export .lrc"]),
-        el("button.btn", { onclick: startTap }, ["🎤 Tap to time"]),
+        el("button.btn", { onclick: addLine }, ["+ " + t("Line")]),
+        el("button.btn", { onclick: importLRC }, ["⬆ " + t("Import .lrc")]),
+        el("button.btn", { onclick: pasteLRC }, ["📋 " + t("Paste LRC")]),
+        el("button.btn", { onclick: exportLRC }, ["⬇ " + t("Export .lrc")]),
+        el("button.btn", { onclick: startTap }, ["🎤 " + t("Tap to time")]),
       ]),
     ]),
     el("p.muted", { style: { fontSize: "12px" }, html:
-      "Times are seconds from the song start. Word-level karaoke timing is auto-distributed across each line " +
-      "unless you tap it in or import enhanced LRC (<code>&lt;mm:ss.xx&gt;</code> word tags)." }),
+      t("Times are seconds from the song start. Word-level karaoke timing is auto-distributed across each line unless you tap it in or import enhanced LRC (<code>&lt;mm:ss.xx&gt;</code> word tags).") }),
     tapPanel,
     lyricList,
   ]));
@@ -331,16 +332,16 @@ export default function editor(ctx) {
   function renderLyrics() {
     lyricList.innerHTML = "";
     const ls = song.lyrics || [];
-    if (!ls.length) { lyricList.appendChild(el("div.muted", { text: "No lyrics yet — add a line, import an .lrc, or tap to time." })); return; }
+    if (!ls.length) { lyricList.appendChild(el("div.muted", { text: t("No lyrics yet — add a line, import an .lrc, or tap to time.") })); return; }
     ls.forEach((l, i) => {
       const timed = Array.isArray(l.words) && l.words.length;
       lyricList.appendChild(el("div.row", { style: { alignItems: "center" } }, [
         el("input.input", { type: "number", step: "0.1", value: l.time, style: { width: "84px" },
           oninput: (e) => l.time = +e.target.value }),
-        el("input.input", { value: l.text, style: { flex: 1 }, placeholder: "lyric text",
+        el("input.input", { value: l.text, style: { flex: 1 }, placeholder: t("lyric text"),
           oninput: (e) => { l.text = e.target.value; if (l.words) delete l.words; } }),
-        timed ? el("span.tag.beginner", { title: "word-level timing captured", text: `${l.words.length}w` }) : el("span.tag", { text: "auto" }),
-        timed ? el("button.btn.ghost", { title: "Clear word timing (revert to auto)", onclick: () => { delete l.words; renderLyrics(); } }, ["↺"]) : null,
+        timed ? el("span.tag.beginner", { title: t("word-level timing captured"), text: t("{n}w", { n: l.words.length }) }) : el("span.tag", { text: t("auto") }),
+        timed ? el("button.btn.ghost", { title: t("Clear word timing (revert to auto)"), onclick: () => { delete l.words; renderLyrics(); } }, ["↺"]) : null,
         el("button.btn.ghost", { onclick: () => { song.lyrics.splice(i, 1); renderLyrics(); } }, ["✕"]),
       ]));
     });
@@ -352,33 +353,33 @@ export default function editor(ctx) {
     if (picked) applyLRC(picked.text, picked.name);
   }
   function pasteLRC() {
-    const text = window.prompt("Paste LRC lyrics — supports [mm:ss.xx] lines and enhanced <mm:ss.xx> word tags:");
-    if (text != null) applyLRC(text, "pasted text");
+    const text = window.prompt(t("Paste LRC lyrics — supports [mm:ss.xx] lines and enhanced <mm:ss.xx> word tags:"));
+    if (text != null) applyLRC(text, t("pasted text"));
   }
   function applyLRC(text, srcName) {
     try {
       const parsed = parseLRC(text);
-      if (!parsed.length) { toast("No timed lyric lines found in that LRC", "bad"); return; }
+      if (!parsed.length) { toast(t("No timed lyric lines found in that LRC"), "bad"); return; }
       song.lyrics = parsed; renderLyrics();
-      toast(`Imported ${parsed.length} line(s) from ${srcName}`, "good");
-    } catch (e) { toast("Couldn't parse LRC: " + e.message, "bad"); }
+      toast(t.n("Imported {n} line from {source}", "Imported {n} lines from {source}", parsed.length, { source: srcName }), "good");
+    } catch (e) { toast(t("Couldn't parse LRC: {error}", { error: e.message }), "bad"); }
   }
   function exportLRC() {
-    if (!(song.lyrics || []).length) { toast("No lyrics to export", "bad"); return; }
+    if (!(song.lyrics || []).length) { toast(t("No lyrics to export"), "bad"); return; }
     const safe = (song.title || "song").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "_") || "song";
     download(`${safe}.lrc`, toLRC(song.lyrics), "text/plain");
-    toast("Exported .lrc to your Downloads folder", "good");
+    toast(t("Exported .lrc to your Downloads folder"), "good");
   }
 
   // ----- tap-to-time: play along and tap each word to capture karaoke timing -----
   let tapFlat = [], tapPos = 0, tapActive = false, tapRAF = 0, tapStartMs = 0, tapPlayer = null, tapKey = null;
   function startTap() {
     const ls = song.lyrics || [];
-    if (!ls.length) { toast("Add lyric lines (text) first, then tap their timing", "bad"); return; }
+    if (!ls.length) { toast(t("Add lyric lines (text) first, then tap their timing"), "bad"); return; }
     tapFlat = [];
     ls.forEach((line) => String(line.text || "").trim().split(/\s+/).filter(Boolean)
       .forEach((tok, w) => tapFlat.push({ line, text: tok, first: w === 0 })));
-    if (!tapFlat.length) { toast("Your lyric lines have no text to time", "bad"); return; }
+    if (!tapFlat.length) { toast(t("Your lyric lines have no text to time"), "bad"); return; }
     ls.forEach((l) => { l.words = []; });
     tapPos = 0; tapActive = true; tapStartMs = performance.now();
     try { if (song.audio?.backing) { tapPlayer = new TrackPlayer(); tapPlayer.load(song); tapPlayer.play(0); } } catch (e) { /* audio optional */ }
@@ -409,7 +410,7 @@ export default function editor(ctx) {
     if (tapKey) { window.removeEventListener("keydown", tapKey); tapKey = null; }
     if (tapPlayer) { try { tapPlayer.stop(); } catch (e) {} tapPlayer = null; }
     tapPanel.classList.add("hidden");
-    if (!silent) { renderLyrics(); toast("Word timing captured", "good"); }
+    if (!silent) { renderLyrics(); toast(t("Word timing captured"), "good"); }
   }
   function renderTap() {
     tapPanel.classList.remove("hidden");
@@ -417,13 +418,13 @@ export default function editor(ctx) {
     tapPanel.innerHTML = "";
     tapPanel.append(
       el("div.spread", {}, [
-        el("div", { html: `<b>🎤 Tap to time</b> · <span class="muted">word ${Math.min(tapPos + 1, tapFlat.length)}/${tapFlat.length} · <span id="tap-clock">0.00s</span></span>` }),
-        el("button.btn.ghost", { onclick: () => stopTap() }, ["■ Stop"]),
+        el("div", { html: `<b>🎤 ${t("Tap to time")}</b> · <span class="muted">${t("word {pos}/{total}", { pos: Math.min(tapPos + 1, tapFlat.length), total: tapFlat.length })} · <span id="tap-clock">0.00s</span></span>` }),
+        el("button.btn.ghost", { onclick: () => stopTap() }, ["■ " + t("Stop")]),
       ]),
       el("div", { style: { fontSize: "22px", margin: "8px 0", minHeight: "28px" },
-        html: cur ? `▶ <b>${escHTML(cur.text)}</b>${nxt ? ` <span class="muted">→ ${escHTML(nxt.text)}</span>` : ""}` : "Done — press Stop" }),
-      el("button.btn.primary", { style: { width: "100%" }, onclick: stamp }, ["TAP — or press Space"]),
-      el("p.muted", { style: { fontSize: "12px", marginTop: "6px" }, text: "Play along and tap on each word as you sing it. The backing track (if attached) plays automatically." }),
+        html: cur ? `▶ <b>${escHTML(cur.text)}</b>${nxt ? ` <span class="muted">→ ${escHTML(nxt.text)}</span>` : ""}` : t("Done — press Stop") }),
+      el("button.btn.primary", { style: { width: "100%" }, onclick: stamp }, [t("TAP — or press Space")]),
+      el("p.muted", { style: { fontSize: "12px", marginTop: "6px" }, text: t("Play along and tap on each word as you sing it. The backing track (if attached) plays automatically.") }),
     );
   }
 
@@ -437,23 +438,23 @@ export default function editor(ctx) {
     try {
       const parsed = parseMelody(song.bpm, txt);
       if (editLayer === "voice") (song.voice ||= { notes: [] }).notes = parsed; else song.notes = parsed;
-      refreshVoice(); toast(`${editLayer === "voice" ? "Vocal" : "Instrument"} notes updated from notation`, "good");
-    } catch (e) { toast("Couldn't parse notation: " + e.message, "bad"); }
+      refreshVoice(); toast(editLayer === "voice" ? t("Vocal notes updated from notation") : t("Instrument notes updated from notation"), "good");
+    } catch (e) { toast(t("Couldn't parse notation: {error}", { error: e.message }), "bad"); }
   }
   function save() {
-    if (!song.title.trim()) { toast("Give your song a title first", "bad"); return; }
-    if (!song.notes.length) { toast("Add some notes first", "bad"); return; }
+    if (!song.title.trim()) { toast(t("Give your song a title first"), "bad"); return; }
+    if (!song.notes.length) { toast(t("Add some notes first"), "bad"); return; }
     Store.saveSong(song);
-    toast(`Saved "${song.title}"`, "good");
+    toast(t('Saved "{title}"', { title: song.title }), "good");
     navigate("#/library");
   }
   function play() {
-    if (!song.notes.length) { toast("Add notes before testing", "bad"); return; }
+    if (!song.notes.length) { toast(t("Add notes before testing"), "bad"); return; }
     Store.saveSong(song); navigate(`#/play/${song.id}`);
   }
   function exportSong() {
     const safe = (song.title || "song").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "_") || "song";
-    download(`${safe}.gpsong.json`, serialize(song)); toast("Exported", "good");
+    download(`${safe}.gpsong.json`, serialize(song)); toast(t("Exported"), "good");
   }
 
   // stop tap-to-time and hum-capture (timers/listeners/mic) when leaving the view

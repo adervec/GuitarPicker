@@ -478,6 +478,29 @@ function fakeCtx() {
   ok("theme: a saved choice wins over the device", theme(true, { theme: "sunset" }).startsWith("sunset,sunset,"));
 }
 
+// ---- languages (house standard 20): English + 16 machine-translated, every key, placeholders intact ----
+{
+  const { t, fmt } = await import("./src/i18n.js");
+  ok("i18n: English fallback fills placeholders", t("Imported \"{title}\"", { title: "Ode" }) === "Imported \"Ode\"");
+  ok("i18n: English plural fallback", t.n("{n} song", "{n} songs", 1) === "1 song" && t.n("{n} song", "{n} songs", 3) === "3 songs");
+  ok("i18n: fmt works without font.js", fmt.number(1.239, { max: 2 }) === "1.24" && fmt.percent(0.42) === "42%");
+  const LANGS = ["fr", "es", "pt", "it", "hr", "de", "zh", "uk", "eo", "sw", "hi", "bn", "id", "ur", "fa", "ar"];
+  const en = JSON.parse(readFileSync("locales/en.json", "utf8"));
+  const ph = (s) => [...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(",");
+  const bad = [];
+  for (const l of LANGS) {
+    let d; try { d = JSON.parse(readFileSync(`locales/${l}.json`, "utf8")); } catch { bad.push(`${l}: no file`); continue; }
+    for (const [k, v] of Object.entries(en)) {
+      const got = d[k];
+      if (typeof v === "string") { if (typeof got !== "string" || !got.trim() || ph(got) !== ph(k)) bad.push(`${l}: ${k}`); }
+      else if (!got || typeof got !== "object" || !got.other) bad.push(`${l}: plural ${k}`);
+    }
+  }
+  ok(`i18n: all 16 languages cover every one of ${Object.keys(en).length} strings with placeholders intact` + (bad.length ? ` (first gaps: ${bad.slice(0, 3).join("; ")})` : ""), !bad.length);
+  ok("i18n: index.html declares the locales", readFileSync("index.html", "utf8").includes('<meta name="app-locales" content="locales/"'));
+  ok("i18n: the deploy publishes locales/", /cp -r [^\n]*\blocales\b/.test(readFileSync(".github/workflows/deploy.yml", "utf8")));
+}
+
 // ---- what's new ----
 {
   const wn = JSON.parse(readFileSync("whatsnew.json", "utf8"));

@@ -2,6 +2,7 @@ import { el, pageHead, stat, tag, progressBar, slider } from "../ui/components.j
 import { Store } from "../state.js";
 import { COURSES, DRILLS, buildDrillSong } from "../music/drills.js";
 import { INSTRUMENTS } from "../music/notes.js";
+import { t } from "../i18n.js";
 
 export default function training(ctx) {
   const { el: root, navigate } = ctx;
@@ -21,17 +22,17 @@ export default function training(ctx) {
   }
 
   const level = Math.floor(Math.sqrt(prog.xp || 0) / 3) + 1;
-  root.appendChild(pageHead("Training", `Course progression and skill drills for ${INSTRUMENTS[inst]?.name || inst}.`));
+  root.appendChild(pageHead(t("Training"), t("Course progression and skill drills for {instrument}.", { instrument: INSTRUMENTS[inst]?.name || inst })));
 
   root.appendChild(el("div.grid.cards", { style: { marginBottom: "18px" } }, [
-    stat("Lv " + level, "Level"),
-    stat(prog.xp || 0, "XP"),
-    stat(Object.values(prog.drills || {}).length || hist.filter((h) => h.songId?.startsWith("drill-")).length, "Drills tried"),
-    stat(hist.filter((h) => h.passed).length, "Passes"),
+    stat(t("Lv {n}", { n: level }), t("Level")),
+    stat(prog.xp || 0, t("XP")),
+    stat(Object.values(prog.drills || {}).length || hist.filter((h) => h.songId?.startsWith("drill-")).length, t("Drills tried")),
+    stat(hist.filter((h) => h.passed).length, t("Passes")),
   ]));
 
   // ---------- Courses ----------
-  root.appendChild(el("h2", { text: "Courses" }));
+  root.appendChild(el("h2", { text: t("Courses") }));
   for (const course of COURSES) {
     const done = course.steps.filter((st) => bestFor(st.ref)?.passed).length;
     const panel = el("div.panel", { style: { marginBottom: "14px" } }, [
@@ -40,7 +41,7 @@ export default function training(ctx) {
         el("div", {}, [tag(course.level)]),
       ]),
       el("div", { style: { margin: "10px 0" } }, [progressBar(done / course.steps.length)]),
-      el("div.muted", { style: { fontSize: "12px", marginBottom: "8px" }, text: `${done} / ${course.steps.length} steps passed` }),
+      el("div.muted", { style: { fontSize: "12px", marginBottom: "8px" }, text: t("{done} / {total} steps passed", { done, total: course.steps.length }) }),
     ]);
     const stepList = el("div.col", { style: { gap: "6px" } });
     course.steps.forEach((st, i) => {
@@ -50,9 +51,9 @@ export default function training(ctx) {
         opacity: locked ? 0.55 : 1, background: b?.passed ? "color-mix(in srgb, var(--good) 10%, var(--panel-2))" : "var(--panel-2)" } }, [
         el("div.row", { style: { alignItems: "center", gap: "10px" } }, [
           el("span", { text: b?.passed ? "✅" : locked ? "🔒" : "▷", style: { fontSize: "16px" } }),
-          el("div", {}, [el("div", { text: st.title }), b && el("div.muted", { style: { fontSize: "11px" }, text: `best ${b.bestAcc}% · ${b.attempts} tries` })]),
+          el("div", {}, [el("div", { text: st.title }), b && el("div.muted", { style: { fontSize: "11px" }, text: t("best {acc}% · {tries}", { acc: b.bestAcc, tries: t.n("{n} try", "{n} tries", b.attempts) }) })]),
         ]),
-        el("button.btn", { onclick: () => launch(st.ref), disabled: locked }, [b?.passed ? "Replay" : "Start"]),
+        el("button.btn", { onclick: () => launch(st.ref), disabled: locked }, [b?.passed ? t("Replay") : t("Start")]),
       ]));
     });
     panel.appendChild(stepList);
@@ -60,19 +61,19 @@ export default function training(ctx) {
   }
 
   // ---------- Drills ----------
-  root.appendChild(el("h2", { text: "Skill drills", style: { marginTop: "18px" } }));
-  root.appendChild(el("p.muted", { text: "Short, repeatable exercises. Adjust the tempo to grind a weak skill up to speed." }));
+  root.appendChild(el("h2", { text: t("Skill drills"), style: { marginTop: "18px" } }));
+  root.appendChild(el("p.muted", { text: t("Short, repeatable exercises. Adjust the tempo to grind a weak skill up to speed.") }));
   const grid = el("div.grid.cards");
   for (const d of DRILLS) {
     let bpm = d.bpm;
     const best = bestFor(d.id);
-    const bpmCtl = slider({ label: "Tempo", min: 50, max: 180, step: 5, value: bpm, fmt: (v) => v + " BPM", oninput: (v) => bpm = v });
+    const bpmCtl = slider({ label: t("Tempo"), min: 50, max: 180, step: 5, value: bpm, fmt: (v) => t("{bpm} BPM", { bpm: v }), oninput: (v) => bpm = v });
     grid.appendChild(el("div.card", { style: { cursor: "default" } }, [
-      el("div.spread", {}, [el("div.title", { text: d.title }), tag(d.difficulty, d.difficulty)]),
+      el("div.spread", {}, [el("div.title", { text: d.title }), tag(t(d.difficulty), d.difficulty)]), // i18n-keys: beginner | intermediate | advanced
       el("div.sub", { text: d.desc }),
-      best ? el("div.muted", { style: { fontSize: "12px" }, text: `best ${best.bestAcc}% · score ${best.bestScore}` }) : el("div.muted", { style: { fontSize: "12px" }, text: "not attempted yet" }),
+      best ? el("div.muted", { style: { fontSize: "12px" }, text: t("best {acc}% · score {score}", { acc: best.bestAcc, score: best.bestScore }) }) : el("div.muted", { style: { fontSize: "12px" }, text: t("not attempted yet") }),
       bpmCtl,
-      el("button.btn.primary", { style: { marginTop: "auto" }, onclick: () => launchDrill(d, bpm) }, ["▶ Start drill"]),
+      el("button.btn.primary", { style: { marginTop: "auto" }, onclick: () => launchDrill(d, bpm) }, ["▶ " + t("Start drill")]),
     ]));
   }
   root.appendChild(grid);

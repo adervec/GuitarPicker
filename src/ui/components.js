@@ -1,4 +1,5 @@
 // Tiny DOM + chart helpers shared across views.
+import { t } from "../i18n.js";
 
 /** Hyperscript-ish element builder.
  *  el("div.card#x", { onclick }, [children])  */
@@ -82,10 +83,10 @@ export function progressBar(frac) {
 let toastHost;
 export function toast(msg, kind = "") {
   toastHost ||= document.getElementById("toast-host");
-  const t = el(`div.toast.${kind}`.replace(/\.$/, ""), { text: msg });
-  toastHost.appendChild(t);
-  setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity 300ms"; }, 2600);
-  setTimeout(() => t.remove(), 2950);
+  const node = el(`div.toast.${kind}`.replace(/\.$/, ""), { text: msg });
+  toastHost.appendChild(node);
+  setTimeout(() => { node.style.opacity = "0"; node.style.transition = "opacity 300ms"; }, 2600);
+  setTimeout(() => node.remove(), 2950);
 }
 
 /** Simple multi-series line chart onto a canvas. series: [{color, points:[{x,y}], label}] */
@@ -99,7 +100,7 @@ export function lineChart(canvas, series, opts = {}) {
   const all = series.flatMap((s) => s.points);
   if (!all.length) {
     ctx.fillStyle = getVar("--muted"); ctx.font = "13px var(--font)";
-    ctx.fillText("No data yet — play a song to start trending.", pad.l, h / 2);
+    ctx.fillText(t("No data yet — play a song to start trending."), pad.l, h / 2);
     return;
   }
   const xs = all.map((p) => p.x), ys = all.map((p) => p.y);

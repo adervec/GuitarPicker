@@ -21,6 +21,7 @@ import { renderAvatar } from "../cosmetics/index.js";
 import { buildLyricTimeline, activeAt, timelineDuration } from "../karaoke/timeline.js";
 import { Grader, gradeLetter, vocalTargets } from "../karaoke/grader.js";
 import { lineFillHTML, escapeHTML as esc } from "../karaoke/render.js";
+import { t, fmt } from "../i18n.js";
 
 const LEAD_IN = 3.0;        // count-in seconds before the song starts
 const HIT_PAD = 0.16;       // detection window pad around a vocal note
@@ -37,12 +38,12 @@ export default async function karaoke(ctx) {
 function picker(root, navigate) {
   const withLyrics = allSongs().filter((s) => (s.lyrics || []).length);
   const wrap = el("div.view-pad", {}, [
-    el("div.page-head", {}, [el("h1", { text: "🎤 Karaoke" }),
-      el("p.muted", { text: "Pick a song with lyrics. Sing along — turn on scoring to be graded." })]),
+    el("div.page-head", {}, [el("h1", { text: "🎤 " + t("Karaoke") }),
+      el("p.muted", { text: t("Pick a song with lyrics. Sing along — turn on scoring to be graded.") })]),
   ]);
   if (!withLyrics.length) {
-    wrap.appendChild(el("div.panel", {}, [el("p", { text: "No songs with lyrics yet. Add lyrics in the Song Editor." }),
-      el("button.btn", { onclick: () => navigate("#/editor") }, ["Open Editor"])]));
+    wrap.appendChild(el("div.panel", {}, [el("p", { text: t("No songs with lyrics yet. Add lyrics in the Song Editor.") }),
+      el("button.btn", { onclick: () => navigate("#/editor") }, [t("Open Editor")])]));
     root.appendChild(wrap);
     return;
   }
@@ -53,10 +54,10 @@ function picker(root, navigate) {
       el("div", { html: `<b>${esc(s.title)}</b>` }),
       el("div.muted", { style: { fontSize: "12px" }, text: `${s.artist} · ${s.key} · ${s.bpm} BPM` }),
       el("div.row", { style: { gap: "6px", marginTop: "6px" } }, [
-        el("span.tag", { text: `${(s.lyrics || []).length} lines` }),
-        wordTimed ? el("span.tag.good", { text: "word-timed" }) : el("span.tag", { text: "auto-timed" }),
-        s.voice?.notes?.length ? el("span.tag", { text: "scored melody" }) : null,
-        s.audio?.vocal ? el("span.tag", { text: "guide vocal" }) : null,
+        el("span.tag", { text: t.n("{n} line", "{n} lines", (s.lyrics || []).length) }),
+        wordTimed ? el("span.tag.good", { text: t("word-timed") }) : el("span.tag", { text: t("auto-timed") }),
+        s.voice?.notes?.length ? el("span.tag", { text: t("scored melody") }) : null,
+        s.audio?.vocal ? el("span.tag", { text: t("guide vocal") }) : null,
       ]),
     ]));
   }
@@ -72,9 +73,9 @@ function stage(ctx, song) {
   const timeline = buildLyricTimeline(song);
   if (!timeline.lines.length) {
     root.appendChild(el("div.panel", { style: { margin: "22px" } }, [
-      el("h2", { text: "No lyrics to sing" }),
-      el("p.muted", { text: "This song has no lyric track. Add one in the Song Editor." }),
-      el("button.btn", { onclick: () => navigate("#/karaoke") }, ["← Karaoke songs"]),
+      el("h2", { text: t("No lyrics to sing") }),
+      el("p.muted", { text: t("This song has no lyric track. Add one in the Song Editor.") }),
+      el("button.btn", { onclick: () => navigate("#/karaoke") }, ["← " + t("Karaoke songs")]),
     ]));
     return;
   }
@@ -118,9 +119,9 @@ function stage(ctx, song) {
   overlay.append(hud, stageEl, banner);
 
   // ----- controls -----
-  const playBtn = el("button.btn.primary", { onclick: togglePlay }, ["▶ Start"]);
-  const restartBtn = el("button.btn", { onclick: restart }, ["⟲ Restart"]);
-  const backBtn = el("button.btn.ghost", { onclick: () => navigate("#/karaoke") }, ["← Songs"]);
+  const playBtn = el("button.btn.primary", { onclick: togglePlay }, ["▶ " + t("Start")]);
+  const restartBtn = el("button.btn", { onclick: restart }, ["⟲ " + t("Restart")]);
+  const backBtn = el("button.btn.ghost", { onclick: () => navigate("#/karaoke") }, ["← " + t("Songs")]);
 
   const player = new TrackPlayer();
   player.load(song);
@@ -132,32 +133,32 @@ function stage(ctx, song) {
   const band = new Band([...allParts, ...autoAccompaniment(song, allParts)], { a4, volume: s.backingVolume });
   let bandOn = !band.empty && !player.backing && (s.band ?? true);
   const bandBtn = band.empty ? null : el("button.btn", {
-    class: bandOn ? "primary" : "", title: "Synthesized accompaniment: " + band.names.join(", "),
+    class: bandOn ? "primary" : "", title: t("Synthesized accompaniment: {parts}", { parts: band.names.join(", ") }),
     onclick: () => {
       bandOn = !bandOn; Store.setSetting("band", bandOn);
       bandBtn.classList.toggle("primary", bandOn);
       if (bandOn) band.seek(Math.max(0, clock)); else band.silence();
     },
-  }, ["🎺 Band"]);
+  }, ["🎺 " + t("Band")]);
 
-  const volB = slider({ label: "Music", value: s.backingVolume, fmt: (v) => Math.round(v * 100) + "%",
+  const volB = slider({ label: t("Music"), value: s.backingVolume, fmt: (v) => Math.round(v * 100) + "%",
     oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); band.setVolume(v); } });
   const guideBtn = el("button.btn", { class: guide ? "primary" : "", onclick: () => {
     guide = !guide; guideBtn.classList.toggle("primary", guide);
     player.setVocalVolume(guide ? (Store.settings().vocalVolume || 0.7) : 0);
-  } }, ["🎙️ Guide vocal"]);
+  } }, ["🎙️ " + t("Guide vocal")]);
   const scoreBtn = el("button.btn", { class: scoring ? "primary" : "", onclick: () => {
-    if (!targets.length) { toast("This song has no vocal melody to score.", "bad"); return; }
+    if (!targets.length) { toast(t("This song has no vocal melody to score."), "bad"); return; }
     scoring = !scoring; Store.setSetting("karaokeScoring", scoring);
     scoreBtn.classList.toggle("primary", scoring);
     scoreBox.style.display = healthWrap.style.display = scoring ? "" : "none";
-  } }, ["🎯 Score my singing"]);
+  } }, ["🎯 " + t("Score my singing")]);
 
   const controls = el("div.play-controls", {}, [
     playBtn, restartBtn,
     el("div.muted", { style: { minWidth: "92px" }, id: "kara-clock", text: "0:00" }),
     el("div", { style: { flex: "1" } }),
-    (!player.hasAudio() && band.empty) ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
+    (!player.hasAudio() && band.empty) ? el("span.muted", { style: { fontSize: "12px" }, text: t("No backing audio — import one in the Song Editor.") }) : null,
     (player.backing || !band.empty) ? wrapNarrow(volB) : null,
     player.vocal ? guideBtn : null,
     bandBtn, scoreBtn, backBtn,
@@ -202,26 +203,26 @@ function stage(ctx, song) {
     if (!scoring) return true;
     if (Audio.micLive()) return true;
     try { await Audio.startMic(s.inputDeviceId); return true; }
-    catch (e) { toast("Mic off — singing won't be scored. " + e.message, "bad"); return false; }
+    catch (e) { toast(t("Mic off — singing won't be scored. {error}", { error: e.message }), "bad"); return false; }
   }
   async function togglePlay() {
     if (finished) { restart(); return; }
     if (playing) { pause(); return; }
     await ensureMic();
     await Audio.resume();
-    playing = true; playBtn.textContent = "⏸ Pause";
+    playing = true; playBtn.textContent = "⏸ " + t("Pause");
     if (clock >= 0) player.play(clock);
     lastTs = performance.now();
     requestAnimationFrame(loop);
   }
-  function pause() { playing = false; playBtn.textContent = "▶ Resume"; player.pause(); band.silence(); }
+  function pause() { playing = false; playBtn.textContent = "▶ " + t("Resume"); player.pause(); band.silence(); }
   function restart() {
     pause();
     finished = false; banner.classList.add("hidden");
     clock = -LEAD_IN; detectedMidi = -1;
     grader.reset();
     targets.forEach((n) => { n.state = "pending"; n.best = 999; n.frames = 0; });
-    player.seek(0); band.seek(0); playBtn.textContent = "▶ Start";
+    player.seek(0); band.seek(0); playBtn.textContent = "▶ " + t("Start");
     render(-LEAD_IN); updateHud();
   }
 
@@ -340,7 +341,7 @@ function stage(ctx, song) {
 
   function finish() {
     finished = true; playing = false; player.pause(); band.silence();
-    playBtn.textContent = "⟲ Sing again";
+    playBtn.textContent = "⟲ " + t("Sing again");
     if (!scoring) { showBanner(null, 0, false, 0, false); return; }
     const acc = grader.accuracy();
     const passed = !grader.failed && acc >= 60;
@@ -355,19 +356,20 @@ function stage(ctx, song) {
   function showBanner(grade, acc, passed, coinsEarned, scored) {
     banner.innerHTML = "";
     const stats = scored ? el("div.grid.cards", { style: { margin: "14px 0" } }, [
-      miniStat(acc + "%", "Accuracy"), miniStat(grader.score, "Score"), miniStat(grader.maxStreak, "Best streak"),
-      miniStat(grader.counts.perfect, "Perfect"), miniStat(grader.counts.miss, "Missed"),
+      miniStat(acc + "%", t("Accuracy")), miniStat(grader.score, t("Score")), miniStat(grader.maxStreak, t("Best streak")),
+      miniStat(grader.counts.perfect, t("Perfect")), miniStat(grader.counts.miss, t("Missed")),
     ]) : null;
     banner.appendChild(el("div.panel", {}, [
       scored ? el("div.big-grade", { text: grade, style: { color: passed ? getVar("--good") : getVar("--bad") } }) : el("div.big-grade", { text: "🎤" }),
-      el("h2", { text: scored ? (passed ? "Nailed it — passed!" : (grader.failed ? "Finished (failed — healthbar emptied)" : "Finished")) : "Nice singing!" }),
+      el("h2", { text: scored ? (passed ? t("Nailed it — passed!") : (grader.failed ? t("Finished (failed — healthbar emptied)") : t("Finished"))) : t("Nice singing!") }),
       coinsEarned ? el("div", { style: { fontSize: "16px", fontWeight: "700", color: "var(--warn)", margin: "2px 0 6px" },
-        html: `🪙 +${coinsEarned} coins earned · <span class="muted" style="font-weight:400">spend them in the Locker</span>` }) : null,
+        html: "🪙 " + t.n(`+{n} coin earned · <span class="muted" style="font-weight:400">spend them in the Locker</span>`,
+          `+{n} coins earned · <span class="muted" style="font-weight:400">spend them in the Locker</span>`, coinsEarned) }) : null,
       stats,
       el("div.row", { style: { justifyContent: "center" } }, [
-        el("button.btn.primary", { onclick: restart }, ["⟲ Sing again"]),
-        el("button.btn", { onclick: () => navigate("#/karaoke") }, ["← Songs"]),
-        scored ? el("button.btn", { onclick: () => navigate("#/history") }, ["📈 Progress"]) : null,
+        el("button.btn.primary", { onclick: restart }, ["⟲ " + t("Sing again")]),
+        el("button.btn", { onclick: () => navigate("#/karaoke") }, ["← " + t("Songs")]),
+        scored ? el("button.btn", { onclick: () => navigate("#/history") }, ["📈 " + t("Progress")]) : null,
       ]),
     ]));
     banner.classList.remove("hidden");
@@ -381,6 +383,6 @@ function stage(ctx, song) {
 function wrapNarrow(node) { node.style.minWidth = "150px"; return node; }
 function miniStat(num, label) { return el("div.stat", {}, [el("div.num", { text: String(num) }), el("div.lbl", { text: label })]); }
 function scoreHTML(score, health, streak, mult, acc, failed) {
-  return `<div style="font-size:22px;font-weight:800">${score.toLocaleString()}</div>
-    <div class="muted" style="font-size:12px">${acc}% · streak ${streak} · ×${mult}${failed ? ' · <span style="color:var(--bad)">FAILED</span>' : ""}</div>`;
+  return `<div style="font-size:22px;font-weight:800">${fmt.number(score)}</div>
+    <div class="muted" style="font-size:12px">${t("{acc}% · streak {streak} · ×{mult}", { acc, streak, mult })}${failed ? ' · <span style="color:var(--bad)">' + t("FAILED") + "</span>" : ""}</div>`;
 }

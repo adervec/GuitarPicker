@@ -16,6 +16,7 @@ import { buildLyricTimeline, activeAt } from "../karaoke/timeline.js";
 import { lineFillHTML, escapeHTML as esc } from "../karaoke/render.js";
 import { Midi } from "../audio/midi.js";
 import { sendPracticeReview } from "../cowork.js";
+import { t, fmt } from "../i18n.js";
 
 const LEAD_IN = 3.0;          // count-in seconds before notes start
 const HIT_PAD = 0.16;         // detection window pad around a note
@@ -27,8 +28,8 @@ export default async function play(ctx) {
   const song = findSong(params[0]);
   if (!song) {
     root.appendChild(el("div.panel", { style: { margin: "22px" } }, [
-      el("h2", { text: "Song not found" }),
-      el("button.btn", { onclick: () => navigate("#/library") }, ["Back to songs"]),
+      el("h2", { text: t("Song not found") }),
+      el("button.btn", { onclick: () => navigate("#/library") }, [t("Back to songs")]),
     ]));
     return;
   }
@@ -70,11 +71,12 @@ export default async function play(ctx) {
   const songBox = el("div.hud-box", {}, [
     el("div", { html: `<b>${song.title}</b>` }),
     el("div.muted", { style: { fontSize: "12px" }, html:
-      `${song.artist} · key ${song.key} · ${song.bpm} BPM` + (capo ? ` · <span class="capo-note" style="padding:2px 8px">🔼 Capo ${capo}</span>` : "") }),
+      t("{artist} · key {key} · {bpm} BPM", { artist: song.artist, key: song.key, bpm: song.bpm }) +
+      (capo ? ` · <span class="capo-note" style="padding:2px 8px">🔼 ${t("Capo {capo}", { capo })}</span>` : "") }),
     parts.length > 1 ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" },
-      text: `🎯 Your part: ${inst.name}` }) : null,
+      text: "🎯 " + t("Your part: {part}", { part: inst.name }) }) : null,
     (song.lyrics && song.lyrics.length)
-      ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" }, text: `🎤 Singalong${song.genre ? " · " + song.genre : ""}` })
+      ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" }, text: "🎤 " + t("Singalong") + (song.genre ? " · " + song.genre : "") })
       : (song.genre ? el("div.muted", { style: { fontSize: "12px", marginTop: "2px" }, text: song.genre }) : null),
   ]);
   const healthWrap = el("div.healthbar-big", {}, [el("i", { style: { width: "100%" } })]);
@@ -90,9 +92,9 @@ export default async function play(ctx) {
   overlay.append(hud, killfeed, lyric, el("div.play-bottom-fade"), banner);
 
   // controls
-  const playBtn = el("button.btn.primary", { onclick: togglePlay }, ["▶ Start"]);
-  const restartBtn = el("button.btn", { onclick: restart }, ["⟲ Restart"]);
-  const backBtn = el("button.btn.ghost", { onclick: () => navigate("#/library") }, ["← Songs"]);
+  const playBtn = el("button.btn.primary", { onclick: togglePlay }, ["▶ " + t("Start")]);
+  const restartBtn = el("button.btn", { onclick: restart }, ["⟲ " + t("Restart")]);
+  const backBtn = el("button.btn.ghost", { onclick: () => navigate("#/library") }, ["← " + t("Songs")]);
   const player = new TrackPlayer();
   player.load(song);
 
@@ -104,80 +106,81 @@ export default async function play(ctx) {
   const band = new Band(bandParts, { a4, volume: s.backingVolume });
   let bandOn = !band.empty && !player.backing && (s.band ?? true);
   const bandBtn = band.empty ? null : el("button.btn", {
-    class: bandOn ? "primary" : "", title: "Synthesized accompaniment: " + band.names.join(", "),
+    class: bandOn ? "primary" : "", title: t("Synthesized accompaniment: {parts}", { parts: band.names.join(", ") }),
     onclick: () => {
       bandOn = !bandOn; Store.setSetting("band", bandOn);
       bandBtn.classList.toggle("primary", bandOn);
       if (bandOn) band.seek(Math.max(0, clock)); else band.silence();
     },
-  }, ["🎺 Band"]);
+  }, ["🎺 " + t("Band")]);
 
-  const volB = slider({ label: "Backing", value: s.backingVolume, fmt: (v) => Math.round(v * 100) + "%",
+  const volB = slider({ label: t("Backing"), value: s.backingVolume, fmt: (v) => Math.round(v * 100) + "%",
     oninput: (v) => { Store.setSetting("backingVolume", v); player.setBackingVolume(v); band.setVolume(v); } });
-  const volV = slider({ label: "Vocal", value: s.vocalVolume, fmt: (v) => Math.round(v * 100) + "%",
+  const volV = slider({ label: t("Vocal"), value: s.vocalVolume, fmt: (v) => Math.round(v * 100) + "%",
     oninput: (v) => { Store.setSetting("vocalVolume", v); player.setVocalVolume(v); } });
   // ----- practice mode: speed, A–B loop, speed trainer. Any of it = run isn't recorded. -----
   let rate = 1, loopA = null, loopB = null, trainer = false;
   const practicing = () => rate !== 1 || loopB != null;
-  const rateSl = slider({ label: "Speed", min: 0.3, max: 2, step: 0.05, value: 1, fmt: (v) => Math.round(v * 100) + "%",
+  const rateSl = slider({ label: t("Speed"), min: 0.3, max: 2, step: 0.05, value: 1, fmt: (v) => Math.round(v * 100) + "%",
     oninput: (v) => setRate(v) });
   function setRate(v) { rate = v; rateSl.setValue(v); player.setRate(v); band.silence(); band.seek(Math.max(0, clock)); }
-  const loopBtn = el("button.btn", { title: "Press at the start of the hard bit, again at its end; a third press clears the loop", onclick: () => {
-    const t = Math.max(0, clock);
-    if (loopA == null) { loopA = t; loopBtn.textContent = "🔁 Set end"; loopBtn.classList.add("primary"); }
+  const loopBtn = el("button.btn", { title: t("Press at the start of the hard bit, again at its end; a third press clears the loop"), onclick: () => {
+    const now = Math.max(0, clock);
+    if (loopA == null) { loopA = now; loopBtn.textContent = "🔁 " + t("Set end"); loopBtn.classList.add("primary"); }
     else if (loopB == null) {
-      if (t <= loopA + 0.5) { toast("Let it play past the start first, then set the end", "bad"); return; }
-      loopB = t; loopBtn.textContent = `🔁 ${fmtTime(loopA)}–${fmtTime(loopB)} ✕`;
-      toast("Looping — practice runs aren't recorded", "good");
-    } else { loopA = loopB = null; loopBtn.textContent = "🔁 Loop"; loopBtn.classList.remove("primary"); }
+      if (now <= loopA + 0.5) { toast(t("Let it play past the start first, then set the end"), "bad"); return; }
+      loopB = now; loopBtn.textContent = `🔁 ${fmtTime(loopA)}–${fmtTime(loopB)} ✕`;
+      toast(t("Looping — practice runs aren't recorded"), "good");
+    } else { loopA = loopB = null; loopBtn.textContent = "🔁 " + t("Loop"); loopBtn.classList.remove("primary"); }
     if (!playing) render(clock);
-  } }, ["🔁 Loop"]);
-  const trainerBtn = el("button.btn", { title: "Speed trainer: each clean pass of the loop speeds it up 5%, up to full speed", onclick: () => {
+  } }, ["🔁 " + t("Loop")]);
+  const trainerBtn = el("button.btn", { title: t("Speed trainer: each clean pass of the loop speeds it up 5%, up to full speed"), onclick: () => {
     trainer = !trainer; trainerBtn.classList.toggle("primary", trainer);
     if (trainer && rate >= 1) setRate(0.6);
-    if (trainer && loopB == null) toast("Set a loop (🔁) — the trainer speeds up after each clean pass", "");
-  } }, ["📈 Trainer"]);
+    if (trainer && loopB == null) toast(t("Set a loop (🔁) — the trainer speeds up after each clean pass"), "");
+  } }, ["📈 " + t("Trainer")]);
   // highway cursor: plain, bar lines, or bar lines + the current bar lit up
   const BAR_MODES = ["off", "lines", "bar"];
   let barMode = BAR_MODES.includes(s.barMode) ? s.barMode : "off";
-  const barBtn = el("button.btn", { title: "Bar lines on the highway: off → lines → highlight the current bar", onclick: () => {
+  const barBtn = el("button.btn", { title: t("Bar lines on the highway: off → lines → highlight the current bar"), onclick: () => {
     barMode = BAR_MODES[(BAR_MODES.indexOf(barMode) + 1) % 3]; Store.setSetting("barMode", barMode);
     barBtn.textContent = barLabel(); barBtn.classList.toggle("primary", barMode !== "off");
     if (!playing) render(clock);
   } });
-  const barLabel = () => ({ off: "📏 Bars", lines: "📏 Bar lines", bar: "📏 Bar focus" })[barMode];
+  // i18n-keys: Bars | Bar lines | Bar focus
+  const barLabel = () => "📏 " + t(({ off: "Bars", lines: "Bar lines", bar: "Bar focus" })[barMode]);
   barBtn.textContent = barLabel(); barBtn.classList.toggle("primary", barMode !== "off");
 
-  const metroBtn = el("button.btn", { onclick: () => { metro = !metro; metroBtn.classList.toggle("primary", metro); } }, ["🥁 Metronome"]);
+  const metroBtn = el("button.btn", { onclick: () => { metro = !metro; metroBtn.classList.toggle("primary", metro); } }, ["🥁 " + t("Metronome")]);
   let metro = false;
   let noteSounds = s.noteSounds ?? true;
-  const soundBtn = el("button.btn", { class: noteSounds ? "primary" : "", title: "Sound each note as it reaches the hit line", onclick: () => {
+  const soundBtn = el("button.btn", { class: noteSounds ? "primary" : "", title: t("Sound each note as it reaches the hit line"), onclick: () => {
     noteSounds = !noteSounds; Store.setSetting("noteSounds", noteSounds);
     soundBtn.classList.toggle("primary", noteSounds);
-  } }, ["🔊 Notes"]);
+  } }, ["🔊 " + t("Notes")]);
   let showFrets = fretted || harp ? (s.showFingering ?? true) : false;
-  const fretBtn = fretted || harp ? el("button.btn", { class: showFrets ? "primary" : "", title: harp ? "Show harmonica hole and breath direction" : "Show finger positions on a fretboard", onclick: () => {
+  const fretBtn = fretted || harp ? el("button.btn", { class: showFrets ? "primary" : "", title: harp ? t("Show harmonica hole and breath direction") : t("Show finger positions on a fretboard"), onclick: () => {
     showFrets = !showFrets; Store.setSetting("showFingering", showFrets);
     fretBtn.classList.toggle("primary", showFrets);
     if (!playing) render(clock);
-  } }, [harp ? "🎺 Holes" : "🎸 Frets"]) : null;
-  const karaokeBtn = lyrics.length ? el("button.btn", { class: karaokeLyrics ? "primary" : "", title: "Word-by-word singalong highlight", onclick: () => {
+  } }, [harp ? "🎺 " + t("Holes") : "🎸 " + t("Frets")]) : null;
+  const karaokeBtn = lyrics.length ? el("button.btn", { class: karaokeLyrics ? "primary" : "", title: t("Word-by-word singalong highlight"), onclick: () => {
     karaokeLyrics = !karaokeLyrics; Store.setSetting("karaokeLyrics", karaokeLyrics);
     karaokeBtn.classList.toggle("primary", karaokeLyrics);
     updateLyric(clock);
-  } }, ["🎤 Karaoke"]) : null;
+  } }, ["🎤 " + t("Karaoke")]) : null;
 
   const controls = el("div.play-controls", {}, [
     playBtn, restartBtn,
     el("div.muted", { style: { minWidth: "70px" }, id: "play-clock", text: "0:00" }),
     el("div", { style: { flex: "1" } }),
-    (!player.hasAudio() && band.empty) ? el("span.muted", { style: { fontSize: "12px" }, text: "No backing audio — import one in the Song Editor." }) : null,
+    (!player.hasAudio() && band.empty) ? el("span.muted", { style: { fontSize: "12px" }, text: t("No backing audio — import one in the Song Editor.") }) : null,
     (player.backing || !band.empty) ? wrapNarrow(volB) : null,
     player.vocal ? wrapNarrow(volV) : null,
     karaokeBtn, bandBtn, soundBtn, fretBtn, metroBtn, backBtn,
   ]);
   const practiceRow = el("div.play-controls", {}, [wrapNarrow(rateSl), loopBtn, trainerBtn, barBtn,
-    el("span.muted", { style: { fontSize: "12px" }, text: "Practice: slow down or loop a section (those runs aren't recorded)." })]);
+    el("span.muted", { style: { fontSize: "12px" }, text: t("Practice: slow down or loop a section (those runs aren't recorded).") })]);
 
   shell.append(el("div.play-stage", {}, [canvas, overlay]), controls, practiceRow);
   root.appendChild(shell);
@@ -233,7 +236,7 @@ export default async function play(ctx) {
   async function ensureMic() {
     if (Audio.micLive()) return true;
     try { await Audio.startMic(s.inputDeviceId); return true; }
-    catch (e) { toast("Mic off — notes won't be graded. " + e.message, "bad"); return false; }
+    catch (e) { toast(t("Mic off — notes won't be graded. {error}", { error: e.message }), "bad"); return false; }
   }
 
   async function togglePlay() {
@@ -241,19 +244,19 @@ export default async function play(ctx) {
     if (playing) { pause(); return; }
     await ensureMic();
     if (s.midiInput) {
-      try { if (!(await Midi.start())) toast("This browser has no Web MIDI — using the mic", ""); }
-      catch (e) { toast("MIDI unavailable: " + e.message, "bad"); }
+      try { if (!(await Midi.start())) toast(t("This browser has no Web MIDI — using the mic"), ""); }
+      catch (e) { toast(t("MIDI unavailable: {error}", { error: e.message }), "bad"); }
     }
     await Audio.resume();
     playing = true; started = true;
-    playBtn.textContent = "⏸ Pause";
+    playBtn.textContent = "⏸ " + t("Pause");
     player.setRate(rate);
     if (clock >= 0) player.play(clock);
     lastTs = performance.now();
     requestAnimationFrame(loop);
   }
   function pause() {
-    playing = false; playBtn.textContent = "▶ Resume";
+    playing = false; playBtn.textContent = "▶ " + t("Resume");
     player.pause(); band.silence();
   }
   function restart() {
@@ -265,7 +268,7 @@ export default async function play(ctx) {
     notes.forEach((n) => { n.state = "pending"; n.best = 999; n.frames = 0; });
     killfeed.innerHTML = "";
     player.seek(0); band.seek(0);
-    playBtn.textContent = "▶ Start";
+    playBtn.textContent = "▶ " + t("Start");
     render(0); updateHud();
   }
 
@@ -275,7 +278,7 @@ export default async function play(ctx) {
     const clean = inLoop.length && inLoop.every((n) => n.state === "perfect" || n.state === "good");
     if (trainer && clean && rate < 1) {
       setRate(Math.min(1, Math.round((rate + 0.05) * 100) / 100));
-      toast(rate >= 1 ? "🎉 Clean at full speed!" : `Clean pass — speed up to ${Math.round(rate * 100)}%`, "good");
+      toast(rate >= 1 ? "🎉 " + t("Clean at full speed!") : t("Clean pass — speed up to {pct}%", { pct: Math.round(rate * 100) }), "good");
     }
     clock = Math.max(0, loopA - beatLen);
     for (const n of notes) if (n.time + n.dur + HIT_PAD >= clock && n.time < loopB) { n.state = "pending"; n.best = 999; n.frames = 0; }
@@ -406,12 +409,14 @@ export default async function play(ctx) {
     else { health = Math.max(0, health - 10); streak = 0; }
     maxStreak = Math.max(maxStreak, streak);
     mult = 1 + Math.min(3, Math.floor(streak / 8)) * 0.5;
-    if (health <= 0 && !failed) { failed = true; toast("Healthbar empty — keep going, but this run won't count as a pass.", "bad"); }
+    if (health <= 0 && !failed) { failed = true; toast(t("Healthbar empty — keep going, but this run won't count as a pass."), "bad"); }
     pushKill(q, n);
   }
   function pushKill(q, n) {
     const label = describeMidiSet(n.midi);
-    const k = el(`div.kill.${q}`, { html: `${q[0].toUpperCase() + q.slice(1)} <span class="muted">${label}</span>` });
+    // i18n-keys: Perfect | Good | Off | Miss
+    const name = t({ perfect: "Perfect", good: "Good", off: "Off", miss: "Miss" }[q]);
+    const k = el(`div.kill.${q}`, { html: `${name} <span class="muted">${label}</span>` });
     killfeed.appendChild(k);
     while (killfeed.children.length > 6) killfeed.firstChild.remove();
     setTimeout(() => { k.style.opacity = "0"; k.style.transition = "opacity 500ms"; }, 1400);
@@ -510,10 +515,10 @@ export default async function play(ctx) {
     if (lbl && w > 22) c.fillText(lbl, x + 5, y + 4);
   }
   // fretboard strip: dots for the current (or next) note's fingering
-  function drawFretboard(t) {
-    const cur = notes.find((n) => n.frets && t <= n.time + n.dur);
+  function drawFretboard(tm) {
+    const cur = notes.find((n) => n.frets && tm <= n.time + n.dur);
     if (!cur) return;
-    const now = t >= cur.time - 0.05;
+    const now = tm >= cur.time - 0.05;
     const nStr = inst.strings.length;
     const FRETS = 12;
     const fbW = Math.min(340, W * 0.42), fbH = 6 + nStr * 13;
@@ -523,7 +528,9 @@ export default async function play(ctx) {
     roundRect(x0 - 10, y0 - 24, fbW + 20, fbH + 44, 10); c.fill();
     c.fillStyle = now ? getVar("--accent") : getVar("--muted");
     c.font = "bold 12px var(--font)";
-    c.fillText((now ? "Now: " : "Next: ") + describeMidiSet(cur.midi) + (capo ? ` · capo ${capo}` : ""), x0, y0 - 8);
+    const notesLbl = describeMidiSet(cur.midi);
+    c.fillText((now ? t("Now: {notes}", { notes: notesLbl }) : t("Next: {notes}", { notes: notesLbl })) +
+      (capo ? " · " + t("capo {capo}", { capo }) : ""), x0, y0 - 8);
     const sy = (si) => y0 + fbH - 6 - si * 13;   // string 0 (lowest pitch) at bottom
     c.lineWidth = 1;
     c.strokeStyle = "rgba(255,255,255,0.4)";
@@ -556,21 +563,23 @@ export default async function play(ctx) {
   }
 
   // harmonica strip: which hole to play and whether to blow (↑) or draw (↓)
-  function drawHoles(t) {
-    const cur = notes.find((n) => n.holes && t <= n.time + n.dur);
+  function drawHoles(tm) {
+    const cur = notes.find((n) => n.holes && tm <= n.time + n.dur);
     if (!cur) return;
-    const now = t >= cur.time - 0.05;
+    const now = tm >= cur.time - 0.05;
     const cell = 28, x0 = 22, fbW = 10 * cell + 4, fbH = 56;
     const y0 = H - fbH - 44;
     c.fillStyle = "rgba(0,0,0,0.55)";
     roundRect(x0 - 10, y0 - 24, fbW + 20, fbH + 34, 10); c.fill();
     const played = cur.holes.filter(Boolean);
     const label = played.length
-      ? played.map((p) => `hole ${p.hole} ${p.draw ? "draw ↓" : "blow ↑"}`).join(" · ")
-      : "not on a C harp";
+      ? played.map((p) => (p.draw ? t("hole {hole} draw ↓", { hole: p.hole }) : t("hole {hole} blow ↑", { hole: p.hole }))).join(" · ")
+      : t("not on a C harp");
     c.fillStyle = now ? getVar("--accent") : getVar("--muted");
     c.font = "bold 12px var(--font)";
-    c.fillText((now ? "Now: " : "Next: ") + describeMidiSet(cur.midi) + " — " + label, x0, y0 - 8);
+    const holeNotes = describeMidiSet(cur.midi);
+    c.fillText(now ? t("Now: {notes} — {holes}", { notes: holeNotes, holes: label })
+      : t("Next: {notes} — {holes}", { notes: holeNotes, holes: label }), x0, y0 - 8);
     const col = now ? getVar("--accent") : "rgba(255,255,255,0.75)";
     for (let i = 0; i < 10; i++) {
       const x = x0 + i * cell;
@@ -635,16 +644,16 @@ export default async function play(ctx) {
 
   function finish() {
     finished = true; playing = false; player.pause(); band.silence();
-    playBtn.textContent = "⟲ Play again";
+    playBtn.textContent = "⟲ " + t("Play again");
     const acc = accuracy();
     if (practicing()) {   // a slowed-down run isn't comparable to a real one, so it isn't logged
       banner.innerHTML = "";
       banner.appendChild(el("div.panel", {}, [
-        el("h2", { text: `Practice run at ${Math.round(rate * 100)}% — ${acc}% accuracy` }),
-        el("p.muted", { text: "Practice runs aren't recorded. Set the speed back to 100% and clear the loop for a scored run." }),
+        el("h2", { text: t("Practice run at {pct}% — {acc}% accuracy", { pct: Math.round(rate * 100), acc }) }),
+        el("p.muted", { text: t("Practice runs aren't recorded. Set the speed back to 100% and clear the loop for a scored run.") }),
         el("div.row", { style: { justifyContent: "center" } }, [
-          el("button.btn.primary", { onclick: restart }, ["⟲ Again"]),
-          el("button.btn", { onclick: () => { setRate(1); restart(); } }, ["Full speed"]),
+          el("button.btn.primary", { onclick: restart }, ["⟲ " + t("Again")]),
+          el("button.btn", { onclick: () => { setRate(1); restart(); } }, [t("Full speed")]),
         ]),
       ]));
       banner.classList.remove("hidden");
@@ -670,18 +679,19 @@ export default async function play(ctx) {
     banner.innerHTML = "";
     banner.appendChild(el("div.panel", {}, [
       el("div.big-grade", { text: grade, style: { color: passed ? getVar("--good") : getVar("--bad") } }),
-      el("h2", { text: passed ? "Song complete — passed!" : (failed ? "Finished (failed — healthbar emptied)" : "Finished") }),
+      el("h2", { text: passed ? t("Song complete — passed!") : (failed ? t("Finished (failed — healthbar emptied)") : t("Finished")) }),
       coinsEarned ? el("div", { style: { fontSize: "16px", fontWeight: "700", color: "var(--warn)", margin: "2px 0 6px" },
-        html: `🪙 +${coinsEarned} coins earned · <span class="muted" style="font-weight:400">spend them in the Locker</span>` }) : null,
+        html: "🪙 " + t.n(`+{n} coin earned · <span class="muted" style="font-weight:400">spend them in the Locker</span>`,
+          `+{n} coins earned · <span class="muted" style="font-weight:400">spend them in the Locker</span>`, coinsEarned) }) : null,
       el("div.grid.cards", { style: { margin: "14px 0" } }, [
-        miniStat(acc + "%", "Accuracy"), miniStat(score, "Score"), miniStat(maxStreak, "Best streak"),
-        miniStat(counts.perfect, "Perfect"), miniStat(counts.miss, "Missed"),
+        miniStat(acc + "%", t("Accuracy")), miniStat(score, t("Score")), miniStat(maxStreak, t("Best streak")),
+        miniStat(counts.perfect, t("Perfect")), miniStat(counts.miss, t("Missed")),
       ]),
       el("div.row", { style: { justifyContent: "center" } }, [
-        el("button.btn.primary", { onclick: restart }, ["⟲ Play again"]),
-        el("button.btn", { onclick: () => navigate("#/library") }, ["← Songs"]),
-        el("button.btn", { onclick: () => navigate("#/history") }, ["📈 Progress"]),
-        coinsEarned ? el("button.btn", { onclick: () => navigate("#/locker") }, ["🎨 Locker"]) : null,
+        el("button.btn.primary", { onclick: restart }, ["⟲ " + t("Play again")]),
+        el("button.btn", { onclick: () => navigate("#/library") }, ["← " + t("Songs")]),
+        el("button.btn", { onclick: () => navigate("#/history") }, ["📈 " + t("Progress")]),
+        coinsEarned ? el("button.btn", { onclick: () => navigate("#/locker") }, ["🎨 " + t("Locker")]) : null,
       ]),
     ]));
     banner.classList.remove("hidden");
@@ -718,8 +728,8 @@ function miniStat(num, label) {
   return el("div.stat", {}, [el("div.num", { text: String(num) }), el("div.lbl", { text: label })]);
 }
 function scoreHTML(score, health, streak, mult, acc = 100, failed = false) {
-  return `<div style="font-size:22px;font-weight:800">${score.toLocaleString()}</div>
-    <div class="muted" style="font-size:12px">${acc}% · streak ${streak} · ×${mult}${failed ? ' · <span style="color:var(--bad)">FAILED</span>' : ""}</div>`;
+  return `<div style="font-size:22px;font-weight:800">${fmt.number(score)}</div>
+    <div class="muted" style="font-size:12px">${t("{acc}% · streak {streak} · ×{mult}", { acc, streak, mult })}${failed ? ' · <span style="color:var(--bad)">' + t("FAILED") + "</span>" : ""}</div>`;
 }
 function gradeLetter(acc, failed) {
   if (failed) return "F";

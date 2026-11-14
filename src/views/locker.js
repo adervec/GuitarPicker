@@ -12,18 +12,19 @@ import {
   SKINS, getSkin, rarity,
   coins, priceFor, ownsItem, buyItem, unlockedCount,
 } from "../cosmetics/index.js";
+import { t, fmt } from "../i18n.js";
 
 export default function locker(ctx) {
   const { el: root } = ctx;
   const head = pageHead(
-    "Locker",
-    "Build your player, customise a guitar, and pick an app skin. Earn 🪙 coins by playing; spend them to unlock rare gear."
+    t("Locker"),
+    t("Build your player, customise a guitar, and pick an app skin. Earn 🪙 coins by playing; spend them to unlock rare gear.")
   );
   // coin balance chip in the page header
-  const coinChip = el("div.coin-chip", { title: "Coins — earn by playing songs" });
+  const coinChip = el("div.coin-chip", { title: t("Coins — earn by playing songs") });
   head.querySelector(".row")?.appendChild(coinChip);
   root.appendChild(head);
-  const paintCoins = () => { coinChip.innerHTML = `🪙 <b>${coins().toLocaleString()}</b>`; };
+  const paintCoins = () => { coinChip.innerHTML = `🪙 <b>${fmt.number(coins())}</b>`; };
   paintCoins();
 
   // First-unlock nudge — shown until the player unlocks their first item or dismisses it.
@@ -31,8 +32,8 @@ export default function locker(ctx) {
   if (unlockedCount() === 0 && !Store.settings().lockerTipDismissed) {
     tipEl = el("div.panel.tight", { style: { borderColor: "var(--accent)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "12px" } }, [
       el("div", { style: { flex: "1", fontSize: "13px" },
-        html: "💡 <b>New here?</b> Items marked 🔒 unlock with coins you earn by playing songs and finishing daily practice. Tap a locked item to unlock it — colours are always free." }),
-      el("button.btn.ghost", { onclick: () => { Store.setSetting("lockerTipDismissed", true); if (tipEl) { tipEl.remove(); tipEl = null; } } }, ["Got it ✕"]),
+        html: "💡 " + t("<b>New here?</b> Items marked 🔒 unlock with coins you earn by playing songs and finishing daily practice. Tap a locked item to unlock it — colours are always free.") }),
+      el("button.btn.ghost", { onclick: () => { Store.setSetting("lockerTipDismissed", true); if (tipEl) { tipEl.remove(); tipEl = null; } } }, [t("Got it") + " ✕"]),
     ]);
     root.appendChild(tipEl);
   }
@@ -42,7 +43,8 @@ export default function locker(ctx) {
     if (e.type === "unlocks" && tipEl) { tipEl.remove(); tipEl = null; }   // first unlock dismisses the nudge
   });
 
-  const TABS = [["player", "🧑 Player"], ["guitar", "🎸 Guitar"], ["skin", "🎨 App Skin"]];
+  // i18n-keys: Player | Guitar | App Skin
+  const TABS = [["player", "🧑", "Player"], ["guitar", "🎸", "Guitar"], ["skin", "🎨", "App Skin"]];
   let active = "player";
   const tabBar = el("div.pill-row", { style: { marginBottom: "18px" } });
   const body = el("div");
@@ -50,9 +52,9 @@ export default function locker(ctx) {
 
   function renderTabs() {
     clear(tabBar);
-    for (const [id, label] of TABS) {
+    for (const [id, icon, label] of TABS) {
       tabBar.appendChild(el(`div.pill${active === id ? ".active" : ""}`,
-        { onclick: () => { active = id; renderTabs(); renderBody(); } }, [label]));
+        { onclick: () => { active = id; renderTabs(); renderBody(); } }, [`${icon} ${t(label)}`]));
     }
   }
 
@@ -94,11 +96,11 @@ export default function locker(ctx) {
     };
 
     const previewPanel = el("div.panel", { style: { width: "300px", flex: "none" } }, [
-      el("h3", { text: isAvatar ? "Your Player" : "Your Guitar" }),
+      el("h3", { text: isAvatar ? t("Your Player") : t("Your Guitar") }),
       previewBox,
       el("div.row", { style: { marginTop: "12px" } }, [
-        el("button.btn", { onclick: randomize }, ["🎲 Randomize"]),
-        el("button.btn.ghost", { onclick: () => { setLoadout({}); renderBody(); } }, ["↺ Reset"]),
+        el("button.btn", { onclick: randomize }, ["🎲 " + t("Randomize")]),
+        el("button.btn.ghost", { onclick: () => { setLoadout({}); renderBody(); } }, ["↺ " + t("Reset")]),
       ]),
     ]);
 
@@ -111,7 +113,8 @@ export default function locker(ctx) {
       } else {
         for (const item of cat.items) grid.appendChild(partOption(kind, cat.key, item, loadout, setPart, compose));
       }
-      opts.appendChild(el("div.panel.tight", {}, [el("h3", { text: cat.label }), grid]));
+      // i18n-keys: Skin Tone | Expression | Hair | Hair Colour | Facial Hair | Clothing | Clothing Colour | Tattoo | Eyewear | Headwear | Headwear Colour | Jewellery | Frame | Body Shape | Body Colour | Finish | Pickguard | Hardware | Inlays | Decal
+      opts.appendChild(el("div.panel.tight", {}, [el("h3", { text: t(cat.label) }), grid]));
     }
 
     container.appendChild(el("div.row", { style: { alignItems: "flex-start", gap: "20px" } }, [previewPanel, opts]));
@@ -122,6 +125,7 @@ export default function locker(ctx) {
     const owned = ownsItem(kind, key, item);
     const price = priceFor(item);
     const r = rarity(item.rarity);
+    const rName = t(r.name); // i18n-keys: Common | Uncommon | Rare | Epic | Legendary
 
     const thumb = el("div", { style: { width: "100%", height: "58px", pointerEvents: "none", opacity: owned ? "1" : "0.5", filter: owned ? "none" : "grayscale(0.6)" } });
     thumb.innerHTML = compose({ ...loadout, [key]: item.id }, getVar("--accent"));
@@ -137,13 +141,13 @@ export default function locker(ctx) {
         ]);
 
     return el("div", {
-      title: owned ? `${item.name} · ${r.name}` : `${item.name} · ${r.name} — unlock for ${price} coins`,
+      title: owned ? `${item.name} · ${rName}` : t("{item} · {rarity} — unlock for {price} coins", { item: item.name, rarity: rName, price }),
       style: optStyle(isActive),
       onclick: () => {
         if (owned) { setPart(key, item.id); renderBody(); return; }
         const res = buyItem(kind, key, item);
-        if (res.ok) { toast(`Unlocked ${item.name}! 🪙 −${res.price}`, "good"); setPart(key, item.id); renderBody(); }
-        else { toast(`Need ${res.price} coins (you have ${coins()}). Play songs to earn more.`, "bad"); }
+        if (res.ok) { toast(t("Unlocked {item}!", { item: item.name }) + ` 🪙 −${res.price}`, "good"); setPart(key, item.id); renderBody(); }
+        else { toast(t("Need {price} coins (you have {coins}). Play songs to earn more.", { price: res.price, coins: coins() }), "bad"); }
       },
     }, [thumb, footer]);
   }
@@ -187,12 +191,12 @@ export default function locker(ctx) {
         mock,
         el("div.spread", {}, [
           el("div.title", { text: sk.name }),
-          el("span", { style: { fontSize: "10px", color: r.color, border: `1px solid ${r.color}`, borderRadius: "999px", padding: "1px 8px" }, text: r.name }),
+          el("span", { style: { fontSize: "10px", color: r.color, border: `1px solid ${r.color}`, borderRadius: "999px", padding: "1px 8px" }, text: t(r.name) }),
         ]),
         el("div.sub", { text: sk.desc }),
         isActive
-          ? el("div", { style: { fontSize: "11px", color: ac, marginTop: "6px", fontWeight: "600" }, text: "✓ Active" })
-          : (owned ? null : el("div", { style: { fontSize: "11px", color: "var(--warn)", marginTop: "6px", fontWeight: "700" }, text: `🔒 Unlock · 🪙 ${price}` })),
+          ? el("div", { style: { fontSize: "11px", color: ac, marginTop: "6px", fontWeight: "600" }, text: "✓ " + t("Active") })
+          : (owned ? null : el("div", { style: { fontSize: "11px", color: "var(--warn)", marginTop: "6px", fontWeight: "700" }, text: `🔒 ${t("Unlock")} · 🪙 ${price}` })),
       ]));
     }
     container.appendChild(grid);
@@ -201,14 +205,14 @@ export default function locker(ctx) {
   function onSkin(sk, owned, price) {
     if (!owned) {
       const res = buyItem("skin", "", sk);
-      if (!res.ok) { toast(`Need ${res.price} coins (you have ${coins()}). Play songs to earn more.`, "bad"); return; }
-      toast(`Unlocked “${sk.name}” skin! 🪙 −${res.price}`, "good");
+      if (!res.ok) { toast(t("Need {price} coins (you have {coins}). Play songs to earn more.", { price: res.price, coins: coins() }), "bad"); return; }
+      toast(t("Unlocked “{skin}” skin!", { skin: sk.name }) + ` 🪙 −${res.price}`, "good");
     }
     Store.setSetting("theme", sk.id);
     document.documentElement.setAttribute("data-theme", sk.id);
     const quick = document.getElementById("theme-quick");
     if (quick) quick.value = sk.id;
-    if (owned) toast(`Applied “${getSkin(sk.id).name}” skin`);
+    if (owned) toast(t("Applied “{skin}” skin", { skin: getSkin(sk.id).name }));
     renderBody();
   }
 

@@ -6,6 +6,7 @@ import { newSong, songDuration, uid } from "../music/song-format.js";
 import { freqToMidiFloat, freqToMidi, midiToName, INSTRUMENTS } from "../music/notes.js";
 import { framesToNotes } from "../music/transcribe.js";
 import { ANIMATED_BACKGROUNDS } from "../ui/backgrounds.js";
+import { t, fmt } from "../i18n.js";
 
 export default function listen(ctx) {
   const { el: root, navigate } = ctx;
@@ -24,10 +25,10 @@ export default function listen(ctx) {
   const capCanvas = document.createElement("canvas");
   const shots = [];
 
-  root.appendChild(pageHead("Listen & Make", "Play or sing something; GuitarPicker transcribes it into a playable song at several difficulty levels."));
+  root.appendChild(pageHead(t("Listen & Make"), t("Play or sing something; GuitarPicker transcribes it into a playable song at several difficulty levels.")));
 
   // setup controls
-  const tapBtn = el("button.btn", { onclick: tapTempo }, ["Tap tempo"]);
+  const tapBtn = el("button.btn", { onclick: tapTempo }, [t("Tap tempo")]);
   let taps = [];
   function tapTempo() {
     const now = performance.now(); taps.push(now); taps = taps.filter((t) => now - t < 3000);
@@ -37,25 +38,25 @@ export default function listen(ctx) {
       bpm = Math.round(60000 / avg); bpmSlider.setValue(bpm);
     }
   }
-  const bpmSlider = slider({ label: "Tempo (for note alignment)", min: 50, max: 200, step: 1, value: bpm, fmt: (v) => v + " BPM", oninput: (v) => bpm = v });
+  const bpmSlider = slider({ label: t("Tempo (for note alignment)"), min: 50, max: 200, step: 1, value: bpm, fmt: (v) => v + " BPM", oninput: (v) => bpm = v });
 
-  const capToggle = el("button.btn", { onclick: toggleCapture }, ["🖥️ Capture screen region"]);
+  const capToggle = el("button.btn", { onclick: toggleCapture }, ["🖥️ " + t("Capture screen region")]);
   const capStatus = el("span.muted", { text: "" });
 
   root.appendChild(el("div.panel", {}, [
-    el("h2", { text: "1 · Set up" }),
+    el("h2", { text: "1 · " + t("Set up") }),
     el("div.grid", { style: { gridTemplateColumns: "2fr 1fr" } }, [bpmSlider, el("div.col", { style: { justifyContent: "flex-end" } }, [tapBtn])]),
     el("div.row", { style: { marginTop: "10px", alignItems: "center" } }, [capToggle, capStatus]),
-    el("p.muted", { style: { fontSize: "12px" }, html: "Screen capture is optional — when on, GuitarPicker snapshots the region you share into a slideshow that plays behind the notes. You choose the region in the browser's share dialog." }),
+    el("p.muted", { style: { fontSize: "12px" }, html: t("Screen capture is optional — when on, GuitarPicker snapshots the region you share into a slideshow that plays behind the notes. You choose the region in the browser's share dialog.") }),
   ]));
 
   // record panel
   const liveNote = el("div.tuner-note", { html: "—", style: { fontSize: "54px" } });
   const liveMeter = el("div.progress", { style: { width: "200px" } }, [el("i", { style: { width: "0%" } })]);
-  const recBtn = el("button.btn.primary.lg", { onclick: toggleRecord }, ["● Record"]);
+  const recBtn = el("button.btn.primary.lg", { onclick: toggleRecord }, ["● " + t("Record")]);
   const elapsed = el("span.muted", { text: "0:00" });
   root.appendChild(el("div.panel.center", {}, [
-    el("h2", { text: "2 · Record" }),
+    el("h2", { text: "2 · " + t("Record") }),
     liveNote,
     el("div.row", { style: { justifyContent: "center", alignItems: "center", margin: "10px 0" } }, [liveMeter]),
     el("div.row", { style: { justifyContent: "center", alignItems: "center" } }, [recBtn, elapsed]),
@@ -66,18 +67,18 @@ export default function listen(ctx) {
 
   async function toggleRecord() {
     if (recording) { stopRecord(); return; }
-    try { await Audio.startMic(s.inputDeviceId); } catch (e) { toast("Mic failed: " + e.message, "bad"); return; }
+    try { await Audio.startMic(s.inputDeviceId); } catch (e) { toast(t("Mic failed: {error}", { error: e.message }), "bad"); return; }
     recording = true; frames = []; startTime = performance.now();
-    recBtn.textContent = "■ Stop"; recBtn.classList.remove("primary");
+    recBtn.textContent = "■ " + t("Stop"); recBtn.classList.remove("primary");
     if (capStream) startSnapping();
     loop();
   }
   function stopRecord() {
     recording = false; cancelAnimationFrame(raf);
-    recBtn.textContent = "● Record"; recBtn.classList.add("primary");
+    recBtn.textContent = "● " + t("Record"); recBtn.classList.add("primary");
     stopSnapping();
     Audio.stopMic();
-    if (frames.length < 5) { toast("Didn't hear enough — try again, a bit louder.", "bad"); return; }
+    if (frames.length < 5) { toast(t("Didn't hear enough — try again, a bit louder."), "bad"); return; }
     buildResults();
   }
 
@@ -122,13 +123,13 @@ export default function listen(ctx) {
 
   function buildResults() {
     const full = framesToNotes(frames, bpm, s.a4);
-    if (!full.length) { toast("Couldn't find clear notes — try a melody with single notes.", "bad"); return; }
+    if (!full.length) { toast(t("Couldn't find clear notes — try a melody with single notes."), "bad"); return; }
 
     resultPanel.classList.remove("hidden");
     resultPanel.innerHTML = "";
-    resultPanel.appendChild(el("h2", { text: "3 · Your transcription" }));
+    resultPanel.appendChild(el("h2", { text: "3 · " + t("Your transcription") }));
     resultPanel.appendChild(el("p.muted", {
-      text: `Detected ${full.length} notes over ${fmtTime(full[full.length - 1].time + full[full.length - 1].dur)}. Pick a difficulty and background, then save or play.`,
+      text: t.n("Detected {n} note over {duration}. Pick a difficulty and background, then save or play.", "Detected {n} notes over {duration}. Pick a difficulty and background, then save or play.", full.length, { duration: fmtTime(full[full.length - 1].time + full[full.length - 1].dur) }),
     }));
 
     // background chooser
@@ -139,10 +140,12 @@ export default function listen(ctx) {
       return p;
     }
     ANIMATED_BACKGROUNDS.forEach((b) => bgRow.appendChild(bgPill(b, { type: "animated", value: b })));
-    bgRow.appendChild(bgPill("solid", { type: "solid", value: "" }));
-    if (shots.length) bgRow.appendChild(bgPill(`📸 captured (${shots.length})`, { type: "slideshow", value: shots.slice() }));
-    resultPanel.append(el("div.muted", { text: "Background:" }), bgRow);
+    bgRow.appendChild(bgPill(t("solid"), { type: "solid", value: "" }));
+    if (shots.length) bgRow.appendChild(bgPill("📸 " + t("captured ({n})", { n: shots.length }), { type: "slideshow", value: shots.slice() }));
+    resultPanel.append(el("div.muted", { text: t("Background:") }), bgRow);
 
+    // i18n-keys: Beginner | Intermediate | Advanced
+    // i18n-keys: One note per beat — easy to follow | Cleaned-up rhythm, ornaments removed | Full transcription as detected
     const levels = [
       { id: "beginner", label: "Beginner", desc: "One note per beat — easy to follow" },
       { id: "intermediate", label: "Intermediate", desc: "Cleaned-up rhythm, ornaments removed" },
@@ -152,12 +155,12 @@ export default function listen(ctx) {
     for (const lv of levels) {
       const notes = lv.id === "advanced" ? full : simplify(full, bpm, lv.id);
       grid.appendChild(el("div.card", {}, [
-        el("div.title", { text: lv.label }),
-        el("div.sub", { text: lv.desc }),
-        el("div.muted", { text: `${notes.length} notes` }),
+        el("div.title", { text: t(lv.label) }),
+        el("div.sub", { text: t(lv.desc) }),
+        el("div.muted", { text: t.n("{n} note", "{n} notes", notes.length) }),
         el("div.row", { style: { marginTop: "auto" } }, [
-          el("button.btn.primary", { onclick: () => saveAndPlay(lv, notes, true) }, ["▶ Play"]),
-          el("button.btn", { onclick: () => saveAndPlay(lv, notes, false) }, ["💾 Save"]),
+          el("button.btn.primary", { onclick: () => saveAndPlay(lv, notes, true) }, ["▶ " + t("Play")]),
+          el("button.btn", { onclick: () => saveAndPlay(lv, notes, false) }, ["💾 " + t("Save")]),
         ]),
       ]));
     }
@@ -166,12 +169,12 @@ export default function listen(ctx) {
 
   function saveAndPlay(lv, notes, play) {
     const song = newSong({
-      id: uid(), title: `Recording ${new Date().toLocaleString()} (${lv.label})`,
-      artist: "You", instrument: s.instrument, bpm, difficulty: lv.id, source: "listen",
+      id: uid(), title: t("Recording {date} ({level})", { date: fmt.dateTime(new Date()), level: t(lv.label) }),
+      artist: t("You"), instrument: s.instrument, bpm, difficulty: lv.id, source: "listen",
       background: chosenBg, notes,
     });
     Store.saveSong(song);
-    toast(`Saved "${song.title}"`, "good");
+    toast(t('Saved "{title}"', { title: song.title }), "good");
     if (play) navigate(`#/play/${song.id}`); else navigate("#/library");
   }
 
@@ -182,15 +185,15 @@ export default function listen(ctx) {
       capStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 2 }, audio: false });
       capVideo.srcObject = capStream; await capVideo.play();
       capStream.getVideoTracks()[0].addEventListener("ended", stopCapture);
-      capToggle.textContent = "🛑 Stop capture";
-      capStatus.textContent = "Sharing — snapshots taken while recording";
-    } catch (e) { toast("Screen capture cancelled", "bad"); }
+      capToggle.textContent = "🛑 " + t("Stop capture");
+      capStatus.textContent = t("Sharing — snapshots taken while recording");
+    } catch (e) { toast(t("Screen capture cancelled"), "bad"); }
   }
   function stopCapture() {
     if (capStream) capStream.getTracks().forEach((t) => t.stop());
     capStream = null; stopSnapping();
-    capToggle.textContent = "🖥️ Capture screen region";
-    capStatus.textContent = shots.length ? `${shots.length} snapshots captured` : "";
+    capToggle.textContent = "🖥️ " + t("Capture screen region");
+    capStatus.textContent = shots.length ? t.n("{n} snapshot captured", "{n} snapshots captured", shots.length) : "";
   }
   function startSnapping() {
     shots.length = 0;
@@ -200,7 +203,7 @@ export default function listen(ctx) {
       capCanvas.width = 640; capCanvas.height = Math.round(capVideo.videoHeight * scale);
       capCanvas.getContext("2d").drawImage(capVideo, 0, 0, capCanvas.width, capCanvas.height);
       try { shots.push(capCanvas.toDataURL("image/jpeg", 0.55)); } catch {}
-      capStatus.textContent = `${shots.length} snapshots captured`;
+      capStatus.textContent = t.n("{n} snapshot captured", "{n} snapshots captured", shots.length);
     }, 1500);
   }
   function stopSnapping() { if (capTimer) clearInterval(capTimer); capTimer = 0; }

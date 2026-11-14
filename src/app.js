@@ -4,7 +4,10 @@ import { el, clear } from "./ui/components.js";
 import { Audio } from "./audio/engine.js";
 import { SKINS } from "./cosmetics/skins.js";
 import { startCowork } from "./cowork.js";
+import { t, fmt, i18nReady } from "./i18n.js";
 
+// labels go through t() when drawn
+// i18n-keys: Play | Create | Grow | You | System | Home | Songs | Karaoke | Tuner | Song Editor | Listen & Make | Training | Theory Games | Glossary | Instruments | Progress | Locker | Settings | Now Playing
 const NAV = [
   { sep: "Play" },
   { route: "home", icon: "🏠", label: "Home" },
@@ -54,9 +57,9 @@ function buildNav() {
   const nav = document.getElementById("nav");
   clear(nav);
   for (const item of NAV) {
-    if (item.sep) { nav.appendChild(el("div.nav-sep", { text: item.sep })); continue; }
+    if (item.sep) { nav.appendChild(el("div.nav-sep", { text: t(item.sep) })); continue; }
     const a = el("a.nav-item", { href: `#/${item.route}` }, [
-      el("span.ico", { text: item.icon }), el("span", { text: item.label }),
+      el("span.ico", { text: item.icon }), el("span", { text: t(item.label) }),
     ]);
     a.dataset.route = item.route;
     nav.appendChild(a);
@@ -102,7 +105,7 @@ async function router() {
   } catch (e) {
     console.error(e);
     container.appendChild(el("div.panel", {}, [
-      el("h2", { text: "View failed to load" }),
+      el("h2", { text: t("View failed to load") }),
       el("pre", { text: String(e && e.stack || e) }),
     ]));
   }
@@ -114,8 +117,8 @@ function refreshIO() {
   const outLabel = document.querySelector('[data-io="out"]');
   const dot = document.querySelector(".io-dot.in");
   const io = Audio.currentDevices();
-  inLabel.textContent = io.input || "no mic";
-  outLabel.textContent = io.output || "default out";
+  inLabel.textContent = io.input || t("no mic");
+  outLabel.textContent = io.output || t("default out");
   dot.classList.toggle("live", io.micLive);
 }
 Audio.onChange(refreshIO);
@@ -123,7 +126,7 @@ Audio.onChange(refreshIO);
 // ---- coin counter (top bar) ----
 function refreshCoins() {
   const chip = document.getElementById("coin-chip");
-  if (chip) chip.innerHTML = `🪙 <b>${Store.coins().toLocaleString()}</b>`;
+  if (chip) chip.innerHTML = `🪙 <b>${fmt.number(Store.coins())}</b>`;
 }
 Store.on((e) => { if (e.type === "coins" || e.type === "history" || e.type === "unlocks") refreshCoins(); });
 
@@ -136,7 +139,7 @@ const crumbTitles = {
 };
 function refreshCrumb() {
   const { route } = parseHash();
-  document.getElementById("crumb").textContent = crumbTitles[route] || "GuitarPicker";
+  document.getElementById("crumb").textContent = crumbTitles[route] ? t(crumbTitles[route]) : "GuitarPicker";
 }
 
 // ---- portal beacon ----
@@ -156,7 +159,8 @@ function markInstalled() {
   } catch {}
 }
 
-function init() {
+async function init() {
+  await i18nReady();   // draw the first screen in the chosen language
   applyTheme(Store.settings().theme);
   buildNav();
   buildThemePicker();
