@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "localStorage": ["guitarpicker.v1", "gp-coach-reply"],
+  "indexedDB": [],
+  "drive": ["guitarpicker-sync.json"],
+  "caches": [],
+  "export": "Settings > Data > Export all data"
+}

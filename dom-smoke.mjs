@@ -216,6 +216,19 @@ for (const must of ["# GuitarPicker practice report", "Sessions: 2", "Average ac
   for (const [name, cond] of checks) { if (cond) { console.log("  ✓ " + name); pass++; } else { console.log("  ✗ " + name); fail++; } }
 }
 
+// house standard 25: a finished run tells the hub's session ledger once, through font.js
+{
+  const calls = [];
+  const prev = globalThis.appFont;
+  globalThis.appFont = { ...(prev || {}), logSession: (s) => { calls.push(s); return true; } };
+  const ts = Date.now() + 5000;
+  Store.addHistory({ ts, songId, songTitle: "Ledger", instrument: "acoustic-guitar", score: 1000, accuracy: 80, maxStreak: 3, passed: true, durationSec: 150, notes: { perfect: 3, good: 1, off: 0, miss: 0 } });
+  globalThis.appFont = prev;
+  const c = calls[0];
+  if (calls.length === 1 && c.kind === "practice" && c.minutes === 3 && c.id === "gp-" + ts && c.at === ts) { console.log("  ✓ a finished run logs one practice session to the hub ledger"); pass++; }
+  else { console.log("  ✗ session ledger call wrong: " + JSON.stringify(calls)); fail++; }
+}
+
 // house standard 22: an imported song's fields never become markup
 {
   const evil = { ...Store.allUserSongs()[0], id: "evil-song", title: "<img src=x id=pwn-title>", artist: "<b id=pwn-artist>x</b>", key: "<i id=pwn-key>" };

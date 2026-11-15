@@ -1,6 +1,6 @@
 // Functional smoke test of the DOM-free core (music + audio math).
 import assert from "node:assert";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { midiToFreq, freqToMidi, nameToMidi, midiToName, scaleNotes, midiToFret, midiToHole, INSTRUMENTS } from "./src/music/notes.js";
@@ -508,6 +508,27 @@ function fakeCtx() {
   ok("security: every script index.html loads is allowed by the CSP",
     [...html.matchAll(/<script[^>]*\bsrc="([^"]+)"/g)].every(([, src]) => !/^https?:/.test(src) || scriptSrc.split(/\s+/).some((s) => s.startsWith("https://") && src.startsWith(s))));
   ok("i18n: the deploy publishes locales/", /cp -r [^\n]*\blocales\b/.test(readFileSync(".github/workflows/deploy.yml", "utf8")));
+}
+
+// ---- data inventory (house standard 23): every place the app keeps data is declared ----
+{
+  const inv = JSON.parse(readFileSync("app-data.json", "utf8"));
+  const stateKey = readFileSync("src/state.js", "utf8").match(/const KEY = "([^"]+)"/)[1];
+  const driveFile = readFileSync("src/cloud/config.js", "utf8").match(/SYNC_FILENAME = "([^"]+)"/)[1];
+  const usedKeys = new Set([stateKey, ...OWN_KEYS,
+    ...[...execSrc().matchAll(/localStorage\.(?:get|set|remove)Item\(\s*["']([^"']+)/g)].map((m) => m[1]).filter((k) => !/^(maker|portal|app|cowork)-/.test(k))]);
+  const declared = (k) => inv.localStorage.some((d) => (d.endsWith("*") ? k.startsWith(d.slice(0, -1)) : d === k));
+  ok("data inventory: schema is a whole number and export is named", Number.isInteger(inv.schema) && inv.export);
+  ok(`data inventory: every localStorage key the code writes is declared (${[...usedKeys].join(", ")})`, [...usedKeys].every(declared));
+  ok("data inventory: the Drive sync file is declared", inv.drive.includes(driveFile));
+  ok("data inventory: no house-prefixed keys declared", !inv.localStorage.some((k) => /^(maker|portal|app|cowork)-/.test(k)));
+  ok("data inventory: published by the deploy", /cp [^\n]*app-data\.json/.test(readFileSync(".github/workflows/deploy.yml", "utf8")));
+}
+function execSrc() {
+  const out = [];
+  const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = d + "/" + e.name; if (e.isDirectory()) walk(p); else if (p.endsWith(".js")) out.push(readFileSync(p, "utf8")); } };
+  walk("src");
+  return out.join("\n");
 }
 
 // ---- what's new ----
