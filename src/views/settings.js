@@ -2,7 +2,6 @@ import { el, pageHead, select, slider, toast, download } from "../ui/components.
 import { Store } from "../state.js";
 import { Audio } from "../audio/engine.js";
 import { INSTRUMENTS, instrumentOptions } from "../music/notes.js";
-import { SKINS } from "../cosmetics/skins.js";
 import { syncConfigured, isSignedIn, signIn, signOut, syncNow, lastSync, account } from "../cloud/sync.js";
 import { eraseLocalData, CACHE_NAME } from "../erase.js";
 import { t, fmt } from "../i18n.js";
@@ -79,9 +78,8 @@ export default async function settings(ctx) {
   root.appendChild(apr);
   apr.append(
     el("div.grid", { style: { gridTemplateColumns: "1fr 1fr" } }, [
-      select({ label: t("Theme (app skin)"), value: s.theme, options: SKINS.map((sk) => ({ value: sk.id, label: sk.name })),
-        onchange: (v) => { Store.setSetting("theme", v); document.documentElement.setAttribute("data-theme", v);
-          const q = document.getElementById("theme-quick"); if (q) q.value = v; } }),
+      // the house theme list (font.js, standard 24): System follows the device, the choice is kept for this app
+      el("div.field", {}, [document.createElement("app-theme-picker")]),
       select({ label: t("Default instrument"), value: s.instrument,
         options: instrumentOptions(),
         onchange: (v) => Store.setSetting("instrument", v) }),
@@ -89,7 +87,7 @@ export default async function settings(ctx) {
     // shared picker from https://adervec.github.io/font.js (el() cannot make hyphenated tags)
     el("div", { style: { marginTop: "12px" } }, [document.createElement("app-font-picker")]),
     el("p.muted", { style: { margin: "12px 0 0", fontSize: "13px" },
-      html: t("Customise your <b>player avatar</b>, <b>guitar</b>, and more app skins in the Locker.") }),
+      html: t("Customise your <b>player avatar</b> and <b>guitar</b> in the Locker.") }),
     el("div.row", { style: { marginTop: "8px" } }, [
       el("button.btn", { onclick: () => { location.hash = "#/locker"; } }, ["🎨 " + t("Open Locker")]),
     ]),

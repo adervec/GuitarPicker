@@ -2,7 +2,7 @@
 // Loadouts live in settings (see state.js DEFAULTS):
 //   settings.avatar  → player avatar loadout
 //   settings.guitar  → guitar avatar loadout
-//   settings.theme   → app skin id (matches a [data-theme] in themes.css)
+// App colours are not cosmetics: they are the house theme list (font.js, house standard 24).
 import { Store } from "../state.js";
 import { getVar } from "../ui/components.js";
 import {
@@ -11,7 +11,6 @@ import {
 import {
   composeGuitar, DEFAULT_GUITAR, GUITAR_PARTS, GUITAR_CATEGORY_ORDER,
 } from "./guitars.js";
-import { SKINS, getSkin, skinIds } from "./skins.js";
 import { priceOf, unlockKey, PRICES } from "./economy.js";
 
 export {
@@ -19,7 +18,6 @@ export {
   DEFAULT_AVATAR, DEFAULT_GUITAR,
   AVATAR_PARTS, AVATAR_CATEGORY_ORDER,
   GUITAR_PARTS, GUITAR_CATEGORY_ORDER,
-  SKINS, getSkin, skinIds,
   priceOf, PRICES,
 };
 export { RARITIES, rarity, SKIN_TONES, HAIR_COLORS, CLOTH_COLORS, GUITAR_COLORS } from "./parts.js";
@@ -76,7 +74,7 @@ export function unlockedCount() {
 
 /**
  * Collection completion across all unlockable items (avatar parts, guitar
- * parts, app skins). Free/common items and colours are not counted as
+ * parts). Free/common items and colours are not counted as
  * "collectible". Returns { total, owned, coins, byRarity:{ id:{total,owned} } }.
  */
 export function collectionStats() {
@@ -97,6 +95,5 @@ export function collectionStats() {
     const cat = GUITAR_PARTS[key];
     if (cat.kind !== "color") for (const it of cat.items) tally("guitar", cat.key, it);
   }
-  for (const sk of SKINS) tally("skin", "", sk);
   return { total, owned, coins: Store.coins(), byRarity };
 }

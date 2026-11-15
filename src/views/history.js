@@ -148,7 +148,8 @@ export default function history(ctx) {
   // re-draw charts on resize
   const onResize = () => renderAll();
   window.addEventListener("resize", onResize);
-  return () => { window.removeEventListener("resize", onResize); offStore(); onCoachReply(null); parkCowork(); };
+  document.addEventListener?.("app-theme-change", onResize);   // charts are canvas: redraw in the new colours
+  return () => { window.removeEventListener("resize", onResize); document.removeEventListener?.("app-theme-change", onResize); offStore(); onCoachReply(null); parkCowork(); };
 }
 
 /** One AI practice review, shown under its session row. */

@@ -2,6 +2,7 @@
  {
   "date": "2026-11-14",
   "items": [
+   "New colour themes: GuitarPicker now uses the same 15 free themes as the maker's other apps, under Settings. \"System\" follows your device's light or dark mode. The old app skins are gone from the Locker, and if you'd picked one, you've been moved to the closest new theme. Guitar and avatar items are unchanged.",
    "GuitarPicker now speaks 16 more languages: French, Spanish, Portuguese, Italian, Croatian, German, Chinese, Ukrainian, Esperanto, Swahili, Hindi, Bengali, Indonesian, Urdu, Farsi and Arabic. Pick one under the font settings in Settings. These are machine translations that no person has checked yet, so some wording may be off. Song names, the glossary and the instrument guide are still in English.",
    "Dates and numbers now follow your language and region."
   ]

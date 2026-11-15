@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 // Pure cosmetic modules — no DOM, no Store — safe to import statically.
 import { composeAvatar, AVATAR_PARTS, AVATAR_CATEGORY_ORDER, DEFAULT_AVATAR } from "./src/cosmetics/avatars.js";
 import { composeGuitar, GUITAR_PARTS, GUITAR_CATEGORY_ORDER, DEFAULT_GUITAR } from "./src/cosmetics/guitars.js";
-import { SKINS, getSkin, skinIds } from "./src/cosmetics/skins.js";
+import { SKIN_TO_HOUSE, migrateTheme } from "./src/theme-migrate.js";
 import { shadeColor, mixColor, pickById } from "./src/cosmetics/parts.js";
 import { PRICES, priceOf, unlockKey } from "./src/cosmetics/economy.js";
 
@@ -96,32 +96,29 @@ renderAll("guitar", composeGuitar, GUITAR_PARTS, GUITAR_CATEGORY_ORDER, GUITAR_V
 assert.ok(variantFails.length === 0, `FAILED: ${variantFails.length} cosmetic variant(s) produced bad SVG:\n  ${variantFails.slice(0, 12).join("\n  ")}`);
 ok(`every cosmetic variant renders to well-formed SVG (${variantCount} variants)`, true);
 
-// ---- 1c. skins + colour helpers -------------------------------------------
-ok("SKINS list is valid", Array.isArray(SKINS) && SKINS.length >= 10 &&
-  SKINS.every((s) => s.id && s.name && s.rarity && Array.isArray(s.swatch) && s.swatch.length === 3 &&
-    s.swatch.every((h) => typeof h === "string" && h.startsWith("#"))));
-ok("getSkin resolves known id and falls back to SKINS[0]", getSkin(SKINS[0].id).id === SKINS[0].id && getSkin("does-not-exist").id === SKINS[0].id);
-ok("skinIds covers the whole catalog", skinIds().length === SKINS.length && skinIds().includes(SKINS[0].id));
-
-// A skin with no [data-theme] block loads with zero CSS variables — the app
-// renders unstyled and nothing throws, so only a check catches it.
+// ---- 1c. app colours = the house theme list (house standard 24) ------------
 {
+  // the 14 house themes in font.js ("system" is the 15th: no saved choice)
+  const HOUSE = ["light", "dark", "midnight", "slate", "ocean", "forest", "ember", "gold", "synthwave", "terminal", "paper", "pastel", "mono", "contrast"];
   const css = readFileSync("styles/themes.css", "utf8");
-  const blocks = new Map();
-  for (const m of css.matchAll(/\[data-theme="([^"]+)"\]\s*\{([^}]*)\}/g)) {
-    const vars = new Map([...m[2].matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+)/g)].map((v) => [v[1], v[2].trim()]));
-    blocks.set(m[1], vars);
-  }
-  ok("every skin has a theme block", SKINS.every((sk) => blocks.has(sk.id)));
-  ok("every theme block belongs to a skin", [...blocks.keys()].every((id) => skinIds().includes(id)));
-  const base = blocks.get(SKINS[0].id);
-  ok("every theme defines the same variables as the default",
-    [...blocks].every(([, vars]) => vars.size === base.size && [...base.keys()].every((v) => vars.has(v))));
-  ok("swatches match the theme's own background and accents",
-    SKINS.every((sk) => {
-      const v = blocks.get(sk.id);
-      return ["--bg", "--accent", "--accent-2"].map((k) => v.get(k)).join().toLowerCase() === sk.swatch.join().toLowerCase();
-    }));
+  ok("themes.css has no app-owned theme blocks left", !/\[data-theme=/.test(css));
+  const APP_VARS = ["--bg", "--panel", "--panel-2", "--line", "--text", "--muted", "--accent", "--accent-2", "--accent-ink", "--good", "--warn", "--bad", "--highway", "--highway-line"];
+  ok("every app colour maps onto a house --t-* variable with a fallback",
+    APP_VARS.every((v) => new RegExp(v.replace(/-/g, "\\-") + ":\\s*var\\(--t-[a-z0-9-]+,\\s*#[0-9a-f]{3,8}\\)").test(css)));
+  ok("canvas-read colours are plain var() mappings, never color-mix()",
+    ["--accent", "--accent-2", "--muted", "--text", "--good", "--bad", "--line", "--highway", "--highway-line", "--panel"].every((v) => !new RegExp(v + ":[^;]*color-mix").test(css)));
+  const OLD = ["midnight", "dark", "light", "sunset", "forest", "contrast", "neon", "synthwave", "vaporwave", "ocean", "arctic", "ember", "crimson", "royal", "gold", "mahogany", "bubblegum", "terminal", "mono", "slate", "parchment", "sakura", "espresso", "borealis", "coral", "peacock"];
+  ok("every old app skin maps to a real house theme", OLD.every((id) => HOUSE.includes(SKIN_TO_HOUSE[id])));
+  const stub = (cur = "system") => { const h = { set: null, theme: () => cur, setTheme: (id) => { h.set = id; } }; return h; };
+  let st = { theme: "sakura" }, h = stub();
+  ok("migration: a chosen old skin moves to its house theme and is removed", migrateTheme(st, h) === "pastel" && h.set === "pastel" && !("theme" in st));
+  st = { theme: "midnight" }; h = stub();
+  ok("migration: the old default (midnight, saved for everyone) stays on System", migrateTheme(st, h) === null && h.set === null && !("theme" in st));
+  st = { theme: "light", themeChosen: false }; h = stub();
+  ok("migration: a device-derived skin was never a choice", migrateTheme(st, h) === null && h.set === null);
+  st = { theme: "neon" }; h = stub("paper");
+  ok("migration: an existing house choice wins", migrateTheme(st, h) === null && h.set === null && !("theme" in st));
+  ok("migration: nothing to do without an old skin", migrateTheme({}, stub()) === null);
 }
 ok("shadeColor identity and extremes", shadeColor("#808080", 0) === "#808080" && shadeColor("#808080", 1) === "#ffffff" && shadeColor("#808080", -1) === "#000000");
 ok("mixColor midpoint of black/white", mixColor("#000000", "#ffffff", 0.5) === "#808080");
@@ -132,7 +129,7 @@ ok("PRICES tiers as specified", PRICES.common === 0 && PRICES.uncommon === 60 &&
 ok("priceOf unknown rarity is free", priceOf("mythic") === 0 && priceOf(undefined) === 0);
 ok("priceOf increases with rarity", priceOf("common") < priceOf("uncommon") && priceOf("uncommon") < priceOf("rare") && priceOf("rare") < priceOf("epic") && priceOf("epic") < priceOf("legendary"));
 ok("unlockKey joins parts", unlockKey("avatar", "hair", "mohawk") === "avatar:hair:mohawk");
-ok("unlockKey drops an empty category (skins)", unlockKey("skin", "", "neon") === "skin:neon");
+ok("unlockKey drops an empty category", unlockKey("skin", "", "neon") === "skin:neon");
 
 // ---- 2b. economy against the real Store -----------------------------------
 // Store reads localStorage at module-eval time, so install a shim BEFORE the

@@ -8,7 +8,7 @@ const KEY = "guitarpicker.v1";
 
 const DEFAULTS = {
   settings: {
-    theme: "midnight",
+    // no theme here: colours are the house theme list, chosen through font.js (src/theme-migrate.js moves old skins)
     inputDeviceId: "",
     outputDeviceId: "",
     instrument: "acoustic-guitar",
@@ -31,22 +31,15 @@ const DEFAULTS = {
   unlocks: {},               // unlocked cosmetic keys -> true (see cosmetics/economy.js)
 };
 
-/** The skin to start from when the player hasn't chosen one: follows the device. */
-export function deviceTheme() {
-  try { return globalThis.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : DEFAULTS.settings.theme; }
-  catch { return DEFAULTS.settings.theme; }
-}
-
-// A theme is a choice only once the player picks one. Until then it isn't
-// stored, so it keeps following the device (persist() leaves it out).
+// A saved old app skin (settings.theme) is kept as loaded until src/theme-migrate.js moves it to
+// the house theme list and deletes it.
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...structuredClone(DEFAULTS), settings: { ...structuredClone(DEFAULTS.settings), theme: deviceTheme() } };
+    if (!raw) return structuredClone(DEFAULTS);
     const parsed = JSON.parse(raw);
-    const chosen = !!parsed.settings?.theme;
     return {
-      settings: { ...DEFAULTS.settings, theme: deviceTheme(), ...(parsed.settings || {}), themeChosen: chosen },
+      settings: { ...DEFAULTS.settings, ...(parsed.settings || {}) },
       songs: parsed.songs || [],
       history: parsed.history || [],
       progress: parsed.progress || {},
@@ -55,7 +48,7 @@ function load() {
     };
   } catch (e) {
     console.warn("state load failed, using defaults", e);
-    return { ...structuredClone(DEFAULTS), settings: { ...structuredClone(DEFAULTS.settings), theme: deviceTheme() } };
+    return structuredClone(DEFAULTS);
   }
 }
 
@@ -63,14 +56,13 @@ const state = load();
 const listeners = new Set();
 
 function persist() {
-  const { themeChosen, ...settings } = state.settings;
-  if (!themeChosen) delete settings.theme;
-  try { localStorage.setItem(KEY, JSON.stringify({ ...state, settings })); }
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
   catch (e) { console.warn("persist failed (quota?)", e); }
 }
 
 export const Store = {
   get: () => state,
+  persist: () => persist(),
   settings: () => state.settings,
 
   on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
@@ -78,7 +70,6 @@ export const Store = {
 
   setSetting(key, value) {
     state.settings[key] = value;
-    if (key === "theme") state.settings.themeChosen = true;
     persist();
     this.emit({ type: "settings", key, value });
   },

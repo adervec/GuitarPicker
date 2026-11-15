@@ -2,7 +2,7 @@
 import { Store } from "./state.js";
 import { el, clear } from "./ui/components.js";
 import { Audio } from "./audio/engine.js";
-import { SKINS } from "./cosmetics/skins.js";
+import { migrateTheme } from "./theme-migrate.js";
 import { startCowork } from "./cowork.js";
 import { t, fmt, i18nReady } from "./i18n.js";
 
@@ -49,10 +49,6 @@ const VIEWS = {
 const viewEl = () => document.getElementById("view");
 let cleanup = null;
 
-function applyTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-}
-
 function buildNav() {
   const nav = document.getElementById("nav");
   clear(nav);
@@ -70,14 +66,6 @@ function setActiveNav(route) {
   document.querySelectorAll(".nav-item").forEach((a) => {
     a.classList.toggle("active", a.dataset.route === route);
   });
-}
-
-function buildThemePicker() {
-  const sel = document.getElementById("theme-quick");
-  clear(sel);
-  for (const sk of SKINS) sel.appendChild(el("option", { value: sk.id, text: sk.name }));
-  sel.value = Store.settings().theme;
-  sel.addEventListener("change", () => { Store.setSetting("theme", sel.value); applyTheme(sel.value); });
 }
 
 export function navigate(hash) { location.hash = hash.startsWith("#") ? hash : "#" + hash; }
@@ -161,9 +149,9 @@ function markInstalled() {
 
 async function init() {
   await i18nReady();   // draw the first screen in the chosen language
-  applyTheme(Store.settings().theme);
+  // colours: the house theme list (font.js); an old app skin moves to the nearest house theme once
+  if ("theme" in Store.settings()) { migrateTheme(Store.settings(), globalThis.appFont); Store.persist(); }
   buildNav();
-  buildThemePicker();
   markInstalled();
   refreshIO();
   refreshCoins();

@@ -458,24 +458,23 @@ function fakeCtx() {
   ok("local day: a streak chains across the DST change", ny === "3,2026-03-09");
 }
 
-// ---- default theme follows the device until the player picks one ----
+// ---- colours are the house theme list (standard 24): System follows the device; old skins migrate ----
 {
-  const theme = (light, saved) => {
+  const run = (saved) => {
     const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
       const mem = new Map(${JSON.stringify(saved ? [["guitarpicker.v1", JSON.stringify({ settings: saved })]] : [])});
       globalThis.localStorage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
-      globalThis.matchMedia = (q) => ({ matches: q.includes("light") ? ${light} : !${light} });
       const { Store } = await import("${pathToFileURL(process.cwd() + "/").href}src/state.js");
-      const start = Store.settings().theme;
+      const loaded = Store.settings().theme ?? "none";
       Store.setSetting("a4", 441);
-      const storedAfterOther = JSON.parse(mem.get("guitarpicker.v1")).settings.theme ?? "none";
-      Store.setSetting("theme", "neon");
-      console.log([start, storedAfterOther, JSON.parse(mem.get("guitarpicker.v1")).settings.theme].join(","));`], { encoding: "utf8" });
+      console.log([loaded, JSON.parse(mem.get("guitarpicker.v1")).settings.theme ?? "none"].join(","));`], { encoding: "utf8" });
     return r.stdout.trim() || r.stderr.split("\n").slice(0, 3).join(" ");
   };
-  ok("theme: light device, nothing saved -> light skin, and the default isn't stored", theme(true) === "light,none,neon");
-  ok("theme: dark device, nothing saved -> the dark default", theme(false) === "midnight,none,neon");
-  ok("theme: a saved choice wins over the device", theme(true, { theme: "sunset" }).startsWith("sunset,sunset,"));
+  ok("theme: a fresh store has no app theme of its own (font.js System follows the device)", run() === "none,none");
+  ok("theme: an old saved skin is kept as loaded, for the one-time migration", run({ theme: "sakura" }).startsWith("sakura,"));
+  ok("theme: Settings offers the house picker", readFileSync("src/views/settings.js", "utf8").includes('createElement("app-theme-picker")'));
+  ok("theme: startup runs the migration", /migrateTheme\(Store\.settings\(\), globalThis\.appFont\)/.test(readFileSync("src/app.js", "utf8")));
+  ok("theme: no data-theme attribute left on the page", !/data-theme=/.test(readFileSync("index.html", "utf8")));
 }
 
 // ---- languages (house standard 20): English + 16 machine-translated, every key, placeholders intact ----

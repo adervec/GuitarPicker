@@ -83,7 +83,9 @@ Claude Cowork folder and ask for coaching — the file starts with a suggested p
 - **Progress** — session history and improvement trends.
 - **Locker** — build a layered player avatar (skin tone, hair, clothing, tattoos, eyewear,
   headwear, jewellery, frames), design a guitar (body shape, finish, hardware, inlays,
-  decals), and choose from 26 app skins. Rarer items are **unlocked with coins**.
+  decals). Rarer items are **unlocked with coins**.
+- **Themes** — the same 15 colour themes as every app by this maker (System follows your
+  device), free, under Settings.
 - **Coins & rewards** — earn 🪙 by playing songs (accuracy + pass bonus) and completing
   daily activities; spend them in the Locker. Balance shows in the top bar, and your avatar
   rides along in the play HUD.

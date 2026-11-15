@@ -1,4 +1,5 @@
-// Locker — customise the player avatar, the guitar avatar, and the app skin.
+// Locker — customise the player avatar and the guitar avatar. (App colours are the house theme
+// list, chosen in Settings; they are not Locker items.)
 // Selections save automatically; items above Common rarity must be unlocked
 // with coins earned by playing. Colours are always free.
 import { el, pageHead, clear, getVar, toast } from "../ui/components.js";
@@ -9,7 +10,7 @@ import {
   setAvatarLoadout, setGuitarLoadout,
   AVATAR_PARTS, AVATAR_CATEGORY_ORDER,
   GUITAR_PARTS, GUITAR_CATEGORY_ORDER,
-  SKINS, getSkin, rarity,
+  rarity,
   coins, priceFor, ownsItem, buyItem, unlockedCount,
 } from "../cosmetics/index.js";
 import { t, fmt } from "../i18n.js";
@@ -18,7 +19,7 @@ export default function locker(ctx) {
   const { el: root } = ctx;
   const head = pageHead(
     t("Locker"),
-    t("Build your player, customise a guitar, and pick an app skin. Earn 🪙 coins by playing; spend them to unlock rare gear.")
+    t("Build your player and customise a guitar. Earn 🪙 coins by playing; spend them to unlock rare gear.")
   );
   // coin balance chip in the page header
   const coinChip = el("div.coin-chip", { title: t("Coins — earn by playing songs") });
@@ -43,8 +44,8 @@ export default function locker(ctx) {
     if (e.type === "unlocks" && tipEl) { tipEl.remove(); tipEl = null; }   // first unlock dismisses the nudge
   });
 
-  // i18n-keys: Player | Guitar | App Skin
-  const TABS = [["player", "🧑", "Player"], ["guitar", "🎸", "Guitar"], ["skin", "🎨", "App Skin"]];
+  // i18n-keys: Player | Guitar
+  const TABS = [["player", "🧑", "Player"], ["guitar", "🎸", "Guitar"]];
   let active = "player";
   const tabBar = el("div.pill-row", { style: { marginBottom: "18px" } });
   const body = el("div");
@@ -62,8 +63,7 @@ export default function locker(ctx) {
     const scroller = document.getElementById("view");
     const sc = scroller ? scroller.scrollTop : 0;
     clear(body);
-    if (active === "skin") buildSkinTab(body);
-    else buildCharacterTab(body, active === "player" ? "avatar" : "guitar");
+    buildCharacterTab(body, active === "player" ? "avatar" : "guitar");
     if (scroller) scroller.scrollTop = sc;
   }
 
@@ -162,58 +162,6 @@ export default function locker(ctx) {
       el("div", { style: { width: "100%", height: "42px", borderRadius: "7px", background: col.hex, border: "1px solid rgba(0,0,0,0.25)" } }),
       el("div", { style: { ...labelStyle(), marginTop: "5px" }, text: col.name }),
     ]);
-  }
-
-  // ---- app skin tab ----
-  function buildSkinTab(container) {
-    const cur = Store.settings().theme;
-    const grid = el("div.grid.cards");
-    for (const sk of SKINS) {
-      const isActive = cur === sk.id;
-      const owned = ownsItem("skin", "", sk);
-      const price = priceFor(sk);
-      const [bg, ac, ac2] = sk.swatch;
-      const r = rarity(sk.rarity);
-      const mock = el("div", {
-        style: { height: "64px", borderRadius: "8px", overflow: "hidden", display: "flex", background: bg, border: "1px solid rgba(255,255,255,0.08)", marginBottom: "10px", opacity: owned ? "1" : "0.85" },
-      }, [
-        el("div", { style: { width: "7px", background: ac } }),
-        el("div", { style: { flex: "1", padding: "10px", display: "flex", flexDirection: "column", gap: "7px" } }, [
-          el("div", { style: { height: "10px", width: "62%", borderRadius: "3px", background: ac } }),
-          el("div", { style: { height: "8px", width: "44%", borderRadius: "3px", background: ac2 } }),
-          el("div", { style: { height: "8px", width: "30%", borderRadius: "3px", background: "rgba(255,255,255,0.18)" } }),
-        ]),
-      ]);
-      grid.appendChild(el("div.card", {
-        onclick: () => onSkin(sk, owned, price),
-        style: { border: `2px solid ${isActive ? ac : "var(--line)"}` },
-      }, [
-        mock,
-        el("div.spread", {}, [
-          el("div.title", { text: sk.name }),
-          el("span", { style: { fontSize: "10px", color: r.color, border: `1px solid ${r.color}`, borderRadius: "999px", padding: "1px 8px" }, text: t(r.name) }),
-        ]),
-        el("div.sub", { text: sk.desc }),
-        isActive
-          ? el("div", { style: { fontSize: "11px", color: ac, marginTop: "6px", fontWeight: "600" }, text: "✓ " + t("Active") })
-          : (owned ? null : el("div", { style: { fontSize: "11px", color: "var(--warn)", marginTop: "6px", fontWeight: "700" }, text: `🔒 ${t("Unlock")} · 🪙 ${price}` })),
-      ]));
-    }
-    container.appendChild(grid);
-  }
-
-  function onSkin(sk, owned, price) {
-    if (!owned) {
-      const res = buyItem("skin", "", sk);
-      if (!res.ok) { toast(t("Need {price} coins (you have {coins}). Play songs to earn more.", { price: res.price, coins: coins() }), "bad"); return; }
-      toast(t("Unlocked “{skin}” skin!", { skin: sk.name }) + ` 🪙 −${res.price}`, "good");
-    }
-    Store.setSetting("theme", sk.id);
-    document.documentElement.setAttribute("data-theme", sk.id);
-    const quick = document.getElementById("theme-quick");
-    if (quick) quick.value = sk.id;
-    if (owned) toast(t("Applied “{skin}” skin", { skin: getSkin(sk.id).name }));
-    renderBody();
   }
 
   renderTabs();
