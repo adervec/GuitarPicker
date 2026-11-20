@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs";
 import { composeAvatar, AVATAR_PARTS, AVATAR_CATEGORY_ORDER, DEFAULT_AVATAR } from "./src/cosmetics/avatars.js";
 import { composeGuitar, GUITAR_PARTS, GUITAR_CATEGORY_ORDER, DEFAULT_GUITAR } from "./src/cosmetics/guitars.js";
 import { SKIN_TO_HOUSE, migrateTheme } from "./src/theme-migrate.js";
+import { EXTRA_THEMES, extraThemes, registerExtraThemes } from "./src/theme-extras.js";
 import { shadeColor, mixColor, pickById } from "./src/cosmetics/parts.js";
 import { PRICES, priceOf, unlockKey } from "./src/cosmetics/economy.js";
 
@@ -108,10 +109,25 @@ ok(`every cosmetic variant renders to well-formed SVG (${variantCount} variants)
   ok("canvas-read colours are plain var() mappings, never color-mix()",
     ["--accent", "--accent-2", "--muted", "--text", "--good", "--bad", "--line", "--highway", "--highway-line", "--panel"].every((v) => !new RegExp(v + ":[^;]*color-mix").test(css)));
   const OLD = ["midnight", "dark", "light", "sunset", "forest", "contrast", "neon", "synthwave", "vaporwave", "ocean", "arctic", "ember", "crimson", "royal", "gold", "mahogany", "bubblegum", "terminal", "mono", "slate", "parchment", "sakura", "espresso", "borealis", "coral", "peacock"];
-  ok("every old app skin maps to a real house theme", OLD.every((id) => HOUSE.includes(SKIN_TO_HOUSE[id])));
+  const EXTRA = EXTRA_THEMES.map((x) => x.id);
+  ok("every old app skin maps to a base theme or one of GuitarPicker's extras", OLD.every((id) => HOUSE.includes(SKIN_TO_HOUSE[id]) || EXTRA.includes(SKIN_TO_HOUSE[id])));
+  ok("an old skin with no base twin keeps its own id as an extra", EXTRA.every((id) => SKIN_TO_HOUSE[id] === id));
+  const xs = extraThemes();
+  ok(`the ${xs.length} extras are valid for appFont.addThemes (id, label, all 11 colours, no base id)`,
+    xs.length === 12 && xs.every((x) => /^[a-z0-9-]{1,30}$/.test(x.id) && !HOUSE.includes(x.id) && x.label &&
+      ["bg", "surface", "surface2", "line", "text", "dim", "accent", "on-accent", "good", "warn", "bad"].every((k) => /^#[0-9a-f]{6}$/i.test(x.colors[k]))));
+  const lum = (h) => { const n = parseInt(h.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  ok("every extra's body text is readable on its background (contrast ≥ 4.5)", xs.every((x) => contrast(x.colors.text, x.colors.bg) >= 4.5 && contrast(x.colors.text, x.colors.surface) >= 4.5));
+  ok("every extra's dark flag matches its background", xs.every((x) => x.dark === lum(x.colors.bg) < 0.18));
+  let got = null;
+  ok("registerExtraThemes hands all of them to font.js", registerExtraThemes({ addThemes: (l) => { got = l; return l.length; } }) === 12 && got.length === 12);
+  ok("registerExtraThemes is a no-op without font.js", registerExtraThemes(null) === 0);
   const stub = (cur = "system") => { const h = { set: null, theme: () => cur, setTheme: (id) => { h.set = id; } }; return h; };
-  let st = { theme: "sakura" }, h = stub();
-  ok("migration: a chosen old skin moves to its house theme and is removed", migrateTheme(st, h) === "pastel" && h.set === "pastel" && !("theme" in st));
+  let st = { theme: "parchment" }, h = stub();
+  ok("migration: an old skin with a base twin moves to it and is removed", migrateTheme(st, h) === "paper" && h.set === "paper" && !("theme" in st));
+  st = { theme: "sakura" }; h = stub();
+  ok("migration: an old skin with no twin stays itself, as an extra", migrateTheme(st, h) === "sakura" && h.set === "sakura" && !("theme" in st));
   st = { theme: "midnight" }; h = stub();
   ok("migration: the old default (midnight, saved for everyone) stays on System", migrateTheme(st, h) === null && h.set === null && !("theme" in st));
   st = { theme: "light", themeChosen: false }; h = stub();

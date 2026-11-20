@@ -1,14 +1,16 @@
-// One-time move from GuitarPicker's old app skins to the house theme list (house standard 24).
-// The old skin lived in settings.theme; the house choice lives in font.js. Each old skin goes to
-// the nearest house theme once, then settings.theme is removed so the old code path is gone.
+// One-time move from GuitarPicker's old app skins to the house themes (house standard 24).
+// The old skin lived in settings.theme; the choice now lives in font.js. A skin with a twin in the
+// base list goes to that twin; one without stays as GuitarPicker's own extra (src/theme-extras.js,
+// registered before this runs). Then settings.theme is removed so the old code path is gone.
 export const SKIN_TO_HOUSE = {
+  // twins in the base list
   midnight: "midnight", dark: "dark", light: "light", slate: "slate", mono: "slate",
-  sunset: "ember", ember: "ember", crimson: "ember", mahogany: "ember", espresso: "ember",
-  forest: "forest", borealis: "forest", peacock: "forest",
-  ocean: "ocean", arctic: "ocean", coral: "ocean",
-  neon: "synthwave", synthwave: "synthwave", vaporwave: "synthwave", bubblegum: "synthwave", royal: "synthwave",
-  gold: "gold", terminal: "terminal", contrast: "contrast",
-  parchment: "paper", sakura: "pastel",
+  ember: "ember", forest: "forest", ocean: "ocean", synthwave: "synthwave", vaporwave: "synthwave",
+  gold: "gold", terminal: "terminal", contrast: "contrast", parchment: "paper",
+  // no twin: kept as extras, under their own ids
+  sakura: "sakura", sunset: "sunset", crimson: "crimson", mahogany: "mahogany", espresso: "espresso",
+  borealis: "borealis", peacock: "peacock", arctic: "arctic", coral: "coral", neon: "neon",
+  bubblegum: "bubblegum", royal: "royal",
 };
 
 /**

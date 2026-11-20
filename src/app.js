@@ -3,6 +3,7 @@ import { Store } from "./state.js";
 import { el, clear } from "./ui/components.js";
 import { Audio } from "./audio/engine.js";
 import { migrateTheme } from "./theme-migrate.js";
+import { registerExtraThemes } from "./theme-extras.js";
 import { startCowork } from "./cowork.js";
 import { t, fmt, i18nReady } from "./i18n.js";
 
@@ -149,7 +150,9 @@ function markInstalled() {
 
 async function init() {
   await i18nReady();   // draw the first screen in the chosen language
-  // colours: the house theme list (font.js); an old app skin moves to the nearest house theme once
+  // colours: the house base list (font.js) plus GuitarPicker's own extras; extras first, so a saved
+  // extra applies and the one-time move from an old app skin can land on one
+  registerExtraThemes();
   if ("theme" in Store.settings()) { migrateTheme(Store.settings(), globalThis.appFont); Store.persist(); }
   buildNav();
   markInstalled();

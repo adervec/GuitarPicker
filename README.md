@@ -85,7 +85,8 @@ Claude Cowork folder and ask for coaching — the file starts with a suggested p
   headwear, jewellery, frames), design a guitar (body shape, finish, hardware, inlays,
   decals). Rarer items are **unlocked with coins**.
 - **Themes** — the same 15 colour themes as every app by this maker (System follows your
-  device), free, under Settings.
+  device), plus 12 of GuitarPicker's own (Sakura, Sunset, Aurora Borealis, Neon Arcade…), all
+  free, under Settings.
 - **Coins & rewards** — earn 🪙 by playing songs (accuracy + pass bonus) and completing
   daily activities; spend them in the Locker. Balance shows in the top bar, and your avatar
   rides along in the play HUD.
