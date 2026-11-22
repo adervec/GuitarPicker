@@ -1,28 +1,34 @@
-// Pure merge of two cloud-sync payloads (no I/O — unit-testable).
+// Pure merge of two cloud-sync payloads (no I/O — unit-testable). House standard 30.
 //
-// Content sets are unioned so no device loses data when two devices both made
-// changes offline; the coin balance (which moves both up and down) is
-// last-write-wins by `savedAt`. Payload shape:
-//   { app, v, savedAt, songs[], history[], progress{}, coins, unlocks{} }
-export function mergeSyncable(a, b) {
+// Songs are records: for each id the most recently changed copy wins (`updatedAt`, else
+// `createdAt` for songs saved before v2), and a deleted song is a tombstone
+// `{ id, deleted: true, updatedAt }` so a stale device cannot bring it back. History,
+// xp, drills, courses and unlocks only ever grow, so they are unioned. The coin balance
+// moves both ways: the copy whose `coinsAt` (when the balance last changed) is newer wins.
+//   { app, v: 2, songs[], history[], progress{}, coins, coinsAt, unlocks{} }
+const TOMBSTONE_DAYS = 90;
+export const songTime = (s) => Number(s.updatedAt) || Date.parse(s.createdAt) || 0;
+
+export function mergeSyncable(a, b, now = Date.now()) {
   a = a || {}; b = b || {};
 
-  // songs: union by id, newer createdAt wins on conflict
   const byId = new Map();
-  for (const s of [...(a.songs || []), ...(b.songs || [])]) {
+  for (const s of [...(b.songs || []), ...(a.songs || [])]) {
     if (!s || !s.id) continue;
     const prev = byId.get(s.id);
-    if (!prev) { byId.set(s.id, s); continue; }
-    if ((Date.parse(s.createdAt) || 0) > (Date.parse(prev.createdAt) || 0)) byId.set(s.id, s);
+    if (!prev || songTime(s) > songTime(prev) || (songTime(s) === songTime(prev) && s.deleted && !prev.deleted)) byId.set(s.id, s);
   }
-  const songs = [...byId.values()];
+  const songs = [...byId.values()].filter((s) => !s.deleted || now - songTime(s) < TOMBSTONE_DAYS * 864e5);
 
-  // history: union by (ts, songId), newest first, capped at 1000
-  const seen = new Set(); const history = [];
+  // history: union by (ts, songId), newest first, capped at 1000; a run reviewed by the AI on
+  // one device keeps that review (fields one copy lacks are filled from the other)
+  // ponytail: removing a review (undo) on one device is undone by the other's copy; add a tombstone if that bites
+  const seen = new Map(); const history = [];
   for (const h of [...(a.history || []), ...(b.history || [])].sort((x, y) => (y.ts || 0) - (x.ts || 0))) {
     const k = (h.ts || 0) + "|" + (h.songId || "");
-    if (seen.has(k)) continue;
-    seen.add(k); history.push(h);
+    const i = seen.get(k);
+    if (i !== undefined) { history[i] = { ...h, ...history[i] }; continue; }
+    seen.set(k, history.length); history.push(h);
   }
   if (history.length > 1000) history.length = 1000;
 
@@ -38,7 +44,9 @@ export function mergeSyncable(a, b) {
   }
 
   const unlocks = { ...(a.unlocks || {}), ...(b.unlocks || {}) };
-  const coins = (a.savedAt || 0) >= (b.savedAt || 0) ? (a.coins || 0) : (b.coins || 0);
+  // v1 payloads carried only savedAt; it stands in for coinsAt
+  const ca = a.coinsAt ?? a.savedAt ?? 0, cb = b.coinsAt ?? b.savedAt ?? 0;
+  const [coins, coinsAt] = ca > cb ? [a.coins || 0, ca] : [b.coins || 0, cb];
 
-  return { app: "guitarpicker", v: 1, savedAt: Math.max(a.savedAt || 0, b.savedAt || 0), songs, history, progress, coins, unlocks };
+  return { app: "guitarpicker", v: 2, songs, history, progress, coins, coinsAt, unlocks };
 }

@@ -14,8 +14,8 @@ const loc = () => af()?.locale?.() || undefined;
 export const fmt = {
   number: (n, o) => (af()?.fmt ? af().fmt.number(n, o) : String(+n.toFixed(o?.max ?? 2))),
   percent: (x, max) => (af()?.fmt ? af().fmt.percent(x, max) : Math.round(x * 100) + "%"),
-  date: (d, style) => (af()?.fmt ? af().fmt.date(d, style) : new Date(d).toLocaleDateString(loc())),
-  time: (d) => (af()?.fmt ? af().fmt.time(d) : new Date(d).toLocaleTimeString(loc(), { timeStyle: "short" })),
+  date: (d, style) => (af()?.fmt ? af().fmt.date(d, style) : new Date(d).toLocaleDateString(loc())), // iso-ok: fallback only when font.js failed to load
+  time: (d) => (af()?.fmt ? af().fmt.time(d) : new Date(d).toLocaleTimeString(loc(), { timeStyle: "short" })), // iso-ok: fallback only when font.js failed to load
   dateTime: (d, style) => (af()?.fmt ? af().fmt.dateTime(d, style) : new Date(d).toLocaleString(loc())),
   relative: (d) => (af()?.fmt ? af().fmt.relative(d) : new Date(d).toLocaleString(loc())),
 };

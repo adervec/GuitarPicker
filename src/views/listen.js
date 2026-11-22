@@ -90,7 +90,7 @@ export default function listen(ctx) {
       const f = tracker.push(freq, s.a4);
       frames.push({ t, freq: f });
       liveMeter.firstChild.style.width = Math.min(100, rms * 600) + "%";
-      if (f > 0) { const nm = midiToName(freqToMidi(f, s.a4)); liveNote.innerHTML = `${nm.name}<small>${nm.octave}</small>`; }
+      if (f > 0) { const nm = midiToName(freqToMidi(f, s.a4)); liveNote.innerHTML = ""; liveNote.append(nm.name, Object.assign(document.createElement("small"), { textContent: String(nm.octave) })); }
     }
     elapsed.textContent = fmtTime((performance.now() - startTime) / 1000);
     raf = requestAnimationFrame(loop);

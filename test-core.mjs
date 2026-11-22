@@ -25,7 +25,6 @@ import { Midi, onMessage } from "./src/audio/midi.js";
 import { CLEFS, staffPos, staffSVG, stepToMidi, stepName } from "./src/music/staff.js";
 import { rotateSong } from "./src/music/daily.js";
 import { eraseLocalData, CACHE_NAME, OWN_KEYS } from "./src/erase.js";
-import { OAUTH_ORIGINS, originAllowed, syncConfigured, driveClientId, BUILTIN_CLIENT_ID } from "./src/cloud/config.js";
 
 let pass = 0;
 const ok = (name, cond) => { assert.ok(cond, "FAILED: " + name); console.log("  ✓ " + name); pass++; };
@@ -190,39 +189,37 @@ ok("framesToNotes quantizes onsets to the grid", humNotes.every((n) => Math.abs(
 const q = quantizeNotes([{ time: 0.04, dur: 0.001, midi: [60] }], 120);
 ok("quantizeNotes snaps onset to grid + floors dur to >= grid", q.length === 1 && q[0].time === 0 && q[0].dur >= 0.1);
 
-// ---- cloud sync merge ----
-const localP = { savedAt: 100, songs: [{ id: "x", createdAt: "2024-01-01" }, { id: "y", createdAt: "2024-01-01" }],
-  history: [{ ts: 10, songId: "x" }], progress: { guitar: { xp: 50, drills: { d1: 80 }, courses: { c1: ["s1"] } } },
-  coins: 30, unlocks: { red: true } };
-const remoteP = { savedAt: 200, songs: [{ id: "y", createdAt: "2024-06-01" }, { id: "z", createdAt: "2024-01-01" }],
-  history: [{ ts: 10, songId: "x" }, { ts: 20, songId: "z" }], progress: { guitar: { xp: 90, drills: { d1: 60, d2: 40 }, courses: { c1: ["s2"] } } },
-  coins: 12, unlocks: { blue: true } };
-const mg = mergeSyncable(localP, remoteP);
-ok("merge unions songs by id (x,y,z)", mg.songs.length === 3);
-ok("merge keeps newer song on id conflict", mg.songs.find((s) => s.id === "y").createdAt === "2024-06-01");
-ok("merge dedupes history by ts+songId", mg.history.length === 2);
-ok("merge takes max xp + union drills/courses", mg.progress.guitar.xp === 90 && mg.progress.guitar.drills.d1 === 80 && mg.progress.guitar.drills.d2 === 40 && mg.progress.guitar.courses.c1.length === 2);
-ok("merge unions unlocks", mg.unlocks.red && mg.unlocks.blue);
-ok("merge coins = last-write-wins by savedAt", mg.coins === 12);
-ok("merge coins flips when local is newer", mergeSyncable({ ...localP, savedAt: 300 }, remoteP).coins === 30);
-ok("merge of empties is safe", mergeSyncable(null, null).songs.length === 0);
-
-// ---- cloud OAuth origin gate ----
+// ---- cloud sync merge (house standard 30: record by record, tombstones, no stale overwrite) ----
 {
-  const saved = globalThis.location;
-  const set = (origin) => { globalThis.location = { origin, hostname: new URL(origin).hostname }; };
-  set("http://localhost:8080"); ok("origin gate allows localhost dev (any port)", originAllowed());
-  set(OAUTH_ORIGINS[0]); ok("origin gate allows the production origin", originAllowed());
-  set("https://evil.example.com"); ok("origin gate denies an unknown origin", !originAllowed());
-  // The built-in ID is shared with the author's sibling apps, so the gate is what stops
-  // a fork borrowing this project's consent screen and quota.
-  ok("a fork on an unknown origin gets no built-in client id", !driveClientId() && !syncConfigured());
-  ok("a fork supplying its own client id still works", syncConfigured("my-own-id.apps.googleusercontent.com"));
-  set(OAUTH_ORIGINS[0]);
-  ok("the official origin is configured out of the box", syncConfigured() && driveClientId() === BUILTIN_CLIENT_ID);
-  ok("a user-supplied id overrides the built-in one", driveClientId(" mine.apps.googleusercontent.com ") === "mine.apps.googleusercontent.com");
-  ok("the built-in id is a real Google web client id", /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(BUILTIN_CLIENT_ID));
-  if (saved === undefined) delete globalThis.location; else globalThis.location = saved;
+  const localP = { songs: [{ id: "x", createdAt: "2024-01-01" }, { id: "y", updatedAt: 100 }],
+    history: [{ ts: 10, songId: "x", aiReview: { grade: "B" } }], progress: { guitar: { xp: 50, drills: { d1: 80 }, courses: { c1: ["s1"] } } },
+    coins: 30, coinsAt: 100, unlocks: { red: true } };
+  const remoteP = { app: "guitarpicker", songs: [{ id: "y", updatedAt: 200, title: "new" }, { id: "z", updatedAt: 50 }],
+    history: [{ ts: 10, songId: "x" }, { ts: 20, songId: "z" }], progress: { guitar: { xp: 90, drills: { d1: 60, d2: 40 }, courses: { c1: ["s2"] } } },
+    coins: 12, coinsAt: 200, unlocks: { blue: true } };
+  const mg = mergeSyncable(localP, remoteP);
+  ok("merge unions songs by id (x,y,z)", mg.songs.length === 3);
+  ok("merge keeps the most recently changed song", mg.songs.find((s) => s.id === "y").title === "new");
+  ok("merge dedupes history by ts+songId and keeps an AI review", mg.history.length === 2 && mg.history.find((h) => h.ts === 10).aiReview?.grade === "B");
+  ok("merge takes max xp + union drills/courses", mg.progress.guitar.xp === 90 && mg.progress.guitar.drills.d1 === 80 && mg.progress.guitar.drills.d2 === 40 && mg.progress.guitar.courses.c1.length === 2);
+  ok("merge unions unlocks", mg.unlocks.red && mg.unlocks.blue);
+  ok("merge coins: the newer balance wins", mg.coins === 12 && mergeSyncable({ ...localP, coinsAt: 300 }, remoteP).coins === 30);
+  ok("merge reads a v1 cloud copy (savedAt stands in for coinsAt)", mergeSyncable({ coins: 5 }, { coins: 9, savedAt: 1 }).coins === 9);
+  ok("merge of empties is safe", mergeSyncable(null, null).songs.length === 0);
+  ok("a tombstone beats an older copy", mergeSyncable({ songs: [{ id: "q", updatedAt: 1 }] }, { songs: [{ id: "q", deleted: true, updatedAt: 2 }] }, 3).songs[0].deleted);
+  ok("tombstones older than 90 days are dropped", mergeSyncable({ songs: [{ id: "q", deleted: true, updatedAt: 1 }] }, {}, 91 * 864e5).songs.length === 0);
+
+  // two devices, one pretend cloud: A edits and deletes, stale B edits something else; all survive
+  let cloudDoc = { app: "guitarpicker", songs: [{ id: "s1", updatedAt: 1, title: "one" }, { id: "s2", updatedAt: 1 }], history: [], coins: 0, coinsAt: 0 };
+  const sync = (dev) => { const m = mergeSyncable(dev, cloudDoc, 1000); cloudDoc = m; return m; };
+  let A = structuredClone(cloudDoc), B = structuredClone(cloudDoc);
+  A.songs = [{ id: "s1", updatedAt: 10, title: "one, edited on A" }, { id: "s2", deleted: true, updatedAt: 10 }];
+  A = sync(A);
+  B.songs.push({ id: "s3", updatedAt: 5 }); B.history = [{ ts: 7, songId: "s3" }];
+  B = sync(B);
+  ok("two devices: A's edit survives B's stale sync", B.songs.find((s) => s.id === "s1").title === "one, edited on A");
+  ok("two devices: B's new song and run survive", B.songs.some((s) => s.id === "s3") && B.history.length === 1);
+  ok("two devices: a deletion on A stays deleted after B syncs", B.songs.find((s) => s.id === "s2").deleted);
 }
 
 // ---- instrument roster ----
@@ -513,7 +510,7 @@ function fakeCtx() {
 {
   const inv = JSON.parse(readFileSync("app-data.json", "utf8"));
   const stateKey = readFileSync("src/state.js", "utf8").match(/const KEY = "([^"]+)"/)[1];
-  const driveFile = readFileSync("src/cloud/config.js", "utf8").match(/SYNC_FILENAME = "([^"]+)"/)[1];
+  const driveFile = readFileSync("src/cloud/sync.js", "utf8").match(/SYNC_FILENAME = "([^"]+)"/)[1];
   const usedKeys = new Set([stateKey, ...OWN_KEYS,
     ...[...execSrc().matchAll(/localStorage\.(?:get|set|remove)Item\(\s*["']([^"']+)/g)].map((m) => m[1]).filter((k) => !/^(maker|portal|app|cowork)-/.test(k))]);
   const declared = (k) => inv.localStorage.some((d) => (d.endsWith("*") ? k.startsWith(d.slice(0, -1)) : d === k));

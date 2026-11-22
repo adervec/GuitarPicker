@@ -1,7 +1,6 @@
 // Global store: settings, user songs, history, progress. Persists to localStorage.
 import { DEFAULT_AVATAR } from "./cosmetics/avatars.js";
 import { DEFAULT_GUITAR } from "./cosmetics/guitars.js";
-import { mergeSyncable } from "./cloud/merge.js";
 import { localDay, dayBefore } from "./day.js";
 
 const KEY = "guitarpicker.v1";
@@ -29,6 +28,8 @@ const DEFAULTS = {
   progress: {},              // per-instrument: { xp, drills:{id:bestScore}, courses:{id:[done...]} }
   coins: 0,                  // earned currency for unlocking cosmetics
   unlocks: {},               // unlocked cosmetic keys -> true (see cosmetics/economy.js)
+  coinsAt: 0,                // when the coin balance last changed (sync: the newer balance wins)
+  songTombstones: [],        // deleted songs { id, deleted: true, updatedAt }, so a stale device can't bring them back
 };
 
 // A saved old app skin (settings.theme) is kept as loaded until src/theme-migrate.js moves it to
@@ -45,6 +46,8 @@ function load() {
       progress: parsed.progress || {},
       coins: parsed.coins || 0,
       unlocks: parsed.unlocks || {},
+      coinsAt: parsed.coinsAt || 0,
+      songTombstones: parsed.songTombstones || [],
     };
   } catch (e) {
     console.warn("state load failed, using defaults", e);
@@ -78,6 +81,8 @@ export const Store = {
   allUserSongs: () => state.songs,
   getSong(id) { return state.songs.find((s) => s.id === id); },
   saveSong(song) {
+    song.updatedAt = Date.now();
+    state.songTombstones = state.songTombstones.filter((x) => x.id !== song.id);
     const i = state.songs.findIndex((s) => s.id === song.id);
     if (i >= 0) state.songs[i] = song; else state.songs.push(song);
     persist();
@@ -86,6 +91,7 @@ export const Store = {
   },
   deleteSong(id) {
     state.songs = state.songs.filter((s) => s.id !== id);
+    state.songTombstones = [...state.songTombstones.filter((x) => x.id !== id), { id, deleted: true, updatedAt: Date.now() }];
     persist();
     this.emit({ type: "songs" });
   },
@@ -106,6 +112,7 @@ export const Store = {
     // award coins (accuracy-based + a pass bonus); attach to entry for the UI
     const coinGain = Math.round((entry.accuracy || 0) / 5) + (entry.passed ? 15 : 0);
     state.coins = (state.coins || 0) + coinGain;
+    state.coinsAt = Date.now();
     entry.coins = coinGain;
     // a completed run — pass OR fail — counts toward today's practice streak
     // (a noble failed attempt still counts; the streak can only be earned by
@@ -162,6 +169,7 @@ export const Store = {
   coins: () => state.coins || 0,
   addCoins(n) {
     state.coins = Math.max(0, (state.coins || 0) + Math.round(n));
+    state.coinsAt = Date.now();
     persist();
     this.emit({ type: "coins", coins: state.coins });
     return state.coins;
@@ -169,6 +177,7 @@ export const Store = {
   spendCoins(n) {
     if ((state.coins || 0) < n) return false;
     state.coins -= n;
+    state.coinsAt = Date.now();
     persist();
     this.emit({ type: "coins", coins: state.coins });
     return true;
@@ -186,27 +195,27 @@ export const Store = {
     return JSON.stringify({ exportedAt: new Date().toISOString(), ...state }, null, 2);
   },
 
-  // ----- cloud-syncable subset (Google Drive appData) -----
-  // Portable user content only — device-specific settings stay local.
+  // ----- cloud-syncable subset (one document, kept in step by appFont.cloud.syncDoc) -----
+  // Portable user content only — device-specific settings stay local. No timestamp of the
+  // export itself: an unchanged document must stay byte-identical, so syncDoc skips the write.
   exportSyncable() {
     return {
-      app: "guitarpicker", v: 1, savedAt: Date.now(),
-      songs: state.songs, history: state.history, progress: state.progress,
-      coins: state.coins || 0, unlocks: state.unlocks || {},
+      app: "guitarpicker", v: 2,
+      songs: [...state.songs, ...state.songTombstones], history: state.history, progress: state.progress,
+      coins: state.coins || 0, coinsAt: state.coinsAt || 0, unlocks: state.unlocks || {},
     };
   },
-  // Merge a remote payload into local state (additive for content, last-write-
-  // wins for the coin balance), persist, and notify. Returns the merged payload.
-  importSyncable(remote) {
-    const merged = mergeSyncable(this.exportSyncable(), remote);
-    state.songs = merged.songs;
-    state.history = merged.history;
-    state.progress = merged.progress;
-    state.coins = merged.coins;
-    state.unlocks = merged.unlocks;
+  // Take a merged document (cloud/merge.js) as this device's copy, persist, and notify.
+  applySyncable(doc) {
+    state.songs = doc.songs.filter((s) => !s.deleted);
+    state.songTombstones = doc.songs.filter((s) => s.deleted);
+    state.history = doc.history;
+    state.progress = doc.progress;
+    state.coins = doc.coins;
+    state.coinsAt = doc.coinsAt;
+    state.unlocks = doc.unlocks;
     persist();
     this.emit({ type: "sync" });
     this.emit({ type: "coins", coins: state.coins });
-    return merged;
   },
 };

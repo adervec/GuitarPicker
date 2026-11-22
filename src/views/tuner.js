@@ -170,7 +170,7 @@ export default async function tuner(ctx) {
     }
     const cents = centsTo(freq, refMidi, s.a4);
     const nm = midiToName(refMidi);
-    noteEl.innerHTML = `${nm.name}<small>${nm.octave}</small>`;
+    noteEl.innerHTML = ""; noteEl.append(nm.name, Object.assign(document.createElement("small"), { textContent: String(nm.octave) }));
     freqEl.textContent = t("{freq} Hz · target {target} Hz", {
       freq: fmt.number(freq, { max: 1, min: 1 }), target: fmt.number(midiToFreq(refMidi, s.a4), { max: 1, min: 1 }) });
 

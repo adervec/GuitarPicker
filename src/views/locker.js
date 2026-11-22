@@ -25,7 +25,7 @@ export default function locker(ctx) {
   const coinChip = el("div.coin-chip", { title: t("Coins — earn by playing songs") });
   head.querySelector(".row")?.appendChild(coinChip);
   root.appendChild(head);
-  const paintCoins = () => { coinChip.innerHTML = `🪙 <b>${fmt.number(coins())}</b>`; };
+  const paintCoins = () => { coinChip.innerHTML = ""; coinChip.append("🪙 ", Object.assign(document.createElement("b"), { textContent: fmt.number(coins()) })); };
   paintCoins();
 
   // First-unlock nudge — shown until the player unlocks their first item or dismisses it.

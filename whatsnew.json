@@ -1,5 +1,11 @@
 [
  {
+  "date": "2026-11-22",
+  "items": [
+   "Cloud sync now runs by itself: when you open GuitarPicker, come back to it, reconnect, or change something. It merges song by song, so a phone that was offline can no longer undo what you did on another device, and a song you delete stays deleted everywhere."
+  ]
+ },
+ {
   "date": "2026-11-20",
   "items": [
    "12 of GuitarPicker's old app skins are back as free themes: Sakura, Sunset, Crimson, Mahogany, Espresso, Aurora Borealis, Peacock, Arctic, Coral Reef, Neon Arcade, Bubblegum and Royal. They're under Settings, after the shared themes. If one of them was your skin, you can pick it again there."

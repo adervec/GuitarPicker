@@ -1,4 +1,5 @@
 // Bootstrap: theme, navigation, hash router, IO indicator, view lifecycle.
+import { startAutoSync } from "./cloud/sync.js";
 import { Store } from "./state.js";
 import { el, clear } from "./ui/components.js";
 import { Audio } from "./audio/engine.js";
@@ -115,7 +116,7 @@ Audio.onChange(refreshIO);
 // ---- coin counter (top bar) ----
 function refreshCoins() {
   const chip = document.getElementById("coin-chip");
-  if (chip) chip.innerHTML = `🪙 <b>${fmt.number(Store.coins())}</b>`;
+  if (chip) { chip.innerHTML = ""; chip.append("🪙 ", Object.assign(document.createElement("b"), { textContent: fmt.number(Store.coins()) })); }
 }
 Store.on((e) => { if (e.type === "coins" || e.type === "history" || e.type === "unlocks") refreshCoins(); });
 
@@ -162,6 +163,7 @@ async function init() {
   if (!location.hash) location.hash = "#/home";
   refreshCrumb();
   router();
+  startAutoSync(); // cloud copy kept in step: on start, focus, reconnect, and after a change
   startCowork();   // hidden cowork panel: reconnects the folder, runs schedules, sends finished runs for review
 }
 

@@ -2,7 +2,7 @@ import { el, pageHead, select, slider, toast, download } from "../ui/components.
 import { Store } from "../state.js";
 import { Audio } from "../audio/engine.js";
 import { INSTRUMENTS, instrumentOptions } from "../music/notes.js";
-import { syncConfigured, isSignedIn, signIn, signOut, syncNow, lastSync, account } from "../cloud/sync.js";
+import { syncConfigured, isSignedIn, signIn, signOut, syncNow, lastSync, account, cloudLabel } from "../cloud/sync.js";
 import { eraseLocalData, CACHE_NAME } from "../erase.js";
 import { t, fmt } from "../i18n.js";
 
@@ -112,23 +112,9 @@ export default async function settings(ctx) {
   // --- Cloud sync (Google Drive, opt-in) ---
   const cloud = el("div.panel", {}, [el("h2", { text: t("Account & Sync (cloud)") })]);
   root.appendChild(cloud);
-  // The built-in client ID is origin-gated, so a fork deployed elsewhere lands here
-  // and can paste its own ID rather than editing source and redeploying.
-  const clientIdField = el("input.input", {
-    type: "text", placeholder: "1234-abc.apps.googleusercontent.com",
-    value: Store.settings().driveClientId || "",
-    onchange: (e) => { Store.setSetting("driveClientId", e.target.value.trim()); location.reload(); },
-  });
-  const clientIdRow = el("details", { style: { marginTop: "12px" } }, [
-    el("summary.muted", { style: { fontSize: "12px", cursor: "pointer" }, text: t("Use your own Google OAuth client ID (forks & self-hosting)") }),
-    el("p.muted", { style: { fontSize: "12px", lineHeight: "1.5", margin: "8px 0" },
-      html: t("The built-in ID only works on the official site and on localhost. Running your own copy elsewhere? Create a free OAuth <b>Web</b> client (see <code>docs/CLOUD-SYNC-SETUP.md</code>), authorise your origin, and paste the ID here. Blank uses the built-in one.") }),
-    clientIdField,
-  ]);
-
   if (!syncConfigured()) {
     cloud.append(el("p.muted", { style: { fontSize: "13px", lineHeight: "1.5" },
-      html: t("Cloud sync is <b>not available on this origin</b> — GuitarPicker is running 100% locally (no account, no network). The built-in Google client ID is restricted to the official site; add your own below to enable sync on this deployment.") }), clientIdRow);
+      text: t("Cloud sync is not available here: GuitarPicker is running fully on this device.") }));
   } else {
     const status = el("span.muted", {});
     const signinBtn = el("button.btn.primary", { onclick: doSignIn }, [t("Sign in with Google")]);
@@ -142,7 +128,7 @@ export default async function settings(ctx) {
       el("p.muted", { style: { fontSize: "13px", lineHeight: "1.5" },
         html: t("Sync your <b>songs, history, progress, and unlocks</b> to a hidden, app-private folder in your own Google Drive. Device settings (mic/output, theme) stay local. Opt-in — nothing leaves your device until you sign in, and you can sign out anytime.") }),
       el("div.row", { style: { alignItems: "center", gap: "10px" } }, [signinBtn, syncBtn, signoutBtn, status]),
-      clientIdRow,
+      el("p.muted", { style: { fontSize: "12px" }, text: t("Cloud in use: {cloud} (chosen once for every app, in the hub's settings)", { cloud: cloudLabel() }) }),
     );
     function refresh() {
       const on = isSignedIn();
